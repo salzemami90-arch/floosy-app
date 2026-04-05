@@ -278,11 +278,17 @@ def render():
             )
 
         with col2:
-            settings["language"] = st.selectbox(
+            current_language = settings.get("language", "العربية")
+            selected_language = st.selectbox(
                 t("اللغة", "Language"),
                 ["العربية", "English"],
-                index=0 if settings.get("language", "العربية") == "العربية" else 1,
+                index=0 if current_language == "العربية" else 1,
             )
+            if selected_language != current_language:
+                settings["language"] = selected_language
+                st.session_state.settings = settings
+                st.rerun()
+            settings["language"] = selected_language
             uploaded_file = st.file_uploader(
                 t("رفع شعار التطبيق", "Upload App Logo"),
                 type=["png", "jpg", "jpeg"],
