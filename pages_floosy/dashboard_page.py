@@ -1,10 +1,12 @@
 import base64
+from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
-from config_floosy import arabic_months, english_months, get_all_transactions_df, get_logo_bytes, get_saving_totals
+from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_logo_bytes, get_saving_totals
 from repositories.session_repo import SessionStateRepository
+from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
 
 
@@ -18,7 +20,20 @@ def render(month_key: str, month: str, year: int):
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
     currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
     currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
+    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
+    tax_codes = [opt["code"] for opt in tax_options]
+    tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
+    default_expense_tax_code = next((opt["code"] for opt in tax_options if opt.get("deductible")), tax_codes[0] if tax_codes else "")
     month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+
+    def _toast(msg: str, level: str = "success"):
+        if hasattr(st, "toast"):
+            st.toast(msg)
+        else:
+            if level == "warning":
+                st.warning(msg)
+            else:
+                st.success(msg)
 
     # ===== Header (uses CSS from config_floosy.py) =====
     logo_html = ""
@@ -179,3 +194,224 @@ def render(month_key: str, month: str, year: int):
     if st.button(t("فتح المحلل المالي", "Open Financial Analyzer"), key="open_assistant_from_dashboard"):
         st.session_state.current_page = "assistant"
         st.rerun()
+
+    # ===== Floating + button + Modal (session_state only) =====
+    default_quick_form = {"type": "مصروف", "amount": 0.0, "category": "أخرى", "note": "", "tax_tag_code": ""}
+    st.session_state.setdefault("dash_quick_open", False)
+    st.session_state.setdefault("dash_quick_form", default_quick_form.copy())
+
+    st.markdown(
+        """
+        <style>
+        div.st-key-dash_quick_fab {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 999999;
+        }
+
+        div.st-key-dash_quick_fab button {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px !important;
+            background: linear-gradient(135deg, #2c5f87, #3fa37a) !important;
+            border: 0 !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18) !important;
+            position: relative;
+            padding: 0 !important;
+            display: block;
+            color: #ffffff !important;
+        }
+
+        div.st-key-dash_quick_fab button::before {
+            content: "+";
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            line-height: 56px;
+            font-weight: 900;
+            color: #ffffff;
+            pointer-events: none;
+        }
+
+        div.st-key-dash_quick_fab button:hover {
+            filter: brightness(1.05);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("", key="dash_quick_fab", help=t("إضافة", "Add")):
+        st.session_state["dash_quick_open"] = True
+        st.rerun()
+
+    if st.session_state["dash_quick_open"]:
+        categories = [
+            t("راتب", "Salary"),
+            t("دخل إضافي", "Extra Income"),
+            t("إيجار / قسط", "Rent / Installment"),
+            t("فواتير", "Bills"),
+            t("مشتريات", "Shopping"),
+            t("طلعات وكوفي", "Coffee / Outings"),
+            t("أكل أونلاين", "Food Delivery"),
+            t("مواصلات", "Transport"),
+            t("صحة / صالون", "Health / Salon"),
+            t("أخرى", "Other"),
+        ]
+        st.markdown(f"### {t('إضافة معاملة', 'Add Transaction')}")
+
+        form_state = st.session_state["dash_quick_form"]
+        type_map_ar_en = {"مصروف": "Expense", "دخل": "Income"}
+        type_map_en_ar = {"Expense": "مصروف", "Income": "دخل"}
+        type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
+        cat_map_ar_en = {
+            "راتب": "Salary",
+            "دخل إضافي": "Extra Income",
+            "إيجار / قسط": "Rent / Installment",
+            "فواتير": "Bills",
+            "مشتريات": "Shopping",
+            "طلعات وكوفي": "Coffee / Outings",
+            "أكل أونلاين": "Food Delivery",
+            "مواصلات": "Transport",
+            "صحة / صالون": "Health / Salon",
+            "أخرى": "Other",
+        }
+        cat_map_en_ar = {v: k for k, v in cat_map_ar_en.items()}
+
+        default_type = form_state.get("type", "مصروف")
+        if is_en and default_type in type_map_ar_en:
+            default_type = type_map_ar_en[default_type]
+        if (not is_en) and default_type in type_map_en_ar:
+            default_type = type_map_en_ar[default_type]
+
+        default_category = form_state.get("category", "أخرى")
+        if is_en and default_category in cat_map_ar_en:
+            default_category = cat_map_ar_en[default_category]
+        if (not is_en) and default_category in cat_map_en_ar:
+            default_category = cat_map_en_ar[default_category]
+
+        current_type = st.session_state.get("dash_q_type", default_type)
+        if is_en and current_type in type_map_ar_en:
+            current_type = type_map_ar_en[current_type]
+        elif (not is_en) and current_type in type_map_en_ar:
+            current_type = type_map_en_ar[current_type]
+        if current_type not in type_options:
+            current_type = default_type if default_type in type_options else type_options[0]
+        st.session_state["dash_q_type"] = current_type
+
+        current_category = st.session_state.get("dash_q_category", default_category)
+        if is_en and current_category in cat_map_ar_en:
+            current_category = cat_map_ar_en[current_category]
+        elif (not is_en) and current_category in cat_map_en_ar:
+            current_category = cat_map_en_ar[current_category]
+        if current_category not in categories:
+            current_category = default_category if default_category in categories else categories[-1]
+        st.session_state["dash_q_category"] = current_category
+
+        st.session_state.setdefault("dash_q_amount", float(form_state.get("amount", 0.0)))
+        st.session_state.setdefault("dash_q_note", form_state.get("note", ""))
+
+        default_form_tax_code = str(form_state.get("tax_tag_code", "") or "")
+        if default_form_tax_code not in tax_codes:
+            default_form_tax_code = default_expense_tax_code
+        current_tax_code = str(st.session_state.get("dash_q_tax_code", default_form_tax_code) or "")
+        if current_tax_code not in tax_codes:
+            current_tax_code = default_form_tax_code if default_form_tax_code in tax_codes else (tax_codes[0] if tax_codes else "")
+        st.session_state["dash_q_tax_code"] = current_tax_code
+
+        st.markdown(
+            """<style>
+div[data-testid="stForm"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(360px, 92vw) !important;
+  height: auto !important;
+  max-height: 420px !important;
+  overflow: auto !important;
+  padding: 12px 12px 10px 12px !important;
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25) !important;
+  z-index: 999999 !important;
+}
+
+.flossy-quick-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 999998;
+  display: block;
+}
+</style>
+<div class="flossy-quick-overlay"></div>
+""",
+            unsafe_allow_html=True,
+        )
+
+        with st.form("quick_add_form", clear_on_submit=False):
+            r1c1, r1c2 = st.columns(2)
+            with r1c1:
+                q_type_lbl = st.selectbox(t("النوع", "Type"), type_options, key="dash_q_type")
+            with r1c2:
+                q_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, step=1.0, key="dash_q_amount")
+
+            q_category = st.selectbox(t("التصنيف", "Category"), categories, key="dash_q_category")
+            q_selected_type = "مصروف" if q_type_lbl == t("مصروف", "Expense") else "دخل"
+            q_tax_code = ""
+            if q_selected_type == "مصروف" and tax_codes:
+                q_tax_code = st.selectbox(
+                    t("التصنيف الضريبي", "Tax Classification"),
+                    tax_codes,
+                    index=tax_codes.index(st.session_state["dash_q_tax_code"]) if st.session_state["dash_q_tax_code"] in tax_codes else 0,
+                    format_func=lambda code: tax_label_by_code.get(code, code),
+                    key="dash_q_tax_code",
+                )
+            q_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), key="dash_q_note")
+
+            b1, b2 = st.columns(2)
+            with b1:
+                save_btn = st.form_submit_button(t("حفظ", "Save"))
+            with b2:
+                cancel_btn = st.form_submit_button(t("إغلاق", "Close"))
+
+        if cancel_btn:
+            st.session_state["dash_quick_open"] = False
+            st.rerun()
+
+        if save_btn:
+            st.session_state["dash_quick_form"] = {
+                "type": q_selected_type,
+                "amount": float(q_amount),
+                "category": q_category,
+                "note": q_note,
+                "tax_tag_code": q_tax_code if q_selected_type == "مصروف" else "",
+            }
+            if q_amount and q_amount > 0:
+                tx_payload = {
+                    "date": datetime.today().strftime("%Y-%m-%d"),
+                    "type": q_selected_type,
+                    "amount": float(q_amount),
+                    "currency": currency,
+                    "category": q_category,
+                    "note": q_note,
+                }
+                if q_selected_type == "مصروف" and q_tax_code:
+                    tx_payload["tax_tag_code"] = q_tax_code
+                add_transaction(month_key, tx_payload)
+                st.session_state["dash_quick_open"] = False
+                st.session_state["dash_quick_form"] = default_quick_form.copy()
+                st.session_state["dash_q_type"] = default_quick_form["type"]
+                st.session_state["dash_q_amount"] = default_quick_form["amount"]
+                st.session_state["dash_q_category"] = default_quick_form["category"]
+                st.session_state["dash_q_note"] = default_quick_form["note"]
+                st.session_state["dash_q_tax_code"] = default_expense_tax_code if tax_codes else ""
+                _toast(t("تمت إضافة المعاملة.", "Transaction added."))
+                st.rerun()
+            else:
+                _toast(t("أدخل مبلغًا أكبر من 0.", "Enter amount greater than 0."), level="warning")

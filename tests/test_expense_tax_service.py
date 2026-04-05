@@ -15,6 +15,13 @@ class ExpenseTaxServiceTests(unittest.TestCase):
         self.assertIn(ExpenseTaxService.DEDUCTIBLE_CODE, codes)
         self.assertIn(ExpenseTaxService.NON_DEDUCTIBLE_CODE, codes)
 
+    def test_expense_options_translate_default_labels_in_english(self):
+        state = {"tax_tags": []}
+        options = ExpenseTaxService.expense_options(state, is_en=True)
+        labels_by_code = {item["code"]: item["label"] for item in options}
+        self.assertEqual(labels_by_code["expense_rent"], "Rent (Deductible)")
+        self.assertNotIn("إيجار (Deductible)", labels_by_code.values())
+
     def test_normalize_income_transaction_marks_not_applicable(self):
         state = {"tax_tags": []}
         tx = {"type": "دخل", "amount": 100.0}

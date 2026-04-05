@@ -8,6 +8,26 @@ class ExpenseTaxService:
 
     DEDUCTIBLE_CODE = "expense_deductible_generic"
     NON_DEDUCTIBLE_CODE = "expense_non_deductible_generic"
+    _KNOWN_EN_NAMES_BY_CODE = {
+        "income_sales": "Sales",
+        "income_other": "Other Income",
+        "expense_rent": "Rent",
+        "expense_telecom": "Telecom",
+        "expense_salary": "Salaries",
+        "expense_subscription": "Subscriptions",
+        DEDUCTIBLE_CODE: "General Expense",
+        NON_DEDUCTIBLE_CODE: "Personal Expense",
+    }
+    _KNOWN_EN_NAMES_BY_AR = {
+        "مبيعات": "Sales",
+        "دخل آخر": "Other Income",
+        "إيجار": "Rent",
+        "اتصالات": "Telecom",
+        "رواتب": "Salaries",
+        "اشتراكات": "Subscriptions",
+        "مصروف قابل للخصم": "General Expense",
+        "مصروف غير قابل للخصم": "Personal Expense",
+    }
 
     @staticmethod
     def _as_bool(value, fallback: bool = False) -> bool:
@@ -89,6 +109,22 @@ class ExpenseTaxService:
         return tags
 
     @classmethod
+    def _display_name(cls, tag: dict, is_en: bool = False) -> str:
+        raw_name = str(tag.get("name", "") or tag.get("code", "")).strip()
+        if not is_en:
+            return raw_name
+
+        explicit_en_name = str(tag.get("name_en", "") or "").strip()
+        if explicit_en_name:
+            return explicit_en_name
+
+        code = str(tag.get("code", "") or "").strip()
+        if code in cls._KNOWN_EN_NAMES_BY_CODE:
+            return cls._KNOWN_EN_NAMES_BY_CODE[code]
+
+        return cls._KNOWN_EN_NAMES_BY_AR.get(raw_name, raw_name)
+
+    @classmethod
     def expense_options(cls, session_state, is_en: bool = False) -> list[dict]:
         tags = [
             tag
@@ -102,7 +138,8 @@ class ExpenseTaxService:
             deductible = bool(tag.get("deductible", False))
             suffix_ar = "قابل للخصم" if deductible else "غير قابل للخصم"
             suffix_en = "Deductible" if deductible else "Non-deductible"
-            label = f"{tag['name']} ({suffix_en})" if is_en else f"{tag['name']} ({suffix_ar})"
+            display_name = cls._display_name(tag, is_en=is_en)
+            label = f"{display_name} ({suffix_en})" if is_en else f"{display_name} ({suffix_ar})"
             options.append(
                 {
                     "code": str(tag.get("code", "")),
