@@ -118,26 +118,13 @@ def _render_welcome_gate() -> None:
     st.markdown(
         """
         <style>
-        div[data-testid="stForm"][data-stale="false"] {
-            position: fixed !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: min(420px, 92vw) !important;
-            padding: 18px 16px 14px 16px !important;
+        .floosy-welcome-card {
+            margin-top: 8vh;
             background: #ffffff !important;
             border-radius: 18px !important;
             border: 1px solid #dbe3ea !important;
             box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22) !important;
-            z-index: 999999 !important;
-        }
-
-        .floosy-welcome-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.42);
-            backdrop-filter: blur(3px);
-            z-index: 999998;
+            padding: 18px 16px 14px 16px;
         }
 
         .floosy-welcome-title {
@@ -154,27 +141,31 @@ def _render_welcome_gate() -> None:
             font-size: 0.95rem;
         }
         </style>
-        <div class="floosy-welcome-overlay"></div>
         """,
         unsafe_allow_html=True,
     )
 
-    with st.form("welcome_gate_form", clear_on_submit=False):
-        st.markdown('<div class="floosy-welcome-title">أهلًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="floosy-welcome-copy">اختاري لغتك للبدء، والاسم اختياري. تقدرين تغيرينهم لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
-            unsafe_allow_html=True,
-        )
-        welcome_name = st.text_input(
-            "اسمك (اختياري) | Your name (optional)",
-            value=str(settings.get("name", "") or ""),
-        )
-        welcome_language = st.selectbox(
-            "اللغة | Language",
-            ["العربية", "English"],
-            index=0 if current_language == "العربية" else 1,
-        )
-        submitted = st.form_submit_button("ابدأ | Start", use_container_width=True)
+    st.markdown("<div style='height: 4vh;'></div>", unsafe_allow_html=True)
+    _, center_col, _ = st.columns([1, 1.4, 1])
+    with center_col:
+        st.markdown('<div class="floosy-welcome-card">', unsafe_allow_html=True)
+        with st.form("welcome_gate_form", clear_on_submit=False):
+            st.markdown('<div class="floosy-welcome-title">أهلًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="floosy-welcome-copy">اختاري لغتك للبدء، والاسم اختياري. تقدرين تغيرينهم لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
+                unsafe_allow_html=True,
+            )
+            welcome_name = st.text_input(
+                "اسمك (اختياري) | Your name (optional)",
+                value=str(settings.get("name", "") or ""),
+            )
+            welcome_language = st.selectbox(
+                "اللغة | Language",
+                ["العربية", "English"],
+                index=0 if current_language == "العربية" else 1,
+            )
+            submitted = st.form_submit_button("ابدأ | Start", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if submitted:
         settings["language"] = welcome_language
