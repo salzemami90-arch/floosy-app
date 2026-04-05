@@ -76,6 +76,24 @@ class FinancialAnalyzerTests(unittest.TestCase):
         self.assertLess(brief["focus_value"], 0.0)
         self.assertGreaterEqual(brief["support_value"], 0.0)
 
+    def test_dashboard_brief_uses_english_currency_code_in_english_detail(self):
+        analyzer = FinancialAnalyzer(_FakeRepo())
+        session_state = {
+            "transactions": {},
+            "recurring": {"items": []},
+            "documents": [],
+            "project_data": {},
+        }
+
+        brief = analyzer.dashboard_brief(
+            session_state,
+            "2026-مارس",
+            "د.ك - دينار كويتي",
+        )
+
+        self.assertIn("KWD", brief["detail_en"])
+        self.assertNotIn("د.ك", brief["detail_en"])
+
 
 if __name__ == "__main__":
     unittest.main()

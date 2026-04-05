@@ -81,6 +81,19 @@ class FinancialAnalyzer:
         return value
 
     @classmethod
+    def _currency_display(cls, raw_value: str, is_en: bool = False) -> str:
+        symbol = cls._currency_symbol(raw_value)
+        if not is_en:
+            return symbol
+        return {
+            "د.ك": "KWD",
+            "ر.س": "SAR",
+            "د.إ": "AED",
+            "$": "USD",
+            "€": "EUR",
+        }.get(symbol, symbol)
+
+    @classmethod
     def _currency_matches(cls, item_currency: str, target_currency: str) -> bool:
         return cls._currency_symbol(item_currency) == cls._currency_symbol(target_currency)
 
@@ -524,7 +537,8 @@ class FinancialAnalyzer:
         projected_90 = cash_flow["projected_next_90"]
         carry_over = cash_flow["carry_over"]
         comparison_90 = cash_flow["comparison_vs_last_90"]
-        currency_symbol = self._currency_symbol(currency)
+        currency_symbol_ar = self._currency_display(currency, is_en=False)
+        currency_symbol_en = self._currency_display(currency, is_en=True)
         follow_up_total = (
             float(carry_over["overdue_commitments"])
             + float(carry_over["overdue_open_invoice_total"])
@@ -534,8 +548,8 @@ class FinancialAnalyzer:
         status = "stable"
         message_ar = "وضعك تحت السيطرة"
         message_en = "Your finances are under control"
-        detail_ar = f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol}."
-        detail_en = f"Projected 90-day net is {projected_90['net']:,.2f} {currency_symbol}."
+        detail_ar = f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol_ar}."
+        detail_en = f"Projected 90-day net is {projected_90['net']:,.2f} {currency_symbol_en}."
         focus_label_ar = "صافي 90 يوم"
         focus_label_en = "90-Day Net"
         focus_value = float(projected_90["net"])
@@ -548,11 +562,11 @@ class FinancialAnalyzer:
             message_ar = "عندك ضغط نقدي متوقع"
             message_en = "You have expected cash pressure"
             detail_ar = (
-                f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol}، "
+                f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol_ar}، "
                 f"والفرق عن آخر 90 يوم {comparison_90['net_delta']:+,.2f}."
             )
             detail_en = (
-                f"Projected 90-day net is {projected_90['net']:,.2f} {currency_symbol}, "
+                f"Projected 90-day net is {projected_90['net']:,.2f} {currency_symbol_en}, "
                 f"with a {comparison_90['net_delta']:+,.2f} change versus the last 90 days."
             )
             support_label_ar = "متأخر ومفتوح"
@@ -572,8 +586,8 @@ class FinancialAnalyzer:
             status = "needs_follow_up"
             message_ar = "عندك مبالغ تحتاج متابعة"
             message_en = "You have amounts that need follow-up"
-            detail_ar = f"عندك عناصر مفتوحة أو متأخرة بقيمة {follow_up_total:,.2f} {currency_symbol}."
-            detail_en = f"You have open or overdue items worth {follow_up_total:,.2f} {currency_symbol}."
+            detail_ar = f"عندك عناصر مفتوحة أو متأخرة بقيمة {follow_up_total:,.2f} {currency_symbol_ar}."
+            detail_en = f"You have open or overdue items worth {follow_up_total:,.2f} {currency_symbol_en}."
         elif project_impact["personal_net_after_support"] < 0:
             status = "project_pressure"
             message_ar = "المشاريع تضغط على حسابك الشخصي"
