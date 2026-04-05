@@ -96,6 +96,95 @@ def _render_beta_notice() -> None:
     )
 
 
+def _should_show_welcome_gate() -> bool:
+    settings = st.session_state.get("settings", {})
+    if not isinstance(settings, dict):
+        return True
+    if bool(st.session_state.get("_welcome_completed", False)):
+        return False
+    if bool(settings.get("language_user_selected", False)):
+        st.session_state["_welcome_completed"] = True
+        return False
+    return True
+
+
+def _render_welcome_gate() -> None:
+    settings = st.session_state.get("settings", {})
+    if not isinstance(settings, dict):
+        settings = {}
+
+    current_language = settings.get("language", "العربية")
+
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stForm"][data-stale="false"] {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: min(420px, 92vw) !important;
+            padding: 18px 16px 14px 16px !important;
+            background: #ffffff !important;
+            border-radius: 18px !important;
+            border: 1px solid #dbe3ea !important;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22) !important;
+            z-index: 999999 !important;
+        }
+
+        .floosy-welcome-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.42);
+            backdrop-filter: blur(3px);
+            z-index: 999998;
+        }
+
+        .floosy-welcome-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: #0f172a;
+        }
+
+        .floosy-welcome-copy {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        </style>
+        <div class="floosy-welcome-overlay"></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("welcome_gate_form", clear_on_submit=False):
+        st.markdown('<div class="floosy-welcome-title">أهلًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="floosy-welcome-copy">اختاري لغتك للبدء، والاسم اختياري. تقدرين تغيرينهم لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
+            unsafe_allow_html=True,
+        )
+        welcome_name = st.text_input(
+            "اسمك (اختياري) | Your name (optional)",
+            value=str(settings.get("name", "") or ""),
+        )
+        welcome_language = st.selectbox(
+            "اللغة | Language",
+            ["العربية", "English"],
+            index=0 if current_language == "العربية" else 1,
+        )
+        submitted = st.form_submit_button("ابدأ | Start", use_container_width=True)
+
+    if submitted:
+        settings["language"] = welcome_language
+        settings["language_user_selected"] = True
+        settings["name"] = welcome_name.strip()
+        st.session_state["settings"] = settings
+        st.session_state["_welcome_completed"] = True
+        st.rerun()
+
+
 def main():
     st.set_page_config(page_title="فلوسي | Floosy", layout="wide")
 
@@ -115,6 +204,10 @@ def main():
     except Exception:
         st.error("في خطأ يمنع تشغيل التطبيق بسبب ImportError أو مشكلة في أحد الملفات.")
         st.code(traceback.format_exc())
+        st.stop()
+
+    if _should_show_welcome_gate():
+        _render_welcome_gate()
         st.stop()
 
     lang = st.session_state.settings.get("language", "العربية")
