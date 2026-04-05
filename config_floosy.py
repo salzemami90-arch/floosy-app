@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import json
 import base64
+from urllib.parse import urlparse
 from services.local_store import delete_sqlite_payload, load_sqlite_payload, save_sqlite_payload
 from services.expense_tax_service import ExpenseTaxService
 
@@ -205,6 +206,46 @@ def _persist_backend() -> str:
     return "json" if raw_backend == "json" else "sqlite"
 
 
+def _is_shared_hosted_url(url: str) -> bool:
+    clean_url = str(url or "").strip().lower()
+    if not clean_url:
+        return False
+    try:
+        host = (urlparse(clean_url).hostname or "").strip().lower()
+    except Exception:
+        return False
+    return (
+        host.endswith(".streamlit.app")
+        or host == "share.streamlit.io"
+        or host.endswith(".share.streamlit.io")
+    )
+
+
+def _local_persistence_enabled() -> bool:
+    try:
+        context = getattr(st, "context", None)
+    except Exception:
+        context = None
+
+    runtime_url = ""
+    if context is not None:
+        try:
+            runtime_url = str(getattr(context, "url", "") or "")
+        except Exception:
+            runtime_url = ""
+
+        if not runtime_url:
+            try:
+                headers = getattr(context, "headers", {})
+                runtime_host = str(headers.get("host", "") or "")
+                if runtime_host:
+                    runtime_url = f"https://{runtime_host}"
+            except Exception:
+                runtime_url = ""
+
+    return not _is_shared_hosted_url(runtime_url)
+
+
 def _load_json_payload_from_file() -> dict | None:
     if not os.path.exists(PERSIST_FILE):
         return None
@@ -244,6 +285,9 @@ def import_app_state_payload(raw_payload) -> None:
 
 
 def load_persistent_state() -> None:
+    if not _local_persistence_enabled():
+        return
+
     backend = _persist_backend()
 
     raw_payload = None
@@ -262,6 +306,9 @@ def load_persistent_state() -> None:
 
 
 def save_persistent_state() -> None:
+    if not _local_persistence_enabled():
+        return
+
     payload = export_app_state_payload()
     payload["_meta"] = {
         "saved_at": datetime.now().isoformat(timespec="seconds"),
