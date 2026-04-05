@@ -221,7 +221,24 @@ def _is_shared_hosted_url(url: str) -> bool:
     )
 
 
+def _is_local_runtime_url(url: str) -> bool:
+    clean_url = str(url or "").strip().lower()
+    if not clean_url:
+        return False
+    try:
+        host = (urlparse(clean_url).hostname or "").strip().lower()
+    except Exception:
+        return False
+    return host in {"localhost", "127.0.0.1", "0.0.0.0"}
+
+
 def _local_persistence_enabled() -> bool:
+    explicit = str(os.getenv("FLOOSY_ENABLE_LOCAL_PERSISTENCE", "") or "").strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+
     try:
         context = getattr(st, "context", None)
     except Exception:
@@ -243,7 +260,13 @@ def _local_persistence_enabled() -> bool:
             except Exception:
                 runtime_url = ""
 
-    return not _is_shared_hosted_url(runtime_url)
+    if _is_local_runtime_url(runtime_url):
+        return True
+    if _is_shared_hosted_url(runtime_url):
+        return False
+
+    # Safe default for public beta: avoid shared file persistence unless explicitly enabled.
+    return False
 
 
 def _load_json_payload_from_file() -> dict | None:
