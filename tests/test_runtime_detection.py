@@ -7,8 +7,8 @@ from unittest.mock import patch
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from config_floosy import (
-    _apply_browser_cookie_preferences,
     _apply_browser_language_preference,
+    _apply_browser_query_preferences,
     _is_local_runtime_url,
     _is_shared_hosted_url,
     _local_persistence_enabled,
@@ -61,22 +61,18 @@ class RuntimeDetectionTests(unittest.TestCase):
             _apply_browser_language_preference()
         self.assertEqual(fake_st.session_state["settings"]["language"], "العربية")
 
-    def test_cookie_preferences_restore_language_and_mark_welcome_complete(self):
+    def test_query_preferences_restore_language_and_mark_welcome_complete(self):
         fake_st = SimpleNamespace(
-            context=SimpleNamespace(
-                cookies={
-                    "floosy_welcome_done": "1",
-                    "floosy_lang": "English",
-                    "floosy_name": "Sara",
-                }
-            ),
+            query_params={
+                "f_w": "1",
+                "f_lang": "en",
+            },
             session_state={"settings": {"language": "العربية", "language_user_selected": False, "name": ""}},
         )
         with patch("config_floosy.st", fake_st):
-            _apply_browser_cookie_preferences()
+            _apply_browser_query_preferences()
         self.assertEqual(fake_st.session_state["settings"]["language"], "English")
         self.assertTrue(fake_st.session_state["settings"]["language_user_selected"])
-        self.assertEqual(fake_st.session_state["settings"]["name"], "Sara")
         self.assertTrue(fake_st.session_state["_welcome_completed"])
 
 

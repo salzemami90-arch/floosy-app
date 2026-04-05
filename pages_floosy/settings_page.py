@@ -12,7 +12,7 @@ from config_floosy import (
     import_app_state_payload,
     reset_local_app_data,
     save_persistent_state,
-    sync_browser_preferences_cookie,
+    sync_browser_preferences_state,
 )
 from services.supabase_sync import SupabaseSyncClient
 
@@ -289,13 +289,12 @@ def render():
                 settings["language"] = selected_language
                 settings["language_user_selected"] = True
                 st.session_state.settings = settings
-                sync_browser_preferences_cookie(
+                sync_browser_preferences_state(
                     language=selected_language,
                     name=str(settings.get("name", "") or "").strip(),
                     welcome_done=True,
-                    reload=True,
                 )
-                st.stop()
+                st.rerun()
             settings["language"] = selected_language
             uploaded_file = st.file_uploader(
                 t("رفع شعار التطبيق", "Upload App Logo"),

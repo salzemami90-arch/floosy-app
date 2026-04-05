@@ -10,7 +10,7 @@ from config_floosy import (
     get_month_selection,
     init_session_state,
     save_persistent_state,
-    sync_browser_preferences_cookie,
+    sync_browser_preferences_state,
 )
 from services.supabase_sync import SupabaseSyncClient
 
@@ -174,13 +174,12 @@ def _render_welcome_gate() -> None:
         settings["name"] = welcome_name.strip()
         st.session_state["settings"] = settings
         st.session_state["_welcome_completed"] = True
-        sync_browser_preferences_cookie(
+        sync_browser_preferences_state(
             language=welcome_language,
             name=welcome_name.strip(),
             welcome_done=True,
-            reload=True,
         )
-        st.stop()
+        st.rerun()
 
 
 def main():

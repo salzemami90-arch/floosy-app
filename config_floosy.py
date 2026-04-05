@@ -1,11 +1,10 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timedelta
 import os
 import json
 import base64
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
 from services.local_store import delete_sqlite_payload, load_sqlite_payload, save_sqlite_payload
 from services.expense_tax_service import ExpenseTaxService
 
@@ -223,81 +222,65 @@ def _preferred_language_from_accept_language(header_value: str) -> str:
     return "العربية"
 
 
-def _read_browser_preferences_from_cookies() -> dict:
+def _read_browser_preferences_from_query_params() -> dict:
     try:
-        context = getattr(st, "context", None)
+        query_params = st.query_params
     except Exception:
-        context = None
-
-    if context is None:
         return {}
 
-    try:
-        cookies = getattr(context, "cookies", {}) or {}
-    except Exception:
-        cookies = {}
-
-    if not hasattr(cookies, "get"):
-        return {}
-
-    completed = str(cookies.get("floosy_welcome_done", "") or "").strip() == "1"
-    language = unquote(str(cookies.get("floosy_lang", "") or "")).strip()
-    name = unquote(str(cookies.get("floosy_name", "") or "")).strip()
+    welcome_done = str(query_params.get("f_w", "") or "").strip() == "1"
+    lang_code = str(query_params.get("f_lang", "") or "").strip().lower()
+    language = ""
+    if lang_code == "ar":
+        language = "العربية"
+    elif lang_code == "en":
+        language = "English"
 
     return {
-        "completed": completed,
+        "completed": welcome_done,
         "language": language,
-        "name": name,
     }
 
 
-def _apply_browser_cookie_preferences() -> None:
+def _apply_browser_query_preferences() -> None:
     settings = st.session_state.get("settings")
     if not isinstance(settings, dict):
         return
 
-    prefs = _read_browser_preferences_from_cookies()
+    prefs = _read_browser_preferences_from_query_params()
     if not prefs.get("completed"):
         return
 
-    cookie_language = str(prefs.get("language", "") or "").strip()
-    if cookie_language in {"العربية", "English"}:
-        settings["language"] = cookie_language
+    query_language = str(prefs.get("language", "") or "").strip()
+    if query_language in {"العربية", "English"}:
+        settings["language"] = query_language
         settings["language_user_selected"] = True
-
-    cookie_name = str(prefs.get("name", "") or "").strip()
-    if cookie_name:
-        settings["name"] = cookie_name
 
     st.session_state["settings"] = settings
     st.session_state["_welcome_completed"] = True
 
 
-def sync_browser_preferences_cookie(
+def sync_browser_preferences_state(
     *,
     language: str = "",
     name: str = "",
     welcome_done: bool = True,
-    reload: bool = False,
 ) -> None:
-    safe_language = language if language in {"العربية", "English"} else ""
-    safe_name = str(name or "")
-    safe_done = "1" if welcome_done else "0"
-    reload_script = "window.parent.location.reload();" if reload else ""
+    del name
+    lang_code = ""
+    if language == "العربية":
+        lang_code = "ar"
+    elif language == "English":
+        lang_code = "en"
 
-    components.html(
-        f"""
-        <script>
-        const maxAge = 60 * 60 * 24 * 365;
-        document.cookie = "floosy_welcome_done={safe_done}; path=/; max-age=" + maxAge + "; SameSite=Lax";
-        document.cookie = "floosy_lang=" + encodeURIComponent({json.dumps(safe_language)}) + "; path=/; max-age=" + maxAge + "; SameSite=Lax";
-        document.cookie = "floosy_name=" + encodeURIComponent({json.dumps(safe_name)}) + "; path=/; max-age=" + maxAge + "; SameSite=Lax";
-        {reload_script}
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
+    try:
+        st.query_params["f_w"] = "1" if welcome_done else "0"
+        if lang_code:
+            st.query_params["f_lang"] = lang_code
+        elif "f_lang" in st.query_params:
+            del st.query_params["f_lang"]
+    except Exception:
+        return
 
 
 def _detect_browser_language() -> str:
@@ -822,7 +805,7 @@ hr {
         for k, v in default_settings.items():
             st.session_state.settings.setdefault(k, v)
 
-    _apply_browser_cookie_preferences()
+    _apply_browser_query_preferences()
     _apply_browser_language_preference()
 
     if not isinstance(st.session_state.get("transactions"), dict):
