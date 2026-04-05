@@ -35,6 +35,7 @@ default_settings = {
     "name": "",
     "default_currency": CURRENCY_OPTIONS[0],
     "language": "العربية",
+    "language_user_selected": False,
     "profile_image": None,
     "show_status_account": True,
     "show_status_saving": True,
@@ -204,6 +205,64 @@ def _decode_from_json(value):
 def _persist_backend() -> str:
     raw_backend = str(os.getenv("FLOOSY_PERSIST_BACKEND", "sqlite") or "sqlite").strip().lower()
     return "json" if raw_backend == "json" else "sqlite"
+
+
+def _preferred_language_from_accept_language(header_value: str) -> str:
+    raw_value = str(header_value or "").strip().lower()
+    if not raw_value:
+        return "العربية"
+
+    for part in raw_value.split(","):
+        token = part.split(";", 1)[0].strip()
+        if token.startswith("ar"):
+            return "العربية"
+        if token.startswith("en"):
+            return "English"
+
+    return "العربية"
+
+
+def _detect_browser_language() -> str:
+    try:
+        context = getattr(st, "context", None)
+    except Exception:
+        context = None
+
+    if context is None:
+        return "العربية"
+
+    try:
+        headers = getattr(context, "headers", {}) or {}
+    except Exception:
+        headers = {}
+
+    raw_value = ""
+    if hasattr(headers, "get"):
+        raw_value = str(headers.get("accept-language") or headers.get("Accept-Language") or "").strip()
+    if not raw_value and isinstance(headers, dict):
+        normalized_headers = {str(k).lower(): v for k, v in headers.items()}
+        raw_value = str(normalized_headers.get("accept-language") or "").strip()
+
+    return _preferred_language_from_accept_language(raw_value)
+
+
+def _apply_browser_language_preference() -> None:
+    settings = st.session_state.get("settings")
+    if not isinstance(settings, dict):
+        return
+
+    if bool(settings.get("language_user_selected", False)):
+        return
+
+    detected_language = _detect_browser_language()
+    if detected_language not in {"العربية", "English"}:
+        return
+
+    if settings.get("language") == detected_language:
+        return
+
+    settings["language"] = detected_language
+    st.session_state["settings"] = settings
 
 
 def _is_shared_hosted_url(url: str) -> bool:
@@ -671,17 +730,21 @@ hr {
         """,
         unsafe_allow_html=True,
     )
-
-
     if not st.session_state.get("_persist_loaded", False):
         load_persistent_state()
         st.session_state["_persist_loaded"] = True
 
+    settings_loaded_from_persistence = isinstance(st.session_state.get("settings"), dict)
+
     if not isinstance(st.session_state.get("settings"), dict):
         st.session_state.settings = default_settings.copy()
     else:
+        if settings_loaded_from_persistence and "language_user_selected" not in st.session_state.settings:
+            st.session_state.settings["language_user_selected"] = True
         for k, v in default_settings.items():
             st.session_state.settings.setdefault(k, v)
+
+    _apply_browser_language_preference()
 
     if not isinstance(st.session_state.get("transactions"), dict):
         st.session_state.transactions = {}

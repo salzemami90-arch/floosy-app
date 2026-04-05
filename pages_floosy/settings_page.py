@@ -286,6 +286,7 @@ def render():
             )
             if selected_language != current_language:
                 settings["language"] = selected_language
+                settings["language_user_selected"] = True
                 st.session_state.settings = settings
                 st.rerun()
             settings["language"] = selected_language

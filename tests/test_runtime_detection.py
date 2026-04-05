@@ -1,8 +1,18 @@
 import os
+import sys
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from config_floosy import _is_local_runtime_url, _is_shared_hosted_url, _local_persistence_enabled
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from config_floosy import (
+    _apply_browser_language_preference,
+    _is_local_runtime_url,
+    _is_shared_hosted_url,
+    _local_persistence_enabled,
+    _preferred_language_from_accept_language,
+)
 
 
 class RuntimeDetectionTests(unittest.TestCase):
@@ -25,6 +35,30 @@ class RuntimeDetectionTests(unittest.TestCase):
     def test_local_persistence_can_be_enabled_explicitly(self):
         with patch.dict(os.environ, {"FLOOSY_ENABLE_LOCAL_PERSISTENCE": "1"}, clear=False):
             self.assertTrue(_local_persistence_enabled())
+
+    def test_accept_language_prefers_english_when_browser_is_english(self):
+        self.assertEqual(_preferred_language_from_accept_language("en-US,en;q=0.9,ar;q=0.8"), "English")
+
+    def test_accept_language_prefers_arabic_when_browser_is_arabic(self):
+        self.assertEqual(_preferred_language_from_accept_language("ar-KW,ar;q=0.9,en;q=0.8"), "العربية")
+
+    def test_browser_language_applies_when_user_has_not_selected_language(self):
+        fake_st = SimpleNamespace(
+            context=SimpleNamespace(headers={"accept-language": "en-US,en;q=0.9"}),
+            session_state={"settings": {"language": "العربية", "language_user_selected": False}},
+        )
+        with patch("config_floosy.st", fake_st):
+            _apply_browser_language_preference()
+        self.assertEqual(fake_st.session_state["settings"]["language"], "English")
+
+    def test_browser_language_does_not_override_manual_selection(self):
+        fake_st = SimpleNamespace(
+            context=SimpleNamespace(headers={"accept-language": "en-US,en;q=0.9"}),
+            session_state={"settings": {"language": "العربية", "language_user_selected": True}},
+        )
+        with patch("config_floosy.st", fake_st):
+            _apply_browser_language_preference()
+        self.assertEqual(fake_st.session_state["settings"]["language"], "العربية")
 
 
 if __name__ == "__main__":
