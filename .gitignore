@@ -1,0 +1,12 @@
+.DS_Store
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+
+.streamlit/secrets.toml
+
+data/floosy_data.json
+data/floosy_data.sqlite3
+data/*.tmp
+

@@ -1,0 +1,106 @@
+# Floosy Privacy Policy | سياسة الخصوصية لتطبيق فلوسي
+
+**Last updated:** February 19, 2026  
+**آخر تحديث:** 19 فبراير 2026
+
+## 1) Who we are | من نحن
+Floosy is a personal finance app for account tracking, savings, projects, and documents.
+
+فلوسي هو تطبيق إدارة مالية شخصية لمتابعة الحساب، التوفير، المشاريع، والمستندات.
+
+## 2) Data we process | البيانات التي نعالجها
+### You provide | بيانات تدخلها أنت
+- Profile info (name, language, currency, optional logo)
+- Transactions, savings entries, projects, recurring items, and documents
+- Account email/password only when you choose cloud sync (Supabase)
+
+- معلومات الملف الشخصي (الاسم، اللغة، العملة، الشعار الاختياري)
+- المعاملات، حركات التوفير، المشاريع، الالتزامات المتكررة، والمستندات
+- الإيميل/كلمة المرور فقط عند تفعيل المزامنة السحابية (Supabase)
+
+### Not collected by default | غير مجمعة افتراضيًا
+- No background tracking
+- No ads profile tracking
+- No payment card data inside the app at this stage
+
+- لا يوجد تتبع في الخلفية
+- لا يوجد تتبع إعلاني
+- لا يتم جمع بيانات بطاقات الدفع داخل التطبيق حاليًا
+
+## 3) Local-first behavior | آلية العمل المحلية أولًا
+By default, Floosy stores data locally on your device.
+Cloud sync is optional and can be turned off in Settings.
+
+افتراضيًا، فلوسي يحفظ البيانات محليًا على جهازك.
+المزامنة السحابية اختيارية ويمكن إيقافها من الإعدادات.
+
+## 4) Cloud sync (optional) | المزامنة السحابية (اختيارية)
+If you enable cloud sync, your app data is stored in your own cloud record (Supabase) and linked to your account.
+Access control rules are applied so users can access only their own record.
+
+عند تفعيل المزامنة السحابية، يتم حفظ بيانات التطبيق في سجل سحابي خاص بك (Supabase) مرتبط بحسابك.
+يتم تطبيق صلاحيات وصول بحيث كل مستخدم يصل إلى سجله فقط.
+
+## 5) How data is used | كيف نستخدم البيانات
+- Show your balances, summaries, and analytics
+- Sync your data across sessions/devices (if enabled)
+- Improve reliability and app quality
+
+- عرض الأرصدة والملخصات والتحليل المالي
+- مزامنة البيانات بين الجلسات/الأجهزة (إذا كانت مفعلة)
+- تحسين استقرار وجودة التطبيق
+
+## 6) Data sharing | مشاركة البيانات
+We do not sell personal data.
+Data is not shared with third parties for advertising.
+Infrastructure providers may process data only to operate the service.
+
+لا نقوم ببيع البيانات الشخصية.
+لا تتم مشاركة البيانات مع أطراف ثالثة لأغراض إعلانية.
+قد تتم المعالجة عبر مزودي البنية التحتية فقط لتشغيل الخدمة.
+
+## 7) Data retention | مدة الاحتفاظ بالبيانات
+- Local data remains on your device until you delete it.
+- Cloud data remains until you delete it or delete your account.
+
+- البيانات المحلية تبقى على جهازك حتى تقوم بحذفها.
+- البيانات السحابية تبقى حتى تقوم بحذفها أو حذف الحساب.
+
+## 8) Your controls | تحكم المستخدم
+Inside the app, you can:
+- Disable cloud sync
+- Sign out from cloud
+- Delete cloud data
+- Delete your account (cloud)
+- Delete local device data
+
+داخل التطبيق، يمكنك:
+- إيقاف المزامنة السحابية
+- تسجيل خروج من السحابة
+- حذف البيانات السحابية
+- حذف الحساب (السحابة)
+- حذف بيانات الجهاز المحلية
+
+## 9) Security | الحماية
+We use reasonable safeguards to protect data, but no method is 100% secure.
+Please use a strong password and keep your device protected.
+
+نستخدم وسائل حماية مناسبة، لكن لا توجد وسيلة أمان مضمونة 100%.
+يرجى استخدام كلمة مرور قوية وحماية جهازك.
+
+## 10) Children | الأطفال
+This app is not intended for children under 13.
+
+هذا التطبيق غير مخصص للأطفال دون 13 سنة.
+
+## 11) Changes to this policy | تحديثات سياسة الخصوصية
+We may update this policy. The latest version date is shown at the top.
+
+قد نقوم بتحديث هذه السياسة. تاريخ آخر نسخة يظهر أعلى الصفحة.
+
+## 12) Contact | التواصل
+For privacy questions, contact:
+- Email: **[add-your-support-email@example.com]**
+
+للاستفسارات المتعلقة بالخصوصية، تواصلي عبر:
+- البريد: **[add-your-support-email@example.com]**
