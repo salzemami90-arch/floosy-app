@@ -68,6 +68,34 @@ def _sync_cloud_if_logged_in() -> None:
             st.session_state["settings"] = settings
 
 
+def _render_beta_notice() -> None:
+    st.markdown(
+        """
+        <div style="
+            background: linear-gradient(135deg, #fff7ed, #fffbeb);
+            border: 1px solid #f59e0b;
+            border-right: 6px solid #f59e0b;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 8px 0 14px 0;
+            color: #78350f;
+            line-height: 1.75;
+        ">
+            <div style="font-weight: 800; margin-bottom: 6px;">
+                تنبيه تجريبي | Beta Notice
+            </div>
+            <div>
+                هذا التطبيق ما زال في مرحلة تجريبية. رجاءً لا تدخلون بياناتكم الحقيقية أو الحساسة حالياً.
+            </div>
+            <div style="margin-top: 4px;">
+                This app is currently in beta. Please do not enter real or sensitive data at this stage.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def main():
     st.set_page_config(page_title="فلوسي | Floosy", layout="wide")
 
@@ -142,6 +170,7 @@ def main():
 
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
+    _render_beta_notice()
 
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
