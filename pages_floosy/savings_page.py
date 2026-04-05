@@ -84,8 +84,8 @@ def render(month_key: str, month: str, year: int):
     st.markdown(f"### {t('أهداف الشراء', 'Purchase Goals')}")
     st.caption(
         t(
-            "قسّمي هدف الشراء على الشهور وتابعي المبلغ المطلوب شهريًا.",
-            "Split your purchase target across months and track the monthly amount needed.",
+            "يمكن توزيع هدف الشراء على الشهور ومتابعة المبلغ المطلوب شهريًا.",
+            "Purchase goals can be spread across months to track the required monthly amount.",
         )
     )
 
@@ -117,7 +117,7 @@ def render(month_key: str, month: str, year: int):
 
         if pg_submit:
             if not pg_name.strip():
-                st.warning(t("أدخلي اسم الهدف أولاً.", "Please enter a goal name first."))
+                st.warning(t("يرجى إدخال اسم الهدف أولًا.", "Please enter a goal name first."))
             elif pg_target_amount <= 0:
                 st.warning(t("المبلغ المستهدف يجب أن يكون أكبر من صفر.", "Target amount must be greater than zero."))
             else:
@@ -272,7 +272,7 @@ def render(month_key: str, month: str, year: int):
     selected = edited[edited["حذف"]]["رقم"].tolist()
     if st.button(t("حذف المحدد من التوفير", "Delete Selected Savings Transactions"), use_container_width=True):
         if not selected:
-            st.warning(t("اختاري حركة واحدة على الأقل.", "Select at least one transaction."))
+            st.warning(t("يرجى اختيار حركة واحدة على الأقل.", "Select at least one transaction."))
         else:
             for row_num in sorted(selected, reverse=True):
                 tx_index = int(row_num) - 1

@@ -154,7 +154,7 @@ def render():
 
         if save:
             if not name.strip():
-                st.warning(t("أدخل اسم المستند", "Please enter document name"))
+                st.warning(t("يرجى إدخال اسم المستند.", "Please enter document name."))
                 return
 
             attachment_name = None
@@ -191,14 +191,14 @@ def render():
 
             _show_add_doc_dialog()
         else:
-            st.info(t("إصدار Streamlit عندك ما يدعم dialog — هذا نموذج بديل مؤقت.", "Your Streamlit version does not support dialog — showing inline form."))
+            st.info(t("إصدار Streamlit الحالي لا يدعم dialog، لذلك سيظهر نموذج بديل داخل الصفحة.", "This Streamlit version does not support dialog, so an inline form is shown instead."))
             _add_doc_form()
 
     st.markdown("---")
     st.subheader(t("المستندات", "Documents"))
 
     if not docs:
-        st.info(t("لا توجد مستندات للحين", "No documents yet"))
+        st.info(t("لا توجد مستندات حاليًا.", "No documents yet."))
         return
 
     df = pd.DataFrame(docs)

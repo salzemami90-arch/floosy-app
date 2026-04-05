@@ -546,8 +546,8 @@ class FinancialAnalyzer:
         )
 
         status = "stable"
-        message_ar = "وضعك تحت السيطرة"
-        message_en = "Your finances are under control"
+        message_ar = "الوضع المالي تحت السيطرة"
+        message_en = "Financial position is under control"
         detail_ar = f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol_ar}."
         detail_en = f"Projected 90-day net is {projected_90['net']:,.2f} {currency_symbol_en}."
         focus_label_ar = "صافي 90 يوم"
@@ -559,8 +559,8 @@ class FinancialAnalyzer:
 
         if projected_90["net"] < 0:
             status = "cash_pressure_90"
-            message_ar = "عندك ضغط نقدي متوقع"
-            message_en = "You have expected cash pressure"
+            message_ar = "يوجد ضغط نقدي متوقع"
+            message_en = "Expected cash pressure"
             detail_ar = (
                 f"صافي 90 يوم المتوقعة {projected_90['net']:,.2f} {currency_symbol_ar}، "
                 f"والفرق عن آخر 90 يوم {comparison_90['net_delta']:+,.2f}."
@@ -573,8 +573,8 @@ class FinancialAnalyzer:
             support_label_en = "Open + Overdue"
         elif coverage["net_coverage"] < 0 and coverage["overdue_commitments"] > 0:
             status = "coverage_gap"
-            message_ar = "عندك فجوة تغطية حالياً"
-            message_en = "You currently have a coverage gap"
+            message_ar = "توجد فجوة تغطية حاليًا"
+            message_en = "Coverage gap detected"
             detail_ar = "الالتزامات المتأخرة أعلى من المدخول المتوقع."
             detail_en = "Overdue commitments are higher than expected income."
             focus_label_ar = "صافي 90 يوم"
@@ -584,16 +584,16 @@ class FinancialAnalyzer:
             support_value = float(abs(coverage["net_coverage"]))
         elif follow_up_total > 0:
             status = "needs_follow_up"
-            message_ar = "عندك مبالغ تحتاج متابعة"
-            message_en = "You have amounts that need follow-up"
-            detail_ar = f"عندك عناصر مفتوحة أو متأخرة بقيمة {follow_up_total:,.2f} {currency_symbol_ar}."
-            detail_en = f"You have open or overdue items worth {follow_up_total:,.2f} {currency_symbol_en}."
+            message_ar = "توجد مبالغ تحتاج متابعة"
+            message_en = "Amounts need follow-up"
+            detail_ar = f"توجد عناصر مفتوحة أو متأخرة بقيمة {follow_up_total:,.2f} {currency_symbol_ar}."
+            detail_en = f"Open or overdue items total {follow_up_total:,.2f} {currency_symbol_en}."
         elif project_impact["personal_net_after_support"] < 0:
             status = "project_pressure"
-            message_ar = "المشاريع تضغط على حسابك الشخصي"
-            message_en = "Projects are pressuring your personal account"
-            detail_ar = "عجز المشروع الحالي يأثر على صافي حسابك."
-            detail_en = "Current project deficit is impacting your net balance."
+            message_ar = "المشاريع تضغط على الحساب الشخصي"
+            message_en = "Projects are pressuring the personal account"
+            detail_ar = "يؤثر عجز المشروع الحالي على صافي الحساب."
+            detail_en = "Current project deficit is impacting the net balance."
         elif seasonal["status"] == "high":
             status = "spending_high"
             message_ar = "مصاريفك أعلى من المعتاد"
@@ -602,8 +602,8 @@ class FinancialAnalyzer:
             detail_en = "This month expenses are above the 6-month average."
         elif docs["expired_count"] > 0 or docs["upcoming_30_count"] > 0:
             status = "docs_due"
-            message_ar = "عندك مستندات تحتاج متابعة"
-            message_en = "You have documents that need follow-up"
+            message_ar = "توجد مستندات تحتاج متابعة"
+            message_en = "Documents need follow-up"
             detail_ar = "في مستندات منتهية أو قرب موعد تجديدها."
             detail_en = "Some documents are expired or close to renewal."
 

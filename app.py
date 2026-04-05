@@ -86,7 +86,7 @@ def _render_beta_notice() -> None:
                 تنبيه تجريبي | Beta Notice
             </div>
             <div>
-                هذا التطبيق ما زال في مرحلة تجريبية. رجاءً لا تدخلون بياناتكم الحقيقية أو الحساسة حالياً.
+                هذا التطبيق ما زال في مرحلة تجريبية. يرجى عدم إدخال بيانات حقيقية أو حساسة في الوقت الحالي.
             </div>
             <div style="margin-top: 4px;">
                 This app is currently in beta. Please do not enter real or sensitive data at this stage.
@@ -151,7 +151,7 @@ def _render_welcome_gate() -> None:
     with center_col:
         st.markdown('<div class="floosy-welcome-card">', unsafe_allow_html=True)
         with st.form("welcome_gate_form", clear_on_submit=False):
-            st.markdown('<div class="floosy-welcome-title">أهلًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
+            st.markdown('<div class="floosy-welcome-title">مرحبًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
             st.markdown(
                 '<div class="floosy-welcome-copy">يرجى اختيار اللغة للبدء. الاسم اختياري، ويمكن تعديلهما لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
                 unsafe_allow_html=True,

@@ -209,8 +209,8 @@ def _render_tax_settings_panel(t, repo: SessionStateRepository, settings: dict, 
         st.markdown(f"#### {t('منطق الضريبة', 'Tax Logic')}")
         st.caption(
             t(
-                "اختاري الاسم والنسبة وطريقة الحساب.",
-                "Choose the name, rate, and calculation method.",
+                "يرجى تحديد الاسم والنسبة وطريقة الحساب.",
+                "Set the name, rate, and calculation method.",
             )
         )
         logic_left, logic_right = st.columns(2)
@@ -296,7 +296,7 @@ def _render_tax_settings_panel(t, repo: SessionStateRepository, settings: dict, 
             freq_labels = [item[1] for item in frequency_options]
             freq_index = freq_keys.index(current_freq) if current_freq in freq_keys else 0
             selected_freq_label = st.selectbox(
-                t("كل متى تراجعين التقرير", "Review Frequency"),
+                t("وتيرة مراجعة التقرير", "Review Frequency"),
                 freq_labels,
                 index=freq_index,
                 key="tax_filing_frequency_page",
@@ -377,8 +377,8 @@ def _render_tax_settings_panel(t, repo: SessionStateRepository, settings: dict, 
             font-size:0.92rem;
         ">
             {t(
-                "الإعداد العام يستخدم كافتراضي. الفاتورة تقدر تورث من المشروع أو الإعداد العام. أي تغيير هنا ما يعدّل الفواتير القديمة.",
-                "Global settings are defaults. Invoices can inherit from project or global settings. Changes here do not edit old invoices.",
+                "يُستخدم الإعداد العام كافتراضي. ويمكن أن ترث الفاتورة إعداد المشروع أو الإعداد العام. أي تغيير هنا لا يحدّث الفواتير السابقة.",
+                "Global settings are defaults. Invoices can inherit from project or global settings. Changes here do not update previous invoices.",
             )}
         </div>
         """,
@@ -438,7 +438,7 @@ def render(month_key: str, month: str, year: int) -> None:
         st.title(t("الفواتير والضرائب", "Invoices and Tax"))
         st.caption(
             t(
-                f"أضيفي الفواتير وراجعي الضريبة لشهر {month_display} {year}",
+                f"إضافة الفواتير ومراجعة الضريبة لشهر {month_display} {year}",
                 f"Add invoices and review tax for {month_display} {year}",
             )
         )
@@ -463,8 +463,8 @@ def render(month_key: str, month: str, year: int) -> None:
     if not bool(profile.tax_mode_enabled):
         st.warning(
             t(
-                "الوضع الضريبي غير مفعل. الفواتير تمشي على الإعداد العام/المشروع، والتعديل اليدوي مقفل.",
-                "Tax mode is off. Invoices use global/project defaults, and manual per-invoice edit is locked.",
+                "الوضع الضريبي غير مفعّل. تعتمد الفواتير على الإعداد العام أو المشروع، والتعديل اليدوي غير متاح.",
+                "Tax mode is off. Invoices use global or project defaults, and manual per-invoice editing is unavailable.",
             )
         )
 
@@ -559,16 +559,16 @@ def render(month_key: str, month: str, year: int) -> None:
         if report["counts"].get("overdue_open", 0) > 0:
             st.warning(
                 t(
-                    f"عندك {report['counts']['overdue_open']} فاتورة مفتوحة متأخرة الاستحقاق.",
-                    f"You have {report['counts']['overdue_open']} open overdue invoice(s).",
+                    f"يوجد {report['counts']['overdue_open']} فاتورة مفتوحة متأخرة الاستحقاق.",
+                    f"There are {report['counts']['overdue_open']} open overdue invoice(s).",
                 )
             )
 
         with st.expander(t("تفاصيل طريقة الحساب", "Calculation Details"), expanded=False):
             st.write(
                 t(
-                    "الإعداد العام هو الأساس. وإذا كان المشروع مرتبط بإعداد ضريبي خاص فالفاتورة ترثه. التعديل اليدوي يشتغل فقط إذا الوضع الضريبي مفعل.",
-                    "Global settings are the default. If a project has its own tax setup, the invoice inherits it. Manual override only works when tax mode is enabled.",
+                    "الإعداد العام هو الأساس. وإذا ارتبط المشروع بإعداد ضريبي خاص، ترث الفاتورة هذا الإعداد. لا يتاح التعديل اليدوي إلا عند تفعيل الوضع الضريبي.",
+                    "Global settings are the default. If a project has its own tax setup, the invoice inherits it. Manual override is available only when tax mode is enabled.",
                 )
             )
             st.write(
@@ -677,8 +677,8 @@ def render(month_key: str, month: str, year: int) -> None:
         if not invoices:
             st.info(
                 t(
-                    "ما عندك فواتير حالياً. أضيفي أول فاتورة من تبويب إضافة فاتورة.",
-                    "No invoices yet. Add your first invoice from the Add Invoice tab.",
+                    "لا توجد فواتير حاليًا. يمكن إضافة أول فاتورة من تبويب إضافة فاتورة.",
+                    "No invoices yet. Add the first invoice from the Add Invoice tab.",
                 )
             )
         else:

@@ -132,7 +132,7 @@ def _render_add_project_form(month_obj: dict, t, is_en: bool):
     if save:
         clean_name = name.strip()
         if not clean_name:
-            st.warning(t("أدخل اسم المشروع أولاً.", "Please enter the project name first."))
+            st.warning(t("يرجى إدخال اسم المشروع أولًا.", "Please enter the project name first."))
             return
         if clean_name in month_obj["projects"]:
             st.warning(t("اسم المشروع موجود مسبقاً.", "Project name already exists."))
@@ -244,7 +244,7 @@ def render(month_key: str, month: str, year: int):
     st.markdown(f"### {t('قائمة المشاريع', 'Projects List')}")
     names = list(month_obj["projects"].keys())
     if not names:
-        st.info(t("لا توجد مشاريع حالياً. اضغط زر إضافة مشروع.", "No projects yet. Click Add Project."))
+        st.info(t("لا توجد مشاريع حاليًا. يمكن إضافة مشروع جديد من زر إضافة مشروع.", "No projects yet. Use Add Project to create one."))
         return
 
     cols = st.columns(3)
@@ -297,7 +297,7 @@ def render(month_key: str, month: str, year: int):
             confirm_delete = st.checkbox(t("تأكيد حذف المشروع", "Confirm project deletion"), key=f"confirm_del_{selected_name}")
             if st.button(t("حذف المشروع", "Delete Project"), key=f"delete_proj_{selected_name}", use_container_width=True):
                 if not confirm_delete:
-                    st.warning(t("فعّل تأكيد الحذف أولاً.", "Enable delete confirmation first."))
+                    st.warning(t("يرجى تفعيل تأكيد الحذف أولًا.", "Enable delete confirmation first."))
                 else:
                     _delete_project(month_obj, selected_name)
                     st.success(t("تم حذف المشروع.", "Project deleted."))
@@ -489,7 +489,7 @@ def render(month_key: str, month: str, year: int):
         selected_rows = edited[edited["حذف"]]["رقم"].tolist()
         if st.button(t("حذف المحدد", "Delete Selected"), use_container_width=True):
             if not selected_rows:
-                st.warning(t("اختر معاملة واحدة على الأقل.", "Select at least one transaction."))
+                st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
             else:
                 for row_num in sorted(selected_rows, reverse=True):
                     tx_index = int(row_num) - 1

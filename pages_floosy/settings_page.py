@@ -677,7 +677,7 @@ def render():
             if submit:
                 clean_email = email.strip().lower()
                 if not clean_email or not password:
-                    st.warning(t("أدخل الإيميل وكلمة المرور.", "Please enter email and password."))
+                    st.warning(t("يرجى إدخال البريد الإلكتروني وكلمة المرور.", "Please enter email and password."))
                 else:
                     if mode == t("إنشاء حساب", "Sign Up"):
                         auth_res = client.sign_up(clean_email, password)

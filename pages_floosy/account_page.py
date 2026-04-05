@@ -210,7 +210,7 @@ def render(month_key: str, month: str, year: int):
 
             if add_btn:
                 if not name.strip() or amount <= 0:
-                        st.warning(t("أدخل الاسم والمبلغ بشكل صحيح.", "Please enter a valid name and amount."))
+                        st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
                 else:
                     recurring_items.append(
                         {
@@ -307,8 +307,8 @@ def render(month_key: str, month: str, year: int):
     if not active_items:
         st.info(
             t(
-                "لا توجد عناصر نشطة حالياً. تقدرين تضيفينها من زر إدارة العناصر الشهرية بالأعلى.",
-                "No active items right now. You can add them from the Manage Monthly Items button above.",
+                "لا توجد عناصر نشطة حاليًا. يمكن إضافة العناصر من زر إدارة العناصر الشهرية بالأعلى.",
+                "No active items right now. Items can be added from the Manage Monthly Items button above.",
             )
         )
     else:
@@ -480,15 +480,15 @@ def render(month_key: str, month: str, year: int):
                 else:
                     target_label = _month_label_from_key(target_month_key, is_en)
                     st.session_state["account_save_notice"] = t(
-                        f"تم حفظ المعاملة في شهر {target_label} حسب التاريخ. غيّري الشهر لمشاهدتها.",
-                        f"Transaction was saved in {target_label} based on date. Switch month to view it.",
+                        f"تم حفظ المعاملة في شهر {target_label} حسب التاريخ. يمكن تغيير الشهر لعرضها.",
+                        f"Transaction was saved in {target_label} based on date. Change the month to view it.",
                     )
                 st.rerun()
 
     st.markdown(f"### {t('سجل المعاملات', 'Transactions')}")
     f1, f2, f3 = st.columns([2, 1, 1])
     with f1:
-        query = st.text_input(t("بحث", "Search"), placeholder=t("ابحثي بالتاريخ أو التصنيف أو الملاحظة", "Search by date, category, or note"))
+        query = st.text_input(t("بحث", "Search"), placeholder=t("البحث بالتاريخ أو التصنيف أو الملاحظة", "Search by date, category, or note"))
     with f2:
         type_filter_lbl = st.selectbox(t("النوع", "Type"), [t("الكل", "All"), t("مصروف", "Expense"), t("دخل", "Income")])
         type_filter = "الكل" if type_filter_lbl == t("الكل", "All") else ("مصروف" if type_filter_lbl == t("مصروف", "Expense") else "دخل")
@@ -527,7 +527,7 @@ def render(month_key: str, month: str, year: int):
         hide_index=True,
         disabled=["معرّف", "التاريخ", "النوع", "التصنيف", "المبلغ", "العملة", "ملاحظة"],
         column_config={
-            "حذف": st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("اختر المعاملات المراد حذفها", "Select transactions to delete")),
+            "حذف": st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
             "معرّف": st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
         },
         key="account_tx_editor",
@@ -536,7 +536,7 @@ def render(month_key: str, month: str, year: int):
     to_delete = edited[edited["حذف"]]["معرّف"].tolist()
     if st.button(t("حذف المحدد", "Delete Selected"), type="secondary", use_container_width=True):
         if not to_delete:
-            st.warning(t("اختر معاملة واحدة على الأقل.", "Select at least one transaction."))
+            st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
         else:
             for idx in sorted(to_delete, reverse=True):
                 if 0 <= int(idx) < len(tx_list):
