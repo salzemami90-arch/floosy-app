@@ -153,7 +153,7 @@ def _render_welcome_gate() -> None:
         with st.form("welcome_gate_form", clear_on_submit=False):
             st.markdown('<div class="floosy-welcome-title">أهلًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
             st.markdown(
-                '<div class="floosy-welcome-copy">اختاري لغتك للبدء، والاسم اختياري. تقدرين تغيرينهم لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
+                '<div class="floosy-welcome-copy">يرجى اختيار اللغة للبدء. الاسم اختياري، ويمكن تعديلهما لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
                 unsafe_allow_html=True,
             )
             welcome_name = st.text_input(

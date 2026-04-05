@@ -184,7 +184,7 @@ def render():
         status_bg = "#fffbeb"
         status_border = "#f59e0b"
         status_text = "#92400e"
-        status_hint = t("السحابة متوقفة حالياً، يفضل تفعيلها أو تصدير بياناتك.", "Cloud is currently off. Enable it or export your data.")
+        status_hint = t("السحابة متوقفة حاليًا. يمكنك تفعيلها أو تصدير بياناتك.", "Cloud is currently off. You can enable it or export your data.")
 
     st.markdown(
         f"""
@@ -216,7 +216,7 @@ def render():
     if not cloud_sync_enabled:
         st.warning(
             t(
-                "السحابة غير مفعلة حالياً. تقدرين تفعّلينها أو تصدرين بياناتك الآن.",
+                "السحابة غير مفعلة حاليًا. يمكنك تفعيلها أو تصدير بياناتك الآن.",
                 "Cloud is currently disabled. You can enable it or export your data now.",
             )
         )
@@ -425,8 +425,8 @@ def render():
             st.success(t("تم حذف بيانات هذا الجهاز.", "This device data was deleted."))
             st.info(
                 t(
-                    "إذا تبين تسترجعين من السحابة، فعّلي المزامنة ثم سجلي دخول واضغطي تحميل بياناتي.",
-                    "To restore from cloud, enable sync, sign in, then click Load My Data.",
+                    "لاستعادة البيانات من السحابة، يرجى تفعيل المزامنة ثم تسجيل الدخول واختيار تحميل بياناتي.",
+                    "To restore data from the cloud, enable sync, sign in, then select Load My Data.",
                 )
             )
             st.rerun()
@@ -435,8 +435,8 @@ def render():
         st.subheader(t("تصدير واسترجاع البيانات", "Export and Restore Data"))
         st.caption(
             t(
-                "تقدرين تصدرين ملف JSON من بياناتك واسترجاعه لاحقاً على نفس الجهاز أو جهاز ثاني.",
-                "You can export a JSON data file and restore it later on this or another device.",
+                "يمكنك تصدير ملف JSON من بياناتك واستعادته لاحقًا على هذا الجهاز أو جهاز آخر.",
+                "You can export a JSON data file and restore it later on this device or another one.",
             )
         )
         backup_name, backup_bytes = _build_backup_file()
@@ -501,8 +501,8 @@ def render():
         if not cloud_sync_enabled:
             st.info(
                 t(
-                    "المزامنة السحابية غير مفعلة. فعّليها أولاً من تبويب الخصوصية.",
-                    "Cloud sync is disabled. Enable it first from the Privacy tab.",
+                    "المزامنة السحابية غير مفعلة. يرجى تفعيلها أولًا من تبويب الخصوصية.",
+                    "Cloud sync is disabled. Please enable it first from the Privacy tab.",
                 )
             )
             if bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token")):
@@ -518,8 +518,8 @@ def render():
         if not client.is_configured:
             st.info(
                 t(
-                    "للتفعيل: أضيفي SUPABASE_URL و SUPABASE_ANON_KEY في secrets أو متغيرات البيئة.",
-                    "To enable cloud sync, set SUPABASE_URL and SUPABASE_ANON_KEY in secrets or environment variables.",
+                    "للتفعيل، يرجى إضافة SUPABASE_URL و SUPABASE_ANON_KEY في secrets أو متغيرات البيئة.",
+                    "To enable cloud sync, add SUPABASE_URL and SUPABASE_ANON_KEY in secrets or environment variables.",
                 )
             )
             _render_cloud_sql_setup(t)
@@ -544,7 +544,7 @@ def render():
                     elif pull.get("data") is None:
                         _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
                         _mark_cloud_sync_now()
-                        st.info(t("ما في بيانات محفوظة في السحابة بعد.", "No cloud data found yet."))
+                        st.info(t("لا توجد بيانات محفوظة في السحابة حتى الآن.", "No cloud data found yet."))
                     else:
                         import_app_state_payload(pull.get("data"))
                         _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
@@ -594,8 +594,8 @@ def render():
                         st.success(t("تم حذف بياناتك السحابية بالكامل.", "Your cloud data was deleted."))
                         st.info(
                             t(
-                                "لن يتم رفع البيانات تلقائياً بعد الحذف. إذا تبين ترجعين نسخة سحابية استخدمي زر حفظ بياناتي.",
-                                "Auto upload is paused after deletion. Use Save My Data if you want to create a new cloud copy.",
+                                "لن يتم رفع البيانات تلقائيًا بعد الحذف. إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر حفظ بياناتي.",
+                                "Auto upload is paused after deletion. If you want to create a new cloud copy, use Save My Data.",
                             )
                         )
                         st.rerun()
@@ -694,8 +694,8 @@ def render():
                         if not access_token:
                             st.info(
                                 t(
-                                    "تم إنشاء الحساب. إذا كان التحقق بالإيميل مفعل، افحصي البريد ثم سجلي دخول.",
-                                    "Account created. If email confirmation is enabled, check your inbox then sign in.",
+                                    "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، يرجى مراجعة بريدك الإلكتروني ثم تسجيل الدخول.",
+                                    "Account created. If email confirmation is enabled, please check your inbox and then sign in.",
                                 )
                             )
                         else:
@@ -743,8 +743,8 @@ def render():
                                     _mark_cloud_sync_now()
                                     _sync_snapshot_from_state()
                                     save_persistent_state()
-                                    st.info(t("تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حالياً.", "Signed in. No cloud data exists yet."))
-                                    st.caption(t("إذا تبين إنشاء نسخة سحابية جديدة اضغطي: حفظ بياناتي.", "Use Save My Data to create a new cloud copy."))
+                                    st.info(t("تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حاليًا.", "Signed in. No cloud data exists yet."))
+                                    st.caption(t("إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر حفظ بياناتي.", "If you want to create a new cloud copy, use Save My Data."))
                                 else:
                                     st.warning(t("تم تسجيل الدخول، لكن تعذر تحميل البيانات السحابية الآن.", "Signed in, but failed to load cloud data now."))
 
