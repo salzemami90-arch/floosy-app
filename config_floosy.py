@@ -335,6 +335,24 @@ def _apply_language_direction_theme() -> None:
     direction = "ltr" if is_en else "rtl"
     align = "left" if is_en else "right"
     header_direction = "row" if is_en else "row-reverse"
+    sidebar_side_css = ""
+    if not is_en:
+        sidebar_side_css = """
+        [data-testid="stSidebar"] {
+            left: auto !important;
+            right: 0 !important;
+            border-right: none !important;
+            border-left: 1px solid rgba(255,255,255,0.14) !important;
+        }
+
+        [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapsedControl"],
+        button[title="Open sidebar"],
+        button[aria-label="Open sidebar"] {
+            left: auto !important;
+            right: 0.75rem !important;
+        }
+        """
 
     st.markdown(
         f"""
@@ -390,6 +408,8 @@ def _apply_language_direction_theme() -> None:
         div[data-testid="stMetricValue"] > div {{
             text-align: {align};
         }}
+
+        {sidebar_side_css}
         </style>
         """,
         unsafe_allow_html=True,
