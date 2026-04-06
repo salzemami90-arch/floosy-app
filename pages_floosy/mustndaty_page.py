@@ -59,7 +59,7 @@ def render():
         div.st-key-mustndaty_add_btn button {
             width: 56px;
             height: 56px;
-            border-radius: 18px !important;
+            border-radius: 16px !important;
             background: linear-gradient(135deg, #2c5f87, #3fa37a) !important;
             border: 0 !important;
             box-shadow: 0 10px 30px rgba(0,0,0,0.18) !important;
@@ -195,7 +195,6 @@ def render():
             _add_doc_form()
 
     st.markdown("---")
-    st.subheader(t("المستندات", "Documents"))
 
     if not docs:
         st.info(t("لا توجد مستندات حاليًا.", "No documents yet."))

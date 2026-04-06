@@ -192,7 +192,8 @@ def render(month_key: str, month: str, year: int):
     t = (lambda ar, en: en if is_en else ar)
     month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
 
-    st.title(f"{t('المشاريع', 'Projects')} - {month_display} {year}")
+    st.title(t("المشاريع", "Projects"))
+    st.caption(f"{month_display} {year}")
 
     month_obj = st.session_state.project_data[month_key]
     _ensure_multi_project_model(month_obj)
