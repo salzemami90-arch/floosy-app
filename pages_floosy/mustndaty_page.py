@@ -250,17 +250,49 @@ def render():
 
     st.dataframe(view, use_container_width=True, hide_index=True)
 
-    # Optional: download attachment for a selected document
-    st.markdown(f"#### {t('تنزيل المرفق', 'Download Attachment')}")
-    names = [d.get("name") for d in docs]
-    sel = st.selectbox(t("اختر مستند", "Select Document"), options=["-"] + names, index=0)
-    if sel != "-":
-        doc = next((d for d in docs if d.get("name") == sel), None)
-        if doc and doc.get("attachment_bytes"):
+    st.markdown(f"#### {t('إجراءات المستند', 'Document Actions')}")
+    selectable_indices = df.index.tolist()
+
+    def _document_option_label(idx: int) -> str:
+        row = df.loc[idx]
+        doc_name = str(row.get("name") or t("مستند بدون اسم", "Untitled Document"))
+        end_value = row.get("end_date")
+        end_label = end_value.strftime("%Y-%m-%d") if not pd.isna(end_value) else "-"
+        status_value = str(row.get(status_col) or "-")
+        return f"{doc_name} | {end_label} | {status_value}"
+
+    selected_doc_idx = st.selectbox(
+        t("اختيار مستند", "Select Document"),
+        options=selectable_indices,
+        format_func=_document_option_label,
+        index=0,
+    )
+    selected_doc = docs[int(selected_doc_idx)]
+
+    action_col1, action_col2 = st.columns(2)
+    with action_col1:
+        if selected_doc.get("attachment_bytes"):
             st.download_button(
                 t("تنزيل المرفق", "Download Attachment"),
-                data=doc["attachment_bytes"],
-                file_name=doc.get("attachment_name") or "attachment",
+                data=selected_doc["attachment_bytes"],
+                file_name=selected_doc.get("attachment_name") or "attachment",
+                use_container_width=True,
             )
         else:
-            st.caption(t("لا توجد مرفق لهالمستند", "No attachment for this document"))
+            st.caption(t("لا يوجد مرفق لهذا المستند.", "No attachment is available for this document."))
+
+    with action_col2:
+        delete_confirm = st.checkbox(
+            t("تأكيد حذف المستند", "Confirm Document Deletion"),
+            key=f"doc_delete_confirm_{int(selected_doc_idx)}",
+        )
+        if st.button(
+            t("حذف المستند", "Delete Document"),
+            key=f"doc_delete_btn_{int(selected_doc_idx)}",
+            use_container_width=True,
+            disabled=not delete_confirm,
+        ):
+            docs.pop(int(selected_doc_idx))
+            st.session_state["mustndaty_documents"] = docs
+            st.toast(t("تم حذف المستند.", "Document deleted."))
+            st.rerun()
