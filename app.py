@@ -260,7 +260,9 @@ def main():
 
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
-    _render_beta_notice()
+    if not st.session_state.get("_beta_notice_shown"):
+        _render_beta_notice()
+        st.session_state["_beta_notice_shown"] = True
 
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
