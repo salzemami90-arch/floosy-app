@@ -40,6 +40,17 @@ def _normalize_project_type_value(value: str) -> str:
     return clean_value
 
 
+def _project_tx_type_label(value: str, is_en: bool) -> str:
+    clean_value = str(value or "").strip()
+    if not is_en:
+        return clean_value
+    if clean_value == "دخل":
+        return "Income"
+    if clean_value == "مصروف":
+        return "Expense"
+    return clean_value
+
+
 def _ensure_project_defaults(project_obj: dict) -> None:
     project_obj["project_type"] = _normalize_project_type_value(project_obj.get("project_type", "أخرى"))
     project_obj.setdefault("expected_income", 0.0)
@@ -452,6 +463,8 @@ def render(month_key: str, month: str, year: int):
         st.info(t("لا توجد حركات لهذا المشروع في هذا الشهر.", "No transactions for this project this month."))
     else:
         df_p = pd.DataFrame(selected_txs).copy()
+        if is_en and "type" in df_p.columns:
+            df_p["type"] = df_p["type"].apply(lambda x: _project_tx_type_label(x, True))
         if is_en and "project_type" in df_p.columns:
             df_p["project_type"] = df_p["project_type"].apply(lambda x: _project_type_label(x, True))
         df_p.insert(0, "رقم", range(1, len(df_p) + 1))
