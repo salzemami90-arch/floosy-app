@@ -202,12 +202,11 @@ def render(month_key: str, month: str, year: int):
 
     fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
 
-    st.markdown(
-        f"""
+    fab_css = """
         <style>
         div.st-key-dash_quick_fab {
             position: fixed;
-            {fab_side_css}
+            __FAB_SIDE__
             bottom: 22px;
             z-index: 999999;
         }
@@ -243,9 +242,8 @@ def render(month_key: str, month: str, year: int):
             filter: brightness(1.05);
         }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """.replace("__FAB_SIDE__", fab_side_css)
+    st.markdown(fab_css, unsafe_allow_html=True)
 
     if st.button("", key="dash_quick_fab", help=t("إضافة", "Add")):
         st.session_state["dash_quick_open"] = True

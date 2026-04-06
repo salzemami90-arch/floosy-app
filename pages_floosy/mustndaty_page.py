@@ -48,12 +48,11 @@ def render():
     # =============================
     fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
 
-    st.markdown(
-        f"""
+    fab_css = """
         <style>
         div.st-key-mustndaty_add_btn {
             position: fixed;
-            {fab_side_css}
+            __FAB_SIDE__
             bottom: 22px;
             z-index: 999999;
         }
@@ -89,9 +88,8 @@ def render():
             filter: brightness(1.05);
         }
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """.replace("__FAB_SIDE__", fab_side_css)
+    st.markdown(fab_css, unsafe_allow_html=True)
 
     add_clicked = st.button("", key="mustndaty_add_btn", help=t("إضافة مستند", "Add document"))
     if add_clicked:
