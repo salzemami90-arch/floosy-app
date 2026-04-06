@@ -30,16 +30,18 @@ Floosy is a personal finance app for account tracking, savings, projects, and do
 ## 3) Local-first behavior | آلية العمل المحلية أولًا
 By default, Floosy stores data locally on your device.
 Cloud sync is optional and can be turned off in Settings.
+During beta, users should keep a backup export of important data. If you want data to remain available across sessions and devices, enable cloud sync and sign in.
 
 افتراضيًا، فلوسي يحفظ البيانات محليًا على جهازك.
 المزامنة السحابية اختيارية ويمكن إيقافها من الإعدادات.
+خلال مرحلة التجربة، يُنصح بالاحتفاظ بنسخة تصدير احتياطية للبيانات المهمة. وإذا كان المطلوب هو استمرار توفر البيانات عبر الجلسات والأجهزة، فيرجى تفعيل المزامنة السحابية وتسجيل الدخول.
 
 ## 4) Cloud sync (optional) | المزامنة السحابية (اختيارية)
-If you enable cloud sync, your app data is stored in your own cloud record (Supabase) and linked to your account.
-Access control rules are applied so users can access only their own record.
+If you enable cloud sync, your app data is stored in your own cloud record through the Floosy Supabase setup and linked to your account.
+Access control rules are applied so each user can access only their own record.
 
-عند تفعيل المزامنة السحابية، يتم حفظ بيانات التطبيق في سجل سحابي خاص بك (Supabase) مرتبط بحسابك.
-يتم تطبيق صلاحيات وصول بحيث كل مستخدم يصل إلى سجله فقط.
+عند تفعيل المزامنة السحابية، يتم حفظ بيانات التطبيق في سجل سحابي خاص بك عبر إعداد Supabase الخاص بـ Floosy ويرتبط بحسابك.
+يتم تطبيق صلاحيات وصول بحيث يصل كل مستخدم إلى سجله فقط.
 
 ## 5) How data is used | كيف نستخدم البيانات
 - Show your balances, summaries, and analytics
@@ -73,6 +75,8 @@ Inside the app, you can:
 - Delete cloud data
 - Delete your account (cloud)
 - Delete local device data
+- Export a backup copy of your data
+- Restore data from a JSON backup file
 
 داخل التطبيق، يمكنك:
 - إيقاف المزامنة السحابية
@@ -80,13 +84,15 @@ Inside the app, you can:
 - حذف البيانات السحابية
 - حذف الحساب (السحابة)
 - حذف بيانات الجهاز المحلية
+- تصدير نسخة احتياطية من البيانات
+- استرجاع البيانات من ملف JSON احتياطي
 
 ## 9) Security | الحماية
-We use reasonable safeguards to protect data, but no method is 100% secure.
-Please use a strong password and keep your device protected.
+We use access controls and standard service safeguards to help protect stored data, but no online or local method is 100% secure.
+Please use a strong password, keep your device protected, and keep backup exports for important data during beta.
 
-نستخدم وسائل حماية مناسبة، لكن لا توجد وسيلة أمان مضمونة 100%.
-يرجى استخدام كلمة مرور قوية وحماية جهازك.
+نستخدم ضوابط وصول ووسائل حماية معيارية للمساعدة في حماية البيانات المحفوظة، لكن لا توجد وسيلة محلية أو سحابية مضمونة 100%.
+يرجى استخدام كلمة مرور قوية، وحماية الجهاز، والاحتفاظ بنسخ تصدير احتياطية للبيانات المهمة خلال مرحلة التجربة.
 
 ## 10) Children | الأطفال
 This app is not intended for children under 13.
@@ -100,7 +106,9 @@ We may update this policy. The latest version date is shown at the top.
 
 ## 12) Contact | التواصل
 For privacy questions, contact:
-- Email: **[add-your-support-email@example.com]**
+- During the current beta, please contact the Floosy app owner through the same channel you received the beta link from.
+- A dedicated support email should be added before wider public release.
 
-للاستفسارات المتعلقة بالخصوصية، تواصلي عبر:
-- البريد: **[add-your-support-email@example.com]**
+للاستفسارات المتعلقة بالخصوصية خلال مرحلة التجربة الحالية:
+- يرجى التواصل مع صاحب تطبيق Floosy عبر نفس القناة التي تم من خلالها إرسال رابط النسخة التجريبية.
+- يجب إضافة بريد دعم مخصص قبل الإطلاق الأوسع للجمهور.

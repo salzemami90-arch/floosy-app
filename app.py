@@ -86,10 +86,10 @@ def _render_beta_notice() -> None:
                 تنبيه تجريبي | Beta Notice
             </div>
             <div>
-                هذا التطبيق ما زال في مرحلة تجريبية. يرجى عدم إدخال بيانات حقيقية أو حساسة في الوقت الحالي.
+                هذا التطبيق ما زال في مرحلة تجريبية. إذا كانت البيانات مهمة، فيرجى تفعيل المزامنة السحابية أو تصدير نسخة احتياطية بشكل منتظم خلال مرحلة التجربة.
             </div>
             <div style="margin-top: 4px;">
-                This app is currently in beta. Please do not enter real or sensitive data at this stage.
+                This app is currently in beta. If your data matters, enable cloud sync or export a backup regularly during beta.
             </div>
         </div>
         """,
