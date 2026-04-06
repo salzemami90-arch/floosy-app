@@ -46,12 +46,14 @@ def render():
     # =============================
     # Add (+) button (match dashboard FAB)
     # =============================
+    fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
+
     st.markdown(
-        """
+        f"""
         <style>
         div.st-key-mustndaty_add_btn {
             position: fixed;
-            right: 22px;
+            {fab_side_css}
             bottom: 22px;
             z-index: 999999;
         }

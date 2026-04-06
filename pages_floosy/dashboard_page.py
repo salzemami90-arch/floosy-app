@@ -200,12 +200,14 @@ def render(month_key: str, month: str, year: int):
     st.session_state.setdefault("dash_quick_open", False)
     st.session_state.setdefault("dash_quick_form", default_quick_form.copy())
 
+    fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
+
     st.markdown(
-        """
+        f"""
         <style>
         div.st-key-dash_quick_fab {
             position: fixed;
-            right: 22px;
+            {fab_side_css}
             bottom: 22px;
             z-index: 999999;
         }
