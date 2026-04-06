@@ -499,6 +499,7 @@ def init_session_state():
     --page-bg-bottom: #f2f7fb;
     --surface: #ffffff;
     --surface-muted: #f8fafc;
+    --surface-tint: #f3f9fd;
     --text-main: #0f172a;
     --text-soft: #475569;
     --line: #e2e8f0;
@@ -615,11 +616,32 @@ div[data-testid="stMetricValue"] > div {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+label[data-testid="stWidgetLabel"] p,
+div[data-testid="stFileUploader"] small,
+.stCaption,
+[data-testid="stMarkdownContainer"] p {
+    color: var(--text-soft);
+}
+
 .stTextInput input:focus,
 .stTextArea textarea:focus,
 .stNumberInput input:focus {
     border-color: #5fa3c8 !important;
     box-shadow: 0 0 0 3px rgba(95, 163, 200, 0.18) !important;
+}
+
+.stForm {
+    border: none !important;
+}
+
+div[data-testid="stForm"] {
+    background: linear-gradient(180deg, #ffffff 0%, var(--surface-tint) 100%) !important;
+    border: 1px solid rgba(15, 95, 140, 0.12) !important;
+    border-top: 4px solid var(--brand-2) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+    padding: 18px 16px 14px 16px !important;
+    margin: 0.45rem 0 0.9rem 0 !important;
 }
 
 .stButton button,
@@ -633,6 +655,13 @@ div[data-testid="stMetricValue"] > div {
     transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
+.stForm [data-testid="stFormSubmitButton"] button {
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-2)) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    box-shadow: 0 10px 24px rgba(15, 95, 140, 0.18) !important;
+}
+
 .stButton button:hover,
 .stDownloadButton button:hover,
 .stForm [data-testid="stFormSubmitButton"] button:hover {
@@ -641,13 +670,32 @@ div[data-testid="stMetricValue"] > div {
 }
 
 div[data-testid="stExpander"] {
-    border: 1px solid var(--line) !important;
-    border-radius: var(--radius-md) !important;
-    background: var(--surface) !important;
+    border: 1px solid rgba(15, 95, 140, 0.12) !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, #ffffff 0%, var(--surface-tint) 100%) !important;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+    overflow: hidden !important;
+}
+
+div[data-testid="stExpander"] details {
+    background: transparent !important;
 }
 
 div[data-testid="stExpander"] details summary {
-    font-weight: 700;
+    font-weight: 800;
+    padding: 0.9rem 1rem !important;
+    background: linear-gradient(90deg, rgba(15, 95, 140, 0.08), rgba(18, 149, 107, 0.08));
+    border-bottom: 1px solid rgba(15, 95, 140, 0.08);
+}
+
+div[data-testid="stExpander"] details > div {
+    padding: 0.35rem 0.35rem 0.15rem 0.35rem;
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 16px !important;
+    border: 1px solid rgba(15, 95, 140, 0.1) !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
 div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
@@ -655,6 +703,38 @@ div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
     border-radius: var(--radius-md);
     overflow: hidden;
     background: var(--surface);
+}
+
+div[data-testid="stTabs"] button[role="tab"] {
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 0.55rem 0.9rem;
+    background: rgba(255,255,255,0.72);
+    border: 1px solid transparent;
+}
+
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(15, 95, 140, 0.12), rgba(18, 149, 107, 0.12));
+    color: var(--brand-1) !important;
+    border-color: rgba(15, 95, 140, 0.14);
+}
+
+div[data-testid="stFileUploaderDropzone"] {
+    border: 1.5px dashed rgba(15, 95, 140, 0.22) !important;
+    border-radius: 16px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f5fbff 100%) !important;
+}
+
+div[data-testid="stFileUploaderDropzone"]:hover {
+    border-color: rgba(18, 149, 107, 0.42) !important;
+    background: linear-gradient(180deg, #ffffff 0%, #eef9f4 100%) !important;
+}
+
+div[data-testid="stDialog"] div[role="dialog"] {
+    border-radius: 20px !important;
+    border: 1px solid rgba(15, 95, 140, 0.12) !important;
+    background: linear-gradient(180deg, #ffffff 0%, var(--surface-tint) 100%) !important;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18) !important;
 }
 
 hr {
