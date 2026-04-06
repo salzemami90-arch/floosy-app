@@ -1,7 +1,7 @@
 # Floosy Privacy Policy | سياسة الخصوصية لتطبيق فلوسي
 
-**Last updated:** February 19, 2026  
-**آخر تحديث:** 19 فبراير 2026
+**Last updated:** April 6, 2026  
+**آخر تحديث:** 6 أبريل 2026
 
 ## 1) Who we are | من نحن
 Floosy is a personal finance app for account tracking, savings, projects, and documents.
@@ -30,18 +30,22 @@ Floosy is a personal finance app for account tracking, savings, projects, and do
 ## 3) Local-first behavior | آلية العمل المحلية أولًا
 By default, Floosy stores data locally on your device.
 Cloud sync is optional and can be turned off in Settings.
-During beta, users should keep a backup export of important data. If you want data to remain available across sessions and devices, enable cloud sync and sign in.
+During beta, we recommend keeping regular JSON backup exports of important data. If you want data to remain available across sessions and devices, enable cloud sync and sign in.
 
 افتراضيًا، فلوسي يحفظ البيانات محليًا على جهازك.
 المزامنة السحابية اختيارية ويمكن إيقافها من الإعدادات.
-خلال مرحلة التجربة، يُنصح بالاحتفاظ بنسخة تصدير احتياطية للبيانات المهمة. وإذا كان المطلوب هو استمرار توفر البيانات عبر الجلسات والأجهزة، فيرجى تفعيل المزامنة السحابية وتسجيل الدخول.
+خلال مرحلة التجربة، نوصي بالاحتفاظ بنسخ تصدير احتياطية منتظمة بصيغة JSON للبيانات المهمة. وإذا كان المطلوب هو استمرار توفر البيانات عبر الجلسات والأجهزة، فيرجى تفعيل المزامنة السحابية وتسجيل الدخول.
 
 ## 4) Cloud sync (optional) | المزامنة السحابية (اختيارية)
 If you enable cloud sync, your app data is stored in your own cloud record through the Floosy Supabase setup and linked to your account.
 Access control rules are applied so each user can access only their own record.
+If you start with local use first, you can later sign in and use the in-app cloud save option to upload your current app data.
+If you disable cloud sync later, syncing stops, but existing cloud data is not deleted automatically unless you delete it from inside the app.
 
 عند تفعيل المزامنة السحابية، يتم حفظ بيانات التطبيق في سجل سحابي خاص بك عبر إعداد Supabase الخاص بـ Floosy ويرتبط بحسابك.
 يتم تطبيق صلاحيات وصول بحيث يصل كل مستخدم إلى سجله فقط.
+إذا بدأ الاستخدام محليًا أولًا، فيمكن لاحقًا تسجيل الدخول واستخدام خيار الحفظ السحابي داخل التطبيق لرفع بيانات التطبيق الحالية.
+إذا تم إيقاف المزامنة السحابية لاحقًا، تتوقف المزامنة، لكن لا يتم حذف البيانات السحابية الموجودة تلقائيًا إلا إذا تم حذفها من داخل التطبيق.
 
 ## 5) How data is used | كيف نستخدم البيانات
 - Show your balances, summaries, and analytics
@@ -56,10 +60,12 @@ Access control rules are applied so each user can access only their own record.
 We do not sell personal data.
 Data is not shared with third parties for advertising.
 Infrastructure providers may process data only to operate the service.
+Current beta service providers may include Supabase for authentication/database and Streamlit Community Cloud for app hosting.
 
 لا نقوم ببيع البيانات الشخصية.
 لا تتم مشاركة البيانات مع أطراف ثالثة لأغراض إعلانية.
 قد تتم المعالجة عبر مزودي البنية التحتية فقط لتشغيل الخدمة.
+قد يشمل مزودو الخدمة في النسخة التجريبية الحالية Supabase للمصادقة/قاعدة البيانات وStreamlit Community Cloud لاستضافة التطبيق.
 
 ## 7) Data retention | مدة الاحتفاظ بالبيانات
 - Local data remains on your device until you delete it.
@@ -75,8 +81,8 @@ Inside the app, you can:
 - Delete cloud data
 - Delete your account (cloud)
 - Delete local device data
-- Export a backup copy of your data
-- Restore data from a JSON backup file
+- Export a JSON backup copy of your data from Settings
+- Restore data from a JSON backup file from Settings
 
 داخل التطبيق، يمكنك:
 - إيقاف المزامنة السحابية
@@ -84,15 +90,15 @@ Inside the app, you can:
 - حذف البيانات السحابية
 - حذف الحساب (السحابة)
 - حذف بيانات الجهاز المحلية
-- تصدير نسخة احتياطية من البيانات
-- استرجاع البيانات من ملف JSON احتياطي
+- تصدير نسخة احتياطية بصيغة JSON من الإعدادات
+- استرجاع البيانات من ملف JSON احتياطي من الإعدادات
 
 ## 9) Security | الحماية
 We use access controls and standard service safeguards to help protect stored data, but no online or local method is 100% secure.
-Please use a strong password, keep your device protected, and keep backup exports for important data during beta.
+Please use a strong password, keep your device protected, and export backup copies of important data regularly during beta, especially before major changes or updates.
 
 نستخدم ضوابط وصول ووسائل حماية معيارية للمساعدة في حماية البيانات المحفوظة، لكن لا توجد وسيلة محلية أو سحابية مضمونة 100%.
-يرجى استخدام كلمة مرور قوية، وحماية الجهاز، والاحتفاظ بنسخ تصدير احتياطية للبيانات المهمة خلال مرحلة التجربة.
+يرجى استخدام كلمة مرور قوية، وحماية الجهاز، وتصدير نسخ احتياطية للبيانات المهمة بشكل منتظم خلال مرحلة التجربة، خصوصًا قبل التغييرات أو التحديثات الكبيرة.
 
 ## 10) Children | الأطفال
 This app is not intended for children under 13.
