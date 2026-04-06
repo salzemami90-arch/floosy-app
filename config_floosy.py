@@ -326,6 +326,76 @@ def _apply_browser_language_preference() -> None:
     st.session_state["settings"] = settings
 
 
+def _apply_language_direction_theme() -> None:
+    settings = st.session_state.get("settings", {})
+    if not isinstance(settings, dict):
+        settings = {}
+
+    is_en = settings.get("language") == "English"
+    direction = "ltr" if is_en else "rtl"
+    align = "left" if is_en else "right"
+    header_direction = "row" if is_en else "row-reverse"
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp,
+        .main .block-container,
+        [data-testid="stSidebar"] > div:first-child {{
+            direction: {direction};
+            text-align: {align};
+        }}
+
+        .flossy-header-inner {{
+            flex-direction: {header_direction};
+        }}
+
+        .flossy-header-title,
+        h1, h2, h3, h4, h5, h6,
+        p,
+        label,
+        .stCaption,
+        [data-testid="stMarkdownContainer"],
+        [data-testid="stAlert"] {{
+            text-align: {align};
+        }}
+
+        [data-testid="stSidebar"] .stRadio,
+        [data-testid="stSidebar"] .stSelectbox,
+        [data-testid="stSidebar"] .stNumberInput,
+        [data-testid="stSidebar"] .stDateInput,
+        [data-testid="stSidebar"] .stMarkdown,
+        [data-testid="stSidebar"] label {{
+            text-align: {align};
+            direction: {direction};
+        }}
+
+        .stTextInput input,
+        .stTextArea textarea,
+        .stNumberInput input,
+        .stDateInput input,
+        .stSelectbox [data-baseweb="select"] input,
+        .stSelectbox [data-baseweb="select"] > div,
+        .stMultiSelect [data-baseweb="select"] input,
+        .stMultiSelect [data-baseweb="select"] > div {{
+            direction: {direction};
+            text-align: {align};
+        }}
+
+        div[data-testid="stMetric"] {{
+            text-align: {align};
+        }}
+
+        div[data-testid="stMetricLabel"] > div,
+        div[data-testid="stMetricValue"] > div {{
+            text-align: {align};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _is_shared_hosted_url(url: str) -> bool:
     clean_url = str(url or "").strip().lower()
     if not clean_url:
@@ -887,6 +957,7 @@ hr {
 
     _apply_browser_query_preferences()
     _apply_browser_language_preference()
+    _apply_language_direction_theme()
 
     if not isinstance(st.session_state.get("transactions"), dict):
         st.session_state.transactions = {}
