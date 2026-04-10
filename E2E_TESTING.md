@@ -15,7 +15,7 @@ python -m playwright install chromium
 streamlit run app.py
 ```
 
-By default the Playwright smoke test targets:
+By default the Playwright tests target:
 
 ```text
 http://127.0.0.1:8501
@@ -27,16 +27,27 @@ You can override it with:
 FLOOSY_BASE_URL=http://127.0.0.1:8501 pytest -q e2e_tests
 ```
 
-## 3. What the smoke test checks
+## 3. Recommended clean E2E server
 
-- welcome gate appears
-- English mode can start successfully
-- sidebar loads
-- Account page opens
-- Add New Transaction expander is visible
-- Transactions table is visible
+For deterministic browser tests, especially `Documents`, run a clean Streamlit server with local persistence disabled:
 
-## 4. Good next E2E scenarios
+```bash
+FLOOSY_ENABLE_LOCAL_PERSISTENCE=0 streamlit run app.py --server.headless true --server.port 8502
+FLOOSY_BASE_URL=http://127.0.0.1:8502 pytest -q e2e_tests
+```
+
+This avoids inherited local `documents` / `transactions` state from earlier localhost sessions.
+
+## 4. What the Playwright suite checks
+
+- English Account smoke flow
+- Arabic Account smoke flow
+- English Account add-transaction flow
+- Arabic Account add-transaction flow
+- English Documents add/delete flow
+- Arabic Documents add/delete flow
+
+## 5. Good next E2E scenarios
 
 - add transaction and confirm it appears in Account
 - switch language and confirm page labels update

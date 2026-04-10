@@ -40,6 +40,14 @@ def _open_account(page: Page, label_pattern: re.Pattern[str], heading_pattern: r
     expect(page.get_by_role("heading", name=heading_pattern)).to_be_visible()
 
 
+def _open_documents(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    documents_link = sidebar.locator("label").filter(has_text=label_pattern).first
+    expect(documents_link).to_be_visible()
+    documents_link.click()
+    expect(page.get_by_role("heading", name=heading_pattern)).to_be_visible()
+
+
 def _assert_account_core_ui(
     page: Page,
     add_tx_pattern: re.Pattern[str],
@@ -69,6 +77,32 @@ def _add_basic_transaction(
     expect(page.get_by_text(success_pattern).first).to_be_visible()
     expect(page.locator("body")).to_contain_text(note_value)
     expect(page.get_by_role("button", name=monthly_items_close_pattern)).to_have_count(0)
+
+
+def _add_and_delete_basic_document(
+    page: Page,
+    doc_name: str,
+    save_button_pattern: re.Pattern[str],
+    confirm_delete_pattern: re.Pattern[str],
+    delete_button_pattern: re.Pattern[str],
+) -> None:
+    page.locator("div.st-key-mustndaty_add_btn button").first.click()
+    page.get_by_label(re.compile(r"^Document Name$|^اسم المستند$")).fill(doc_name)
+    page.get_by_role("button", name=save_button_pattern).click()
+
+    expect(page.locator("body")).to_contain_text(doc_name)
+    document_selector = page.locator('input[role="combobox"]').last
+    document_selector.click()
+    page.get_by_role("option", name=re.compile(re.escape(doc_name))).click()
+
+    confirm_delete_label = page.get_by_text(confirm_delete_pattern, exact=True).last
+    expect(confirm_delete_label).to_be_visible()
+    confirm_delete_label.click()
+    delete_button = page.get_by_role("button", name=delete_button_pattern)
+    expect(delete_button).to_be_enabled()
+    delete_button.click()
+
+    expect(page.locator("body")).not_to_contain_text(doc_name)
 
 
 def test_floosy_english_smoke(page: Page) -> None:
@@ -117,4 +151,28 @@ def test_account_can_add_transaction_in_arabic_without_opening_monthly_items(pag
         success_pattern=re.compile(r"تمت إضافة المعاملة بنجاح|تم حفظ المعاملة"),
         monthly_items_close_pattern=re.compile(r"إغلاق إدارة العناصر الشهرية"),
         note_prefix="playwright-smoke-ar",
+    )
+
+
+def test_documents_can_add_and_delete_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_documents(page, re.compile(r"^Documents$"), re.compile(r"^Documents$"))
+    _add_and_delete_basic_document(
+        page,
+        doc_name=f"playwright-doc-en-{int(time.time())}",
+        save_button_pattern=re.compile(r"^Save$"),
+        confirm_delete_pattern=re.compile(r"^Confirm Document Deletion$"),
+        delete_button_pattern=re.compile(r"^Delete Document$"),
+    )
+
+
+def test_documents_can_add_and_delete_in_arabic(page: Page) -> None:
+    _goto_language(page, "ar")
+    _open_documents(page, re.compile(r"^مستنداتي$"), re.compile(r"^مستنداتي$"))
+    _add_and_delete_basic_document(
+        page,
+        doc_name=f"مستند-اختبار-{int(time.time())}",
+        save_button_pattern=re.compile(r"^حفظ$"),
+        confirm_delete_pattern=re.compile(r"^تأكيد حذف المستند$"),
+        delete_button_pattern=re.compile(r"^حذف المستند$"),
     )
