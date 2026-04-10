@@ -3,10 +3,12 @@
 .venv/
 __pycache__/
 *.pyc
+playwright-report/
+test-results/
+.playwright/
 
 .streamlit/secrets.toml
 
 data/floosy_data.json
 data/floosy_data.sqlite3
 data/*.tmp
-
