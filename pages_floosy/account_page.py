@@ -46,7 +46,14 @@ def _currency_short_label(value: str, is_en: bool) -> str:
     return {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}.get(symbol, symbol)
 
 
-def _build_filtered_df(tx_list: list[dict], currency: str, query: str, type_filter: str, category_filter: str) -> pd.DataFrame:
+def _build_filtered_df(
+    tx_list: list[dict],
+    currency: str,
+    query: str,
+    type_filter: str,
+    category_filter: str,
+    newest_first: bool = True,
+) -> pd.DataFrame:
     if not tx_list:
         return pd.DataFrame()
 
@@ -74,7 +81,8 @@ def _build_filtered_df(tx_list: list[dict], currency: str, query: str, type_filt
             | df["date"].astype(str).str.lower().str.contains(q, na=False)
         ]
 
-    return df.sort_values(by=["date_dt", "tx_id"], ascending=[False, False])
+    ascending = [not newest_first, not newest_first]
+    return df.sort_values(by=["date_dt", "tx_id"], ascending=ascending)
 
 
 def _month_key_from_date(dt: datetime) -> str:
@@ -124,6 +132,9 @@ def render(month_key: str, month: str, year: int):
         st.success(save_notice)
 
     st.session_state.setdefault("account_templates_open", False)
+
+    def _close_templates_panel():
+        st.session_state["account_templates_open"] = False
     st.markdown(
         """
         <style>
@@ -468,6 +479,7 @@ def render(month_key: str, month: str, year: int):
                 if selected_tx_type == "مصروف" and selected_tax_code:
                     tx_payload["tax_tag_code"] = selected_tax_code
                 add_transaction(target_month_key, tx_payload)
+                st.session_state["account_templates_open"] = False
                 if target_month_key == month_key:
                     st.session_state["account_save_notice"] = t(
                         "تمت إضافة المعاملة بنجاح.",
@@ -482,58 +494,98 @@ def render(month_key: str, month: str, year: int):
                 st.rerun()
 
     st.markdown(f"### {t('سجل المعاملات', 'Transactions')}")
-    f1, f2, f3 = st.columns([2, 1, 1])
+    order_options = [
+        t("الأحدث أولاً", "Newest First"),
+        t("الأقدم أولاً", "Oldest First"),
+    ]
+    f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
     with f1:
-        query = st.text_input(t("بحث", "Search"), placeholder=t("البحث بالتاريخ أو التصنيف أو الملاحظة", "Search by date, category, or note"))
+        query = st.text_input(
+            t("بحث", "Search"),
+            placeholder=t("البحث بالتاريخ أو التصنيف أو الملاحظة", "Search by date, category, or note"),
+            on_change=_close_templates_panel,
+        )
     with f2:
-        type_filter_lbl = st.selectbox(t("النوع", "Type"), [t("الكل", "All"), t("مصروف", "Expense"), t("دخل", "Income")])
+        type_filter_lbl = st.selectbox(
+            t("النوع", "Type"),
+            [t("الكل", "All"), t("مصروف", "Expense"), t("دخل", "Income")],
+            on_change=_close_templates_panel,
+        )
         type_filter = "الكل" if type_filter_lbl == t("الكل", "All") else ("مصروف" if type_filter_lbl == t("مصروف", "Expense") else "دخل")
     with f3:
         categories = [t("الكل", "All")]
         if not df_all.empty and "category" in df_all.columns:
             categories.extend(sorted(df_all["category"].dropna().astype(str).unique().tolist()))
-        category_filter_lbl = st.selectbox(t("التصنيف", "Category"), categories)
+        category_filter_lbl = st.selectbox(t("التصنيف", "Category"), categories, on_change=_close_templates_panel)
         category_filter = "الكل" if category_filter_lbl == t("الكل", "All") else category_filter_lbl
+    with f4:
+        sort_order_lbl = st.selectbox(t("الترتيب", "Order"), order_options, on_change=_close_templates_panel)
+        newest_first = sort_order_lbl == t("الأحدث أولاً", "Newest First")
 
-    filtered_df = _build_filtered_df(tx_list, currency, query, type_filter, category_filter)
+    filtered_df = _build_filtered_df(tx_list, currency, query, type_filter, category_filter, newest_first=newest_first)
     if filtered_df.empty:
         st.info(t("لا توجد معاملات مطابقة للفلاتر الحالية.", "No transactions match current filters."))
         return
 
+    id_col = t("معرّف", "ID")
+    date_col = t("التاريخ", "Date")
+    type_col = t("النوع", "Type")
+    category_col = t("التصنيف", "Category")
+    amount_col = t("المبلغ", "Amount")
+    currency_col = t("العملة", "Currency")
+    note_col = t("ملاحظة", "Note")
+    delete_col = t("حذف", "Delete")
+
     view_df = filtered_df[["tx_id", "date", "type", "category", "amount", "currency", "note"]].copy()
     if is_en and "type" in view_df.columns:
         view_df["type"] = view_df["type"].apply(lambda x: _tx_type_label(x, True))
+    if is_en and "category" in view_df.columns:
+        category_map_en = {
+            "راتب": "Salary",
+            "دخل إضافي": "Extra Income",
+            "إيجار / قسط": "Rent / Installment",
+            "فواتير": "Bills",
+            "مشتريات": "Shopping",
+            "طلعات وكوفي": "Coffee / Outings",
+            "أكل أونلاين": "Food Delivery",
+            "مواصلات": "Transport",
+            "صحة / صالون": "Health / Salon",
+            "أخرى": "Other",
+        }
+        view_df["category"] = view_df["category"].apply(lambda x: category_map_en.get(str(x).strip(), x))
     view_df.rename(
         columns={
-            "tx_id": "معرّف",
-            "date": "التاريخ",
-            "type": "النوع",
-            "category": "التصنيف",
-            "amount": "المبلغ",
-            "currency": "العملة",
-            "note": "ملاحظة",
+            "tx_id": id_col,
+            "date": date_col,
+            "type": type_col,
+            "category": category_col,
+            "amount": amount_col,
+            "currency": currency_col,
+            "note": note_col,
         },
         inplace=True,
     )
-    view_df["حذف"] = False
+    view_df[delete_col] = False
 
     edited = st.data_editor(
         view_df,
         use_container_width=True,
         hide_index=True,
-        disabled=["معرّف", "التاريخ", "النوع", "التصنيف", "المبلغ", "العملة", "ملاحظة"],
+        disabled=[id_col, date_col, type_col, category_col, amount_col, currency_col, note_col],
         column_config={
-            "حذف": st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
-            "معرّف": st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
+            delete_col: st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
+            id_col: st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
         },
         key="account_tx_editor",
+        on_change=_close_templates_panel,
     )
 
-    to_delete = edited[edited["حذف"]]["معرّف"].tolist()
+    to_delete = edited[edited[delete_col]][id_col].tolist()
     if st.button(t("حذف المحدد", "Delete Selected"), type="secondary", use_container_width=True):
         if not to_delete:
             st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
         else:
+            st.session_state["account_templates_open"] = False
             for idx in sorted(to_delete, reverse=True):
                 if 0 <= int(idx) < len(tx_list):
                     tx_list.pop(int(idx))
