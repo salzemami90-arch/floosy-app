@@ -820,14 +820,23 @@ div[data-testid="stFileUploaderDropzone"]:hover {
     background: linear-gradient(180deg, #ffffff 0%, #eef9f4 100%) !important;
 }
 
+div[data-testid="stDialog"] {
+    align-items: flex-start !important;
+    padding-top: 4vh !important;
+    padding-bottom: 4vh !important;
+}
+
 div[data-testid="stDialog"] div[role="dialog"] {
     border-radius: 20px !important;
     border: 1px solid rgba(15, 95, 140, 0.12) !important;
     background: linear-gradient(180deg, #ffffff 0%, var(--surface-tint) 100%) !important;
     box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18) !important;
     width: min(720px, 92vw) !important;
-    max-height: min(84vh, 760px) !important;
+    max-height: min(88vh, 760px) !important;
     overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin: 0 auto !important;
 }
 
 hr {

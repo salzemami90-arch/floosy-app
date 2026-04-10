@@ -327,13 +327,15 @@ def render(month_key: str, month: str, year: int):
             """<style>
 div[data-testid="stForm"] {
   position: fixed !important;
-  top: 50% !important;
+  top: 6vh !important;
   left: 50% !important;
-  transform: translate(-50%, -50%) !important;
+  transform: translateX(-50%) !important;
   width: min(360px, 92vw) !important;
   height: auto !important;
-  max-height: 420px !important;
-  overflow: auto !important;
+  max-height: 88vh !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
   padding: 12px 12px 10px 12px !important;
   background: #ffffff !important;
   border-radius: 16px !important;
