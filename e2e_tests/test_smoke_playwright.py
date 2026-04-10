@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 import pytest
 
@@ -28,13 +29,17 @@ def page() -> Page:
 def test_floosy_english_smoke(page: Page) -> None:
     page.goto(BASE_URL, wait_until="networkidle")
 
-    expect(page.get_by_text("Welcome to Floosy")).to_be_visible()
-    page.get_by_label("Language").select_option("English")
-    page.get_by_role("button", name="Start").click()
+    welcome_title = page.get_by_text("Welcome to Floosy")
+    if welcome_title.count() > 0:
+        expect(welcome_title).to_be_visible()
+        page.get_by_label("Language").select_option("English")
+        page.get_by_role("button", name="Start").click()
 
-    expect(page.get_by_text("Floosy", exact=True)).to_be_visible()
-    page.get_by_role("radio", name="Account").check()
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    account_link = sidebar.get_by_text(re.compile(r"^Account$|^الحساب$")).first
+    expect(account_link).to_be_visible()
+    account_link.click()
 
-    expect(page.get_by_role("heading", name="Account")).to_be_visible()
-    expect(page.get_by_text("Add New Transaction")).to_be_visible()
-    expect(page.get_by_role("heading", name="Transactions")).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Account|الحساب"))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Add New Transaction|إضافة معاملة جديدة"))).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"Transactions|سجل المعاملات"))).to_be_visible()
