@@ -148,12 +148,14 @@ def render(month_key: str, month: str, year: int):
         st.caption(f"{month_display} {year}")
     with action_col:
         if st.button(
-            t("إدارة العناصر الشهرية", "Manage Monthly Items"),
+            t("إخفاء العناصر الشهرية", "Hide Monthly Items")
+            if st.session_state["account_templates_open"]
+            else t("إدارة العناصر الشهرية", "Manage Monthly Items"),
             key="account_templates_toggle_top",
             help=t("إضافة أو تعديل الالتزامات والدخل الشهري", "Add or edit monthly commitments and income"),
             use_container_width=True,
         ):
-            st.session_state["account_templates_open"] = True
+            st.session_state["account_templates_open"] = not bool(st.session_state.get("account_templates_open", False))
             st.rerun()
 
     tx_list = load_transactions(month_key)
@@ -267,21 +269,15 @@ def render(month_key: str, month: str, year: int):
             st.markdown("---")
 
     if st.session_state["account_templates_open"]:
-        if hasattr(st, "dialog"):
-            @st.dialog(t("إدارة العناصر الشهرية", "Monthly Items"))
-            def _show_templates_dialog():
-                _render_templates_manager()
-                if st.button(t("إغلاق", "Close"), key="close_templates_dialog_btn", use_container_width=True):
-                    st.session_state["account_templates_open"] = False
-                    st.rerun()
-
-            _show_templates_dialog()
-        else:
-            with st.expander(t("إدارة العناصر الشهرية", "Monthly Items"), expanded=True):
-                _render_templates_manager()
-                if st.button(t("إغلاق", "Close"), key="close_templates_fallback_btn", use_container_width=True):
-                    st.session_state["account_templates_open"] = False
-                    st.rerun()
+        st.markdown(f"#### {t('إدارة العناصر الشهرية', 'Monthly Items')}")
+        _render_templates_manager()
+        if st.button(
+            t("إغلاق إدارة العناصر الشهرية", "Close Monthly Items"),
+            key="close_templates_inline_btn",
+            use_container_width=True,
+        ):
+            st.session_state["account_templates_open"] = False
+            st.rerun()
 
     active_items = [item for item in recurring_items if item.get("active", True)]
     for item in active_items:
