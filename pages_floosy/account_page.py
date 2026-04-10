@@ -18,6 +18,18 @@ CURRENCY_OPTION_AR_TO_EN = {
     "$ - دولار أمريكي": "USD - US Dollar",
     "€ - يورو": "EUR - Euro",
 }
+CATEGORY_AR_TO_EN = {
+    "راتب": "Salary",
+    "دخل إضافي": "Extra Income",
+    "إيجار / قسط": "Rent / Installment",
+    "فواتير": "Bills",
+    "مشتريات": "Shopping",
+    "طلعات وكوفي": "Coffee / Outings",
+    "أكل أونلاين": "Food Delivery",
+    "مواصلات": "Transport",
+    "صحة / صالون": "Health / Salon",
+    "أخرى": "Other",
+}
 
 
 def _tx_type_label(value: str, is_en: bool) -> str:
@@ -44,6 +56,13 @@ def _currency_short_label(value: str, is_en: bool) -> str:
     if not is_en:
         return symbol
     return {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}.get(symbol, symbol)
+
+
+def _category_label(value: str, is_en: bool) -> str:
+    clean_value = str(value or "").strip()
+    if not is_en:
+        return clean_value
+    return CATEGORY_AR_TO_EN.get(clean_value, clean_value)
 
 
 def _build_filtered_df(
@@ -516,7 +535,12 @@ def render(month_key: str, month: str, year: int):
         categories = [t("الكل", "All")]
         if not df_all.empty and "category" in df_all.columns:
             categories.extend(sorted(df_all["category"].dropna().astype(str).unique().tolist()))
-        category_filter_lbl = st.selectbox(t("التصنيف", "Category"), categories, on_change=_close_templates_panel)
+        category_filter_lbl = st.selectbox(
+            t("التصنيف", "Category"),
+            categories,
+            format_func=lambda x: x if x == t("الكل", "All") else _category_label(x, is_en),
+            on_change=_close_templates_panel,
+        )
         category_filter = "الكل" if category_filter_lbl == t("الكل", "All") else category_filter_lbl
     with f4:
         sort_order_lbl = st.selectbox(t("الترتيب", "Order"), order_options, on_change=_close_templates_panel)
@@ -540,19 +564,9 @@ def render(month_key: str, month: str, year: int):
     if is_en and "type" in view_df.columns:
         view_df["type"] = view_df["type"].apply(lambda x: _tx_type_label(x, True))
     if is_en and "category" in view_df.columns:
-        category_map_en = {
-            "راتب": "Salary",
-            "دخل إضافي": "Extra Income",
-            "إيجار / قسط": "Rent / Installment",
-            "فواتير": "Bills",
-            "مشتريات": "Shopping",
-            "طلعات وكوفي": "Coffee / Outings",
-            "أكل أونلاين": "Food Delivery",
-            "مواصلات": "Transport",
-            "صحة / صالون": "Health / Salon",
-            "أخرى": "Other",
-        }
-        view_df["category"] = view_df["category"].apply(lambda x: category_map_en.get(str(x).strip(), x))
+        view_df["category"] = view_df["category"].apply(lambda x: _category_label(x, True))
+    if is_en and "currency" in view_df.columns:
+        view_df["currency"] = view_df["currency"].apply(lambda x: _currency_option_label(x, True))
     view_df.rename(
         columns={
             "tx_id": id_col,
