@@ -649,28 +649,48 @@ def render(month_key: str, month: str, year: int) -> None:
             submitted = st.form_submit_button(t("حفظ الفاتورة", "Save Invoice"), use_container_width=True)
 
         if submitted:
-            payload = {
-                "customer_name": customer_name,
-                "customer_tax_no": customer_tax_no,
-                "issue_date": issue_date,
-                "due_date": due_date_value if has_due_date else None,
-                "subtotal": float(amount_value),
-                "tax_rate": float(effective_tax_rate),
-                "prices_include_tax": bool(effective_include_tax),
-                "tax_source": "manual" if manual_override else ("project" if inherited.get("source") == "project" else "global"),
-                "status": status_selected,
-                "linked_project": linked_project,
-                "currency": currency_symbol,
-                "notes": notes,
-            }
-            created = service.create_invoice(payload)
-            st.success(
-                t(
-                    f"تم حفظ الفاتورة {created.invoice_number}.",
-                    f"Invoice {created.invoice_number} saved.",
+            validation_errors = []
+            if not customer_name.strip():
+                validation_errors.append(
+                    t(
+                        "يرجى إدخال اسم العميل.",
+                        "Please enter a customer name.",
+                    )
                 )
-            )
-            st.rerun()
+            if float(amount_value) <= 0:
+                validation_errors.append(
+                    t(
+                        "يرجى إدخال مبلغ أكبر من صفر.",
+                        "Please enter an amount greater than zero.",
+                    )
+                )
+
+            if validation_errors:
+                for message in validation_errors:
+                    st.error(message)
+            else:
+                payload = {
+                    "customer_name": customer_name,
+                    "customer_tax_no": customer_tax_no,
+                    "issue_date": issue_date,
+                    "due_date": due_date_value if has_due_date else None,
+                    "subtotal": float(amount_value),
+                    "tax_rate": float(effective_tax_rate),
+                    "prices_include_tax": bool(effective_include_tax),
+                    "tax_source": "manual" if manual_override else ("project" if inherited.get("source") == "project" else "global"),
+                    "status": status_selected,
+                    "linked_project": linked_project,
+                    "currency": currency_symbol,
+                    "notes": notes,
+                }
+                created = service.create_invoice(payload)
+                st.success(
+                    t(
+                        f"تم حفظ الفاتورة {created.invoice_number}.",
+                        f"Invoice {created.invoice_number} saved.",
+                    )
+                )
+                st.rerun()
 
     with tab_manage:
         st.subheader(t("الفواتير الحالية", "Current Invoices"))

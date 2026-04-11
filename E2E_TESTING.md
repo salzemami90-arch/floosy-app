@@ -69,11 +69,15 @@ Important:
 - Cloud status flow from disabled to enabled/configured UI
 - Cloud setup-required flow on a no-secrets server
 - Documents modal usability on a short viewport
+- English Invoices empty-state + validation flow
+- English Invoices add flow
+- Arabic Invoices add flow
+- English Tax Settings open/save flow
 
 ## 6. Good next E2E scenarios
 
-- invoices and tax flows
 - settings export/restore roundtrip
 - check Monthly Items panel opens and closes correctly
 - verify responsive behavior on smaller viewports
-- validation errors and empty states
+- invoice edit/delete flow
+- tax settings edge cases and wording checks

@@ -58,6 +58,10 @@ def _open_settings(page: Page, label_pattern: re.Pattern[str], heading_pattern: 
     _open_sidebar_page(page, label_pattern, heading_pattern)
 
 
+def _open_invoices_tax(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
+    _open_sidebar_page(page, label_pattern, heading_pattern)
+
+
 def _assert_account_core_ui(
     page: Page,
     add_tx_pattern: re.Pattern[str],
@@ -144,6 +148,37 @@ def _add_and_delete_basic_document(
     delete_button.click()
 
     expect(page.locator("body")).not_to_contain_text(doc_name)
+
+
+def _assert_invoice_validation(
+    page: Page,
+    add_tab_pattern: re.Pattern[str],
+    save_button_pattern: re.Pattern[str],
+    customer_error_text: str,
+    amount_error_text: str,
+) -> None:
+    _click_tab(page, add_tab_pattern)
+    page.get_by_role("button", name=save_button_pattern).last.click()
+    expect(page.locator("body")).to_contain_text(customer_error_text)
+    expect(page.locator("body")).to_contain_text(amount_error_text)
+
+
+def _add_basic_invoice(
+    page: Page,
+    add_tab_pattern: re.Pattern[str],
+    manage_tab_pattern: re.Pattern[str],
+    customer_label: re.Pattern[str],
+    amount_label: re.Pattern[str],
+    save_button_pattern: re.Pattern[str],
+    customer_name: str,
+) -> None:
+    _click_tab(page, add_tab_pattern)
+    page.get_by_label(customer_label).last.fill(customer_name)
+    page.get_by_label(amount_label).last.fill("125")
+    page.get_by_role("button", name=save_button_pattern).last.click()
+
+    _click_tab(page, manage_tab_pattern)
+    expect(page.locator("body")).to_contain_text(customer_name)
 
 
 def test_floosy_english_smoke(page: Page) -> None:
@@ -298,3 +333,63 @@ def test_settings_cloud_status_requires_setup_without_secrets(page: Page) -> Non
 
     _click_tab(page, re.compile(r"^Cloud$"))
     expect(page.get_by_text(re.compile(r"To enable cloud sync, add SUPABASE_URL and SUPABASE_ANON_KEY in secrets or environment variables\."))).to_be_visible()
+
+
+def test_invoices_empty_state_and_validation_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_invoices_tax(page, re.compile(r"^Invoices & Tax$"), re.compile(r"^Invoices and Tax$"))
+
+    _click_tab(page, re.compile(r"^Manage Invoices$"))
+    expect(page.get_by_text(re.compile(r"^No invoices yet\. Add the first invoice from the Add Invoice tab\.$"))).to_be_visible()
+
+    _assert_invoice_validation(
+        page,
+        add_tab_pattern=re.compile(r"^Add Invoice$"),
+        save_button_pattern=re.compile(r"^Save Invoice$"),
+        customer_error_text="Please enter a customer name.",
+        amount_error_text="Please enter an amount greater than zero.",
+    )
+
+
+def test_invoices_can_add_invoice_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_invoices_tax(page, re.compile(r"^Invoices & Tax$"), re.compile(r"^Invoices and Tax$"))
+    _add_basic_invoice(
+        page,
+        add_tab_pattern=re.compile(r"^Add Invoice$"),
+        manage_tab_pattern=re.compile(r"^Manage Invoices$"),
+        customer_label=re.compile(r"^Customer Name$"),
+        amount_label=re.compile(r"^Amount Before Tax$|^Amount \(Tax Included\)$"),
+        save_button_pattern=re.compile(r"^Save Invoice$"),
+        customer_name=f"playwright-invoice-en-{int(time.time())}",
+    )
+
+
+def test_invoices_can_add_invoice_in_arabic(page: Page) -> None:
+    _goto_language(page, "ar")
+    _open_invoices_tax(page, re.compile(r"^الفواتير والضرائب$"), re.compile(r"^الفواتير والضرائب$"))
+    _add_basic_invoice(
+        page,
+        add_tab_pattern=re.compile(r"^إضافة فاتورة$"),
+        manage_tab_pattern=re.compile(r"^إدارة الفواتير$"),
+        customer_label=re.compile(r"^اسم العميل$"),
+        amount_label=re.compile(r"^المبلغ قبل الضريبة$|^المبلغ شامل الضريبة$"),
+        save_button_pattern=re.compile(r"^حفظ الفاتورة$"),
+        customer_name=f"عميل-اختبار-{int(time.time())}",
+    )
+
+
+def test_tax_settings_can_open_and_save_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_invoices_tax(page, re.compile(r"^Invoices & Tax$"), re.compile(r"^Invoices and Tax$"))
+
+    page.get_by_role("button", name=re.compile(r"^Tax Settings$")).last.click()
+    expect(page.get_by_role("heading", name=re.compile(r"^Tax Settings$"))).to_be_visible()
+    expect(page.get_by_role("button", name=re.compile(r"^Save Tax Settings$"))).to_be_visible()
+
+    _click_checkbox_label(page, re.compile(r"^Enable Tax Mode$"))
+    page.get_by_label(re.compile(r"^Tax Name$")).last.fill("Playwright VAT")
+    page.get_by_role("button", name=re.compile(r"^Save Tax Settings$")).last.click()
+
+    expect(page.locator("body")).to_contain_text("Tax settings saved.")
+    expect(page.locator("body")).to_contain_text("Playwright VAT")
