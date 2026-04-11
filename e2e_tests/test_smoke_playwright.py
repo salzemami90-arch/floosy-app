@@ -12,6 +12,12 @@ from playwright.sync_api import Page, expect  # noqa: E402
 
 
 BASE_URL = os.environ.get("FLOOSY_BASE_URL", "http://127.0.0.1:8501")
+EXPECT_CLOUD_CONFIG = str(os.environ.get("FLOOSY_EXPECT_CLOUD_CONFIG", "1") or "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 
 
 @pytest.fixture()
@@ -108,6 +114,10 @@ def _combobox_after_text(page: Page, label_text: str):
 
 def _click_tab(page: Page, name_pattern: re.Pattern[str]) -> None:
     page.get_by_role("tab", name=name_pattern).last.click()
+
+
+def _click_checkbox_label(page: Page, label_pattern: re.Pattern[str]) -> None:
+    page.locator("label").filter(has_text=label_pattern).last.click()
 
 
 def _add_and_delete_basic_document(
@@ -229,6 +239,9 @@ def test_settings_language_switch_updates_multiple_pages(page: Page) -> None:
 
 
 def test_settings_cloud_status_disabled_then_ready(page: Page) -> None:
+    if not EXPECT_CLOUD_CONFIG:
+        pytest.skip("Configured cloud flow is skipped when running against a no-secrets server.")
+
     _goto_language(page, "en")
     _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
 
@@ -239,9 +252,10 @@ def test_settings_cloud_status_disabled_then_ready(page: Page) -> None:
     expect(page.get_by_text(re.compile(r"Cloud sync is disabled\. Please enable it first from the Privacy tab\."))).to_be_visible()
 
     _click_tab(page, re.compile(r"^Privacy$"))
-    page.get_by_text(re.compile(r"Enable Cloud Sync \(Optional\)"), exact=True).click()
+    _click_checkbox_label(page, re.compile(r"^Enable Cloud Sync \(Optional\)$"))
 
-    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Enabled"))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Ready"))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Cloud sync is enabled and ready\. Sign in from the Cloud tab to start syncing\."))).to_be_visible()
 
     _click_tab(page, re.compile(r"^Cloud$"))
     expect(page.get_by_role("heading", name=re.compile(r"Cloud Account \(Supabase\)"))).to_be_visible()
@@ -264,3 +278,23 @@ def test_documents_modal_is_usable_on_short_viewport(page: Page) -> None:
 
     page.get_by_role("button", name=re.compile(r"^Cancel$")).click()
     expect(page.get_by_role("button", name=re.compile(r"^Cancel$"))).to_have_count(0)
+
+
+def test_settings_cloud_status_requires_setup_without_secrets(page: Page) -> None:
+    if EXPECT_CLOUD_CONFIG:
+        pytest.skip("No-secrets cloud flow only runs against a server without Supabase secrets.")
+
+    _goto_language(page, "en")
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
+
+    _click_tab(page, re.compile(r"^Privacy$"))
+    _click_checkbox_label(page, re.compile(r"^Enable Cloud Sync \(Optional\)$"))
+
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Setup Required"))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Cloud sync is enabled, but Supabase is not configured yet\. Add the connection secrets first\."))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Cloud sync is enabled but not fully configured\. Sync will not start until Supabase secrets are added\."))).to_be_visible()
+
+    _click_tab(page, re.compile(r"^Cloud$"))
+    expect(page.get_by_text(re.compile(r"To enable cloud sync, add SUPABASE_URL and SUPABASE_ANON_KEY in secrets or environment variables\."))).to_be_visible()

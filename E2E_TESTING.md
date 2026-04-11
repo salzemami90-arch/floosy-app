@@ -38,7 +38,26 @@ FLOOSY_BASE_URL=http://127.0.0.1:8502 pytest -q e2e_tests
 
 This avoids inherited local `documents` / `transactions` state from earlier localhost sessions.
 
-## 4. What the Playwright suite checks
+## 4. Cloud test environments
+
+Use two server modes for Cloud coverage:
+
+```bash
+# Configured cloud flow (uses the real project secrets)
+FLOOSY_ENABLE_LOCAL_PERSISTENCE=0 streamlit run app.py --server.headless true --server.port 8504
+FLOOSY_BASE_URL=http://127.0.0.1:8504 pytest -q e2e_tests
+
+# Setup-required cloud flow (run from a temp copy without .streamlit/secrets.toml)
+cd /tmp/floosy-no-secrets
+FLOOSY_ENABLE_LOCAL_PERSISTENCE=0 streamlit run app.py --server.headless true --server.port 8506
+FLOOSY_BASE_URL=http://127.0.0.1:8506 FLOOSY_EXPECT_CLOUD_CONFIG=0 pytest -q e2e_tests -k requires_setup_without_secrets
+```
+
+Important:
+- Run the no-secrets server from the temporary copy's own working directory.
+- If it runs from the main repo `cwd`, Streamlit can still read the main project's secrets.
+
+## 5. What the Playwright suite checks
 
 - English Account smoke flow
 - Arabic Account smoke flow
@@ -48,13 +67,13 @@ This avoids inherited local `documents` / `transactions` state from earlier loca
 - Arabic Documents add/delete flow
 - Settings language switch flow across pages
 - Cloud status flow from disabled to enabled/configured UI
+- Cloud setup-required flow on a no-secrets server
 - Documents modal usability on a short viewport
 
-## 5. Good next E2E scenarios
+## 6. Good next E2E scenarios
 
 - invoices and tax flows
 - settings export/restore roundtrip
-- cloud unconfigured state from a server without secrets
 - check Monthly Items panel opens and closes correctly
 - verify responsive behavior on smaller viewports
 - validation errors and empty states

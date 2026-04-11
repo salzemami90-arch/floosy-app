@@ -172,19 +172,41 @@ def render():
         last_sync_label = t("غير متوفر", "Not available")
 
     backup_name_top, backup_bytes_top = _build_backup_file()
+    cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    cloud_logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
 
     st.markdown("---")
-    status_value = t("مفعلة", "Enabled") if cloud_sync_enabled else t("غير مفعلة", "Disabled")
-    if cloud_sync_enabled:
-        status_bg = "#ecfdf5"
-        status_border = "#10b981"
-        status_text = "#065f46"
-        status_hint = t("المزامنة السحابية تعمل بشكل طبيعي.", "Cloud sync is active and working.")
-    else:
+    if not cloud_sync_enabled:
+        status_value = t("غير مفعلة", "Disabled")
         status_bg = "#fffbeb"
         status_border = "#f59e0b"
         status_text = "#92400e"
         status_hint = t("السحابة متوقفة حاليًا. يمكنك تفعيلها أو تصدير بياناتك.", "Cloud is currently off. You can enable it or export your data.")
+    elif not cloud_client.is_configured:
+        status_value = t("تحتاج إعداد", "Setup Required")
+        status_bg = "#fff7ed"
+        status_border = "#f97316"
+        status_text = "#9a3412"
+        status_hint = t(
+            "السحابة مفعلة، لكن إعداد Supabase غير مكتمل بعد. يرجى إضافة مفاتيح الربط أولًا من بيئة التشغيل.",
+            "Cloud sync is enabled, but Supabase is not configured yet. Add the connection secrets first.",
+        )
+    elif cloud_logged_in:
+        status_value = t("متصلة", "Connected")
+        status_bg = "#ecfdf5"
+        status_border = "#10b981"
+        status_text = "#065f46"
+        status_hint = t("السحابة تعمل والحساب مسجل الدخول.", "Cloud sync is active and the account is signed in.")
+    else:
+        status_value = t("جاهزة", "Ready")
+        status_bg = "#eff6ff"
+        status_border = "#2563eb"
+        status_text = "#1d4ed8"
+        status_hint = t(
+            "السحابة مفعلة وجاهزة. يرجى تسجيل الدخول من تبويب السحابة لبدء المزامنة.",
+            "Cloud sync is enabled and ready. Sign in from the Cloud tab to start syncing.",
+        )
 
     st.markdown(
         f"""
@@ -235,6 +257,13 @@ def render():
                 use_container_width=True,
                 key="settings_status_backup_download_btn",
             )
+    elif not cloud_client.is_configured:
+        st.warning(
+            t(
+                "السحابة مفعلة لكن إعداد الربط غير مكتمل. لن تبدأ المزامنة حتى تتم إضافة مفاتيح Supabase.",
+                "Cloud sync is enabled but not fully configured. Sync will not start until Supabase secrets are added.",
+            )
+        )
 
     st.markdown(
         """
