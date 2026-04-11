@@ -32,20 +32,24 @@ def _goto_language(page: Page, lang_code: str) -> None:
     page.goto(f"{BASE_URL}{separator}f_w=1&f_lang={lang_code}", wait_until="networkidle")
 
 
-def _open_account(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
+def _open_sidebar_page(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
     sidebar = page.locator('[data-testid="stSidebar"]')
-    account_link = sidebar.locator("label").filter(has_text=label_pattern).first
-    expect(account_link).to_be_visible()
-    account_link.click()
+    page_link = sidebar.locator("label").filter(has_text=label_pattern).first
+    expect(page_link).to_be_visible()
+    page_link.click()
     expect(page.get_by_role("heading", name=heading_pattern)).to_be_visible()
+
+
+def _open_account(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
+    _open_sidebar_page(page, label_pattern, heading_pattern)
 
 
 def _open_documents(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
-    sidebar = page.locator('[data-testid="stSidebar"]')
-    documents_link = sidebar.locator("label").filter(has_text=label_pattern).first
-    expect(documents_link).to_be_visible()
-    documents_link.click()
-    expect(page.get_by_role("heading", name=heading_pattern)).to_be_visible()
+    _open_sidebar_page(page, label_pattern, heading_pattern)
+
+
+def _open_settings(page: Page, label_pattern: re.Pattern[str], heading_pattern: re.Pattern[str]) -> None:
+    _open_sidebar_page(page, label_pattern, heading_pattern)
 
 
 def _assert_account_core_ui(
@@ -77,6 +81,33 @@ def _add_basic_transaction(
     expect(page.get_by_text(success_pattern).first).to_be_visible()
     expect(page.locator("body")).to_contain_text(note_value)
     expect(page.get_by_role("button", name=monthly_items_close_pattern)).to_have_count(0)
+
+
+def _selectbox_input(page: Page, label_pattern: re.Pattern[str]):
+    return (
+        page.locator('div[data-testid="stSelectbox"]')
+        .filter(has_text=label_pattern)
+        .first
+        .locator('input[role="combobox"]')
+        .first
+    )
+
+
+def _choose_selectbox_option(page: Page, label_pattern: re.Pattern[str], option_pattern: re.Pattern[str]) -> None:
+    selectbox = _selectbox_input(page, label_pattern)
+    expect(selectbox).to_be_visible()
+    selectbox.click()
+    page.get_by_role("option", name=option_pattern).click()
+
+
+def _combobox_after_text(page: Page, label_text: str):
+    return page.locator(
+        f'xpath=//*[normalize-space(text())="{label_text}"]/following::input[@role="combobox"][1]'
+    ).first
+
+
+def _click_tab(page: Page, name_pattern: re.Pattern[str]) -> None:
+    page.get_by_role("tab", name=name_pattern).last.click()
 
 
 def _add_and_delete_basic_document(
@@ -176,3 +207,60 @@ def test_documents_can_add_and_delete_in_arabic(page: Page) -> None:
         confirm_delete_pattern=re.compile(r"^تأكيد حذف المستند$"),
         delete_button_pattern=re.compile(r"^حذف المستند$"),
     )
+
+
+def test_settings_language_switch_updates_multiple_pages(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
+
+    language_input = _combobox_after_text(page, "Language")
+    expect(language_input).to_be_visible()
+    language_input.click()
+    page.get_by_role("option", name=re.compile(r"^العربية$")).click()
+
+    expect(page.get_by_role("heading", name=re.compile(r"^إعدادات فلوسي$"))).to_be_visible()
+    expect(page.locator('[data-testid="stSidebar"]')).to_contain_text("الحساب")
+
+    _open_account(page, re.compile(r"^الحساب$"), re.compile(r"^الحساب$"))
+    expect(page.get_by_text(re.compile(r"إضافة معاملة جديدة"))).to_be_visible()
+    expect(page.get_by_role("heading", name=re.compile(r"^سجل المعاملات$"))).to_be_visible()
+
+
+def test_settings_cloud_status_disabled_then_ready(page: Page) -> None:
+    _goto_language(page, "en")
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
+    expect(page.get_by_text(re.compile(r"Cloud is currently disabled\. You can enable it or export your data now\."))).to_be_visible()
+
+    _click_tab(page, re.compile(r"^Cloud$"))
+    expect(page.get_by_text(re.compile(r"Cloud sync is disabled\. Please enable it first from the Privacy tab\."))).to_be_visible()
+
+    _click_tab(page, re.compile(r"^Privacy$"))
+    page.get_by_text(re.compile(r"Enable Cloud Sync \(Optional\)"), exact=True).click()
+
+    expect(page.get_by_text(re.compile(r"Cloud Status Bar: Enabled"))).to_be_visible()
+
+    _click_tab(page, re.compile(r"^Cloud$"))
+    expect(page.get_by_role("heading", name=re.compile(r"Cloud Account \(Supabase\)"))).to_be_visible()
+    expect(_combobox_after_text(page, "Action")).to_be_visible()
+    expect(page.get_by_label(re.compile(r"^Email$"))).to_be_visible()
+    expect(page.get_by_label(re.compile(r"^Password$"))).to_be_visible()
+    expect(page.get_by_role("button", name=re.compile(r"^Continue$"))).to_be_visible()
+
+
+def test_documents_modal_is_usable_on_short_viewport(page: Page) -> None:
+    page.set_viewport_size({"width": 1280, "height": 620})
+    _goto_language(page, "en")
+    _open_documents(page, re.compile(r"^Documents$"), re.compile(r"^Documents$"))
+
+    page.locator("div.st-key-mustndaty_add_btn button").first.click()
+    expect(page.get_by_text(re.compile(r"^Add Document$"))).to_be_visible()
+    expect(page.get_by_label(re.compile(r"^Document Name$"))).to_be_visible()
+    expect(page.get_by_role("button", name=re.compile(r"^Save$"))).to_be_visible()
+    expect(page.get_by_role("button", name=re.compile(r"^Cancel$"))).to_be_visible()
+
+    page.get_by_role("button", name=re.compile(r"^Cancel$")).click()
+    expect(page.get_by_role("button", name=re.compile(r"^Cancel$"))).to_have_count(0)

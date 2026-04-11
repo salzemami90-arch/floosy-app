@@ -46,11 +46,15 @@ This avoids inherited local `documents` / `transactions` state from earlier loca
 - Arabic Account add-transaction flow
 - English Documents add/delete flow
 - Arabic Documents add/delete flow
+- Settings language switch flow across pages
+- Cloud status flow from disabled to enabled/configured UI
+- Documents modal usability on a short viewport
 
 ## 5. Good next E2E scenarios
 
-- add transaction and confirm it appears in Account
-- switch language and confirm page labels update
+- invoices and tax flows
+- settings export/restore roundtrip
+- cloud unconfigured state from a server without secrets
 - check Monthly Items panel opens and closes correctly
 - verify responsive behavior on smaller viewports
-- verify Documents add dialog remains scrollable on short screens
+- validation errors and empty states
