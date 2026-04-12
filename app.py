@@ -10,7 +10,6 @@ from config_floosy import (
     get_month_selection,
     init_session_state,
     save_persistent_state,
-    sync_browser_preferences_state,
 )
 from services.supabase_sync import SupabaseSyncClient
 
@@ -69,119 +68,6 @@ def _sync_cloud_if_logged_in() -> None:
             st.session_state["settings"] = settings
 
 
-def _render_beta_notice() -> None:
-    st.markdown(
-        """
-        <div style="
-            background: linear-gradient(135deg, #fff7ed, #fffbeb);
-            border: 1px solid #f59e0b;
-            border-right: 6px solid #f59e0b;
-            border-radius: 14px;
-            padding: 12px 14px;
-            margin: 8px 0 14px 0;
-            color: #78350f;
-            line-height: 1.75;
-        ">
-            <div style="font-weight: 800; margin-bottom: 6px;">
-                تنبيه تجريبي | Beta Notice
-            </div>
-            <div>
-                هذا التطبيق ما زال في مرحلة تجريبية. إذا كانت البيانات مهمة، فيرجى تفعيل المزامنة السحابية أو تصدير نسخة احتياطية بشكل منتظم خلال مرحلة التجربة.
-            </div>
-            <div style="margin-top: 4px;">
-                This app is currently in beta. If your data matters, enable cloud sync or export a backup regularly during beta.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _should_show_welcome_gate() -> bool:
-    settings = st.session_state.get("settings", {})
-    if not isinstance(settings, dict):
-        return True
-    if bool(st.session_state.get("_welcome_completed", False)):
-        return False
-    if bool(settings.get("language_user_selected", False)):
-        st.session_state["_welcome_completed"] = True
-        return False
-    return True
-
-
-def _render_welcome_gate() -> None:
-    settings = st.session_state.get("settings", {})
-    if not isinstance(settings, dict):
-        settings = {}
-
-    current_language = settings.get("language", "العربية")
-
-    st.markdown(
-        """
-        <style>
-        .floosy-welcome-card {
-            margin-top: 8vh;
-            background: #ffffff !important;
-            border-radius: 18px !important;
-            border: 1px solid #dbe3ea !important;
-            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22) !important;
-            padding: 18px 16px 14px 16px;
-        }
-
-        .floosy-welcome-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            margin-bottom: 6px;
-            color: #0f172a;
-        }
-
-        .floosy-welcome-copy {
-            color: #475569;
-            line-height: 1.7;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("<div style='height: 4vh;'></div>", unsafe_allow_html=True)
-    _, center_col, _ = st.columns([1, 1.4, 1])
-    with center_col:
-        st.markdown('<div class="floosy-welcome-card">', unsafe_allow_html=True)
-        with st.form("welcome_gate_form", clear_on_submit=False):
-            st.markdown('<div class="floosy-welcome-title">مرحبًا بك في فلوسي | Welcome to Floosy</div>', unsafe_allow_html=True)
-            st.markdown(
-                '<div class="floosy-welcome-copy">يرجى اختيار اللغة للبدء. الاسم اختياري، ويمكن تعديلهما لاحقًا من الإعدادات.<br/>Choose your language to get started. Name is optional, and you can change both later from Settings.</div>',
-                unsafe_allow_html=True,
-            )
-            welcome_name = st.text_input(
-                "اسمك (اختياري) | Your name (optional)",
-                value=str(settings.get("name", "") or ""),
-            )
-            welcome_language = st.selectbox(
-                "اللغة | Language",
-                ["العربية", "English"],
-                index=0 if current_language == "العربية" else 1,
-            )
-            submitted = st.form_submit_button("ابدأ | Start", use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if submitted:
-        settings["language"] = welcome_language
-        settings["language_user_selected"] = True
-        settings["name"] = welcome_name.strip()
-        st.session_state["settings"] = settings
-        st.session_state["_welcome_completed"] = True
-        sync_browser_preferences_state(
-            language=welcome_language,
-            name=welcome_name.strip(),
-            welcome_done=True,
-        )
-        st.rerun()
-
-
 def main():
     st.set_page_config(page_title="فلوسي | Floosy", layout="wide")
 
@@ -201,10 +87,6 @@ def main():
     except Exception:
         st.error("في خطأ يمنع تشغيل التطبيق بسبب ImportError أو مشكلة في أحد الملفات.")
         st.code(traceback.format_exc())
-        st.stop()
-
-    if _should_show_welcome_gate():
-        _render_welcome_gate()
         st.stop()
 
     lang = st.session_state.settings.get("language", "العربية")
@@ -260,10 +142,6 @@ def main():
 
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
-    if not st.session_state.get("_beta_notice_shown", False):
-        _render_beta_notice()
-        st.session_state["_beta_notice_shown"] = True
-
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
 
