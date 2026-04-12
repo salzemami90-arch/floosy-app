@@ -72,6 +72,8 @@ Important:
 - English Invoices empty-state + validation flow
 - English Invoices add flow
 - Arabic Invoices add flow
+- English Invoices edit flow
+- English Invoices delete flow
 - English Tax Settings open/save flow
 
 ## 6. Good next E2E scenarios
@@ -79,5 +81,4 @@ Important:
 - settings export/restore roundtrip
 - check Monthly Items panel opens and closes correctly
 - verify responsive behavior on smaller viewports
-- invoice edit/delete flow
 - tax settings edge cases and wording checks

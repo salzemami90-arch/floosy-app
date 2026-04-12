@@ -181,6 +181,29 @@ def _add_basic_invoice(
     expect(page.locator("body")).to_contain_text(customer_name)
 
 
+def _create_invoice_for_manage_flow(
+    page: Page,
+    page_label_pattern: re.Pattern[str],
+    heading_pattern: re.Pattern[str],
+    add_tab_pattern: re.Pattern[str],
+    manage_tab_pattern: re.Pattern[str],
+    customer_label: re.Pattern[str],
+    amount_label: re.Pattern[str],
+    save_button_pattern: re.Pattern[str],
+    customer_name: str,
+) -> None:
+    _open_invoices_tax(page, page_label_pattern, heading_pattern)
+    _add_basic_invoice(
+        page,
+        add_tab_pattern=add_tab_pattern,
+        manage_tab_pattern=manage_tab_pattern,
+        customer_label=customer_label,
+        amount_label=amount_label,
+        save_button_pattern=save_button_pattern,
+        customer_name=customer_name,
+    )
+
+
 def test_floosy_english_smoke(page: Page) -> None:
     _goto_language(page, "en")
     _open_account(page, re.compile(r"^Account$"), re.compile(r"^Account$"))
@@ -393,3 +416,52 @@ def test_tax_settings_can_open_and_save_in_english(page: Page) -> None:
 
     expect(page.locator("body")).to_contain_text("Tax settings saved.")
     expect(page.locator("body")).to_contain_text("Playwright VAT")
+
+
+def test_invoices_can_edit_invoice_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    original_name = f"playwright-edit-old-{int(time.time())}"
+    updated_name = f"playwright-edit-new-{int(time.time())}"
+
+    _create_invoice_for_manage_flow(
+        page,
+        page_label_pattern=re.compile(r"^Invoices & Tax$"),
+        heading_pattern=re.compile(r"^Invoices and Tax$"),
+        add_tab_pattern=re.compile(r"^Add Invoice$"),
+        manage_tab_pattern=re.compile(r"^Manage Invoices$"),
+        customer_label=re.compile(r"^Customer Name$"),
+        amount_label=re.compile(r"^Amount Before Tax$|^Amount \(Tax Included\)$"),
+        save_button_pattern=re.compile(r"^Save Invoice$"),
+        customer_name=original_name,
+    )
+
+    page.get_by_text(re.compile(r"^Edit Invoice Details$")).last.click()
+    page.get_by_label(re.compile(r"^Customer Name$")).last.fill(updated_name)
+    page.get_by_role("button", name=re.compile(r"^Save Edit$")).last.click()
+
+    expect(page.locator("body")).to_contain_text(updated_name)
+    expect(page.locator("body")).not_to_contain_text(original_name)
+
+
+def test_invoices_can_delete_invoice_in_english(page: Page) -> None:
+    _goto_language(page, "en")
+    customer_name = f"playwright-delete-{int(time.time())}"
+
+    _create_invoice_for_manage_flow(
+        page,
+        page_label_pattern=re.compile(r"^Invoices & Tax$"),
+        heading_pattern=re.compile(r"^Invoices and Tax$"),
+        add_tab_pattern=re.compile(r"^Add Invoice$"),
+        manage_tab_pattern=re.compile(r"^Manage Invoices$"),
+        customer_label=re.compile(r"^Customer Name$"),
+        amount_label=re.compile(r"^Amount Before Tax$|^Amount \(Tax Included\)$"),
+        save_button_pattern=re.compile(r"^Save Invoice$"),
+        customer_name=customer_name,
+    )
+
+    page.get_by_text(re.compile(r"^Delete Invoice$")).last.click()
+    _click_checkbox_label(page, re.compile(r"^Confirm Deletion$"))
+    page.get_by_role("button", name=re.compile(r"^Delete Invoice Permanently$")).last.click()
+
+    expect(page.locator("body")).not_to_contain_text(customer_name)
+    expect(page.get_by_text(re.compile(r"^No invoices yet\. Add the first invoice from the Add Invoice tab\.$"))).to_be_visible()
