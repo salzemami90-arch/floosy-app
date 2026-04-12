@@ -501,6 +501,8 @@ def render(month_key: str, month: str, year: int) -> None:
     with c4:
         st.metric(t("الإجمالي النهائي", "Total"), f"{report['totals'].get('total', 0.0):,.2f} {currency_view}")
 
+    st.markdown("---")
+
     st.caption(
         t(
             f"أساس التقرير: {'نقدي' if report.get('basis') == 'cash' else 'استحقاق'} | مفتوح غير مسدد: {report['totals'].get('outstanding_open_total', 0.0):,.2f} {currency_view}",

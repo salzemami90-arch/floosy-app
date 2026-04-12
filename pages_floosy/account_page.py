@@ -214,6 +214,8 @@ def render(month_key: str, month: str, year: int):
     with c3:
         st.metric(t("المتبقي", "Remaining"), f"{(total_income - total_expense):,.0f} {currency_view}")
 
+    st.markdown("---")
+
     recurring_items = st.session_state.setdefault("recurring", {}).setdefault("items", [])
 
     st.markdown(f"### {t('الالتزامات والدخل الشهري', 'Monthly Commitments and Income')}")
