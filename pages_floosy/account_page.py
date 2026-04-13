@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import html
 
 import pandas as pd
 import streamlit as st
@@ -39,10 +40,10 @@ def _render_account_summary_styles() -> None:
         .floosy-account-summary-card {
             border-radius: 18px;
             padding: 16px 18px 14px 18px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color, #e5e7eb);
             box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
             margin-bottom: 0.8rem;
-            background: #ffffff;
+            background: var(--bg-color, #ffffff);
         }
 
         .floosy-account-summary-card--remaining {
@@ -56,12 +57,16 @@ def _render_account_summary_styles() -> None:
             --accent: #059669;
             --label-color: #047857;
             --value-color: #111827;
+            --bg-color: #f0fbf6;
+            --border-color: #cbeedd;
         }
 
         .floosy-account-summary-card--expense {
             --accent: #eea86d;
             --label-color: #a56a32;
             --value-color: #111827;
+            --bg-color: #fff7f1;
+            --border-color: #f3d7bf;
         }
 
         .floosy-account-summary-card__label {
@@ -79,14 +84,37 @@ def _render_account_summary_styles() -> None:
             color: var(--value-color, #111827);
         }
 
+        .floosy-account-summary-card__currency {
+            font-size: 0.8em;
+            font-weight: 700;
+            color: var(--label-color, #64748b);
+            opacity: 0.72;
+        }
+
         .floosy-account-summary-card--remaining .floosy-account-summary-card__label,
         .floosy-account-summary-card--remaining .floosy-account-summary-card__value {
             color: #ffffff;
         }
 
+        .floosy-account-summary-card--remaining .floosy-account-summary-card__currency {
+            color: rgba(255, 255, 255, 0.82);
+            opacity: 1;
+        }
+
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _metric_value_html(value: str) -> str:
+    clean_value = str(value or "").strip()
+    if " " not in clean_value:
+        return html.escape(clean_value)
+    amount_part, currency_part = clean_value.rsplit(" ", 1)
+    return (
+        f"{html.escape(amount_part)} "
+        f'<span class="floosy-account-summary-card__currency">{html.escape(currency_part)}</span>'
     )
 
 
@@ -100,7 +128,7 @@ def _render_account_summary_card(label: str, value: str, tone: str, is_en: bool)
         f"""
         <div class="floosy-account-summary-card floosy-account-summary-card--{tone}" style="direction:{direction};text-align:{align};{side_style}">
             <div class="floosy-account-summary-card__label">{label}</div>
-            <div class="floosy-account-summary-card__value">{value}</div>
+            <div class="floosy-account-summary-card__value">{_metric_value_html(value)}</div>
         </div>
         """,
         unsafe_allow_html=True,
