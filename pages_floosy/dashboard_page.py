@@ -44,6 +44,16 @@ def _render_summary_card_styles() -> None:
             border-color: rgba(15, 95, 140, 0.14);
         }
 
+        .floosy-summary-card--savings {
+            background: linear-gradient(180deg, #eef5ff 0%, #ddeaff 100%);
+            border-color: rgba(59, 130, 246, 0.18);
+        }
+
+        .floosy-summary-card--projects {
+            background: linear-gradient(180deg, #eefaf8 0%, #dcf3ef 100%);
+            border-color: rgba(19, 148, 123, 0.18);
+        }
+
         .floosy-summary-card__label {
             font-size: 0.88rem;
             font-weight: 700;
@@ -86,6 +96,22 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--neutral .floosy-summary-card__value {
             color: #0f172a;
         }
+
+        .floosy-summary-card--savings .floosy-summary-card__label {
+            color: #315f9f;
+        }
+
+        .floosy-summary-card--savings .floosy-summary-card__value {
+            color: #1e3a8a;
+        }
+
+        .floosy-summary-card--projects .floosy-summary-card__label {
+            color: #1f6f67;
+        }
+
+        .floosy-summary-card--projects .floosy-summary-card__value {
+            color: #115e59;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -100,6 +126,8 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
         "income": "floosy-summary-card--income",
         "expense": "floosy-summary-card--expense",
         "neutral": "floosy-summary-card--neutral",
+        "savings": "floosy-summary-card--savings",
+        "projects": "floosy-summary-card--projects",
     }.get(tone, "floosy-summary-card--neutral")
     featured_class = " floosy-summary-card--featured" if featured and tone != "balance" else ""
 
@@ -272,7 +300,7 @@ def render(month_key: str, month: str, year: int):
             {
                 "label": t("رصيد التوفير", "Savings Balance"),
                 "value": f"{saving_balance:,.0f} {currency_view}",
-                "tone": "neutral",
+                "tone": "savings",
                 "featured": False,
             }
         )
@@ -281,7 +309,7 @@ def render(month_key: str, month: str, year: int):
             {
                 "label": t("صافي المشاريع هذا الشهر", "Projects Net This Month"),
                 "value": f"{project_net_month:,.0f} {currency_view}",
-                "tone": "neutral",
+                "tone": "projects",
                 "featured": False,
             }
         )
