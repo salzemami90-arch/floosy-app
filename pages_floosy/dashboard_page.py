@@ -32,11 +32,11 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--income {
-            --accent: #059669;
-            --label-color: #047857;
-            --value-color: #166534;
-            --bg-color: #f0fbf6;
-            --border-color: #cbeedd;
+            --accent: #10b981;
+            --label-color: #059669;
+            --value-color: #047857;
+            --bg-color: #ecfdf5;
+            --border-color: #a7f3d0;
         }
 
         .floosy-summary-card--expense {
