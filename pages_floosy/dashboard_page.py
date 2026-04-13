@@ -67,7 +67,7 @@ def _render_summary_card_styles() -> None:
             --accent: #0f766e;
             --label-color: #0f766e;
             --value-color: #0f766e;
-            --bg-color: #eef6f5;
+            --bg-color: #d5dbdb;
             --border-color: #d5dbdb;
         }
 
