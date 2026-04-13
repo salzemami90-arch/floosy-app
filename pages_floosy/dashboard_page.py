@@ -55,8 +55,8 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--projects {
-            --accent: #1f6f67;
-            --label-color: #1f6f67;
+            --accent: #0d9488;
+            --label-color: #0d9488;
             --value-color: #111827;
         }
 
