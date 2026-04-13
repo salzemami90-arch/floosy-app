@@ -45,13 +45,13 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--savings {
-            background: #eef4ff;
-            border-color: #c8dbff;
+            background: #edf3ff;
+            border-color: #bcd2ff;
         }
 
         .floosy-summary-card--projects {
-            background: #eef8f6;
-            border-color: #cfe9e2;
+            background: #f1fbf7;
+            border-color: #c9ebdd;
         }
 
         .floosy-summary-card__label {
@@ -98,19 +98,19 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--savings .floosy-summary-card__label {
-            color: #2e5eaa;
+            color: #3b64ad;
         }
 
         .floosy-summary-card--savings .floosy-summary-card__value {
-            color: #2e5eaa;
+            color: #244ea8;
         }
 
         .floosy-summary-card--projects .floosy-summary-card__label {
-            color: #1f6f67;
+            color: #2a7b61;
         }
 
         .floosy-summary-card--projects .floosy-summary-card__value {
-            color: #1f6f67;
+            color: #166b52;
         }
 
         </style>
