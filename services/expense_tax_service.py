@@ -15,8 +15,18 @@ class ExpenseTaxService:
         "expense_telecom": "Telecom",
         "expense_salary": "Salaries",
         "expense_subscription": "Subscriptions",
-        DEDUCTIBLE_CODE: "General Expense",
+        DEDUCTIBLE_CODE: "Business Expense",
         NON_DEDUCTIBLE_CODE: "Personal Expense",
+    }
+    _KNOWN_AR_NAMES_BY_CODE = {
+        "income_sales": "مبيعات",
+        "income_other": "دخل آخر",
+        "expense_rent": "إيجار",
+        "expense_telecom": "اتصالات",
+        "expense_salary": "رواتب",
+        "expense_subscription": "اشتراكات",
+        DEDUCTIBLE_CODE: "مصروف عام",
+        NON_DEDUCTIBLE_CODE: "مصروف شخصي",
     }
     _KNOWN_EN_NAMES_BY_AR = {
         "مبيعات": "Sales",
@@ -111,6 +121,9 @@ class ExpenseTaxService:
     @classmethod
     def _display_name(cls, tag: dict, is_en: bool = False) -> str:
         raw_name = str(tag.get("name", "") or tag.get("code", "")).strip()
+        code = str(tag.get("code", "") or "").strip()
+        if not is_en and code in cls._KNOWN_AR_NAMES_BY_CODE:
+            return cls._KNOWN_AR_NAMES_BY_CODE[code]
         if not is_en:
             return raw_name
 
@@ -118,7 +131,6 @@ class ExpenseTaxService:
         if explicit_en_name:
             return explicit_en_name
 
-        code = str(tag.get("code", "") or "").strip()
         if code in cls._KNOWN_EN_NAMES_BY_CODE:
             return cls._KNOWN_EN_NAMES_BY_CODE[code]
 
@@ -136,16 +148,13 @@ class ExpenseTaxService:
         options = []
         for tag in tags:
             deductible = bool(tag.get("deductible", False))
-            suffix_ar = "قابل للخصم" if deductible else "غير قابل للخصم"
-            suffix_en = "Deductible" if deductible else "Non-deductible"
             display_name = cls._display_name(tag, is_en=is_en)
-            label = f"{display_name} ({suffix_en})" if is_en else f"{display_name} ({suffix_ar})"
             options.append(
                 {
                     "code": str(tag.get("code", "")),
                     "name": str(tag.get("name", "")),
                     "deductible": deductible,
-                    "label": label,
+                    "label": display_name,
                 }
             )
         return options
