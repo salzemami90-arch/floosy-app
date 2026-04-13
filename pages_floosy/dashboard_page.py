@@ -64,11 +64,11 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--projects {
-            --accent: #0d9488;
-            --label-color: #0d9488;
+            --accent: #0f766e;
+            --label-color: #0f766e;
             --value-color: #0f766e;
-            --bg-color: #eef9f7;
-            --border-color: #cdeae4;
+            --bg-color: #eef6f5;
+            --border-color: #c5dbda;
         }
 
         .floosy-summary-card__label {
