@@ -34,7 +34,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--income {
             --accent: #059669;
             --label-color: #047857;
-            --value-color: #111827;
+            --value-color: #166534;
             --bg-color: #f0fbf6;
             --border-color: #cbeedd;
         }
@@ -42,7 +42,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--expense {
             --accent: #eea86d;
             --label-color: #a56a32;
-            --value-color: #111827;
+            --value-color: #8b5e34;
             --bg-color: #fff7f1;
             --border-color: #f3d7bf;
         }
@@ -50,7 +50,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--neutral {
             --accent: #64748b;
             --label-color: #475569;
-            --value-color: #111827;
+            --value-color: #334155;
             --bg-color: #f8fafc;
             --border-color: #e2e8f0;
         }
@@ -58,7 +58,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--savings {
             --accent: #2e5eaa;
             --label-color: #2e5eaa;
-            --value-color: #111827;
+            --value-color: #234b87;
             --bg-color: #eef4ff;
             --border-color: #c8dbff;
         }
@@ -66,7 +66,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--projects {
             --accent: #0d9488;
             --label-color: #0d9488;
-            --value-color: #111827;
+            --value-color: #0f766e;
             --bg-color: #eef9f7;
             --border-color: #cdeae4;
         }
@@ -89,7 +89,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card__currency {
             font-size: 0.8em;
             font-weight: 700;
-            color: var(--label-color, #64748b);
+            color: var(--value-color, #334155);
             opacity: 0.72;
         }
 

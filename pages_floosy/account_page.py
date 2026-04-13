@@ -56,7 +56,7 @@ def _render_account_summary_styles() -> None:
         .floosy-account-summary-card--income {
             --accent: #059669;
             --label-color: #047857;
-            --value-color: #111827;
+            --value-color: #166534;
             --bg-color: #f0fbf6;
             --border-color: #cbeedd;
         }
@@ -64,7 +64,7 @@ def _render_account_summary_styles() -> None:
         .floosy-account-summary-card--expense {
             --accent: #eea86d;
             --label-color: #a56a32;
-            --value-color: #111827;
+            --value-color: #8b5e34;
             --bg-color: #fff7f1;
             --border-color: #f3d7bf;
         }
@@ -87,7 +87,7 @@ def _render_account_summary_styles() -> None:
         .floosy-account-summary-card__currency {
             font-size: 0.8em;
             font-weight: 700;
-            color: var(--label-color, #64748b);
+            color: var(--value-color, #334155);
             opacity: 0.72;
         }
 
