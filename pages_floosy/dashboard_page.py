@@ -33,7 +33,7 @@ def _render_summary_card_styles() -> None:
 
         .floosy-summary-card--income {
             --accent: #047857;
-            --label-color: #059669;
+            --label-color: #047857;
             --value-color: #047857;
             --bg-color: #f5fbf7;
             --border-color: #a7f3d0;
