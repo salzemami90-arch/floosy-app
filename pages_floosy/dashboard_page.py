@@ -37,8 +37,8 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--expense {
-            --accent: #f97316;
-            --label-color: #c2410c;
+            --accent: #eea86d;
+            --label-color: #a56a32;
             --value-color: #111827;
         }
 
