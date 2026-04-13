@@ -68,7 +68,7 @@ def _render_summary_card_styles() -> None:
             --label-color: #0f766e;
             --value-color: #0f766e;
             --bg-color: #eef6f5;
-            --border-color: #c5dbda;
+            --border-color: #d5dbdb;
         }
 
         .floosy-summary-card__label {
