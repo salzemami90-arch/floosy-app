@@ -115,6 +115,38 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
     )
 
 
+def _summary_theme(status: str) -> dict:
+    if status in {"cash_pressure_90", "coverage_gap", "project_pressure"}:
+        return {
+            "background": "#FEF2F2",
+            "border": "#EF4444",
+            "label": "#991B1B",
+            "text": "#7F1D1D",
+            "pill_bg": "#FFF1F2",
+            "pill_border": "#FECACA",
+            "pill_text": "#991B1B",
+        }
+    if status in {"needs_follow_up", "spending_high", "docs_due"}:
+        return {
+            "background": "#FFFBEB",
+            "border": "#F59E0B",
+            "label": "#92400E",
+            "text": "#78350F",
+            "pill_bg": "#FFF7D6",
+            "pill_border": "#FDE68A",
+            "pill_text": "#92400E",
+        }
+    return {
+        "background": "#ECFDF5",
+        "border": "#22C55E",
+        "label": "#166534",
+        "text": "#14532D",
+        "pill_bg": "#F0FDF4",
+        "pill_border": "#BBF7D0",
+        "pill_text": "#166534",
+    }
+
+
 def render(month_key: str, month: str, year: int):
     """Dashboard page entry point. App expects this function."""
 
@@ -316,6 +348,8 @@ def render(month_key: str, month: str, year: int):
 
     analyzer = FinancialAnalyzer(SessionStateRepository())
     brief = analyzer.dashboard_brief(st.session_state, month_key, currency)
+    summary_theme = _summary_theme(str(brief.get("status", "stable") or "stable"))
+    summary_border_side = "border-left" if is_en else "border-right"
 
     st.markdown("### " + t("الملخص الذكي", "Smart Summary"))
     brief_message = brief["message_en"] if is_en else brief["message_ar"]
@@ -327,17 +361,17 @@ def render(month_key: str, month: str, year: int):
 
     st.markdown(
         f"""
-        <div style="background:#ffffff;border:1px solid #e5e7eb;border-right:6px solid #2c5f87;border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-            <div style="font-weight:700;font-size:1.02rem;">{brief_message}</div>
-            <div style="color:#4b5563;font-size:0.92rem;margin-top:4px;">{brief_detail}</div>
+        <div style="background:{summary_theme['background']};border:1px solid {summary_theme['pill_border']};{summary_border_side}:6px solid {summary_theme['border']};border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+            <div style="font-weight:700;font-size:1.02rem;color:{summary_theme['text']};">{brief_message}</div>
+            <div style="color:{summary_theme['label']};font-size:0.92rem;margin-top:4px;">{brief_detail}</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-                <div style="background:#f8fafc;border:1px solid #dbe3ea;border-radius:999px;padding:6px 10px;font-size:0.85rem;">
-                    <span style="color:#64748b;">{focus_label}:</span>
-                    <span style="font-weight:700;color:#0f172a;"> {focus_value}</span>
+                <div style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+                    <span style="color:{summary_theme['label']};">{focus_label}:</span>
+                    <span style="font-weight:700;color:{summary_theme['pill_text']};"> {focus_value}</span>
                 </div>
-                <div style="background:#f8fafc;border:1px solid #dbe3ea;border-radius:999px;padding:6px 10px;font-size:0.85rem;">
-                    <span style="color:#64748b;">{support_label}:</span>
-                    <span style="font-weight:700;color:#0f172a;"> {support_value}</span>
+                <div style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+                    <span style="color:{summary_theme['label']};">{support_label}:</span>
+                    <span style="font-weight:700;color:{summary_theme['pill_text']};"> {support_value}</span>
                 </div>
             </div>
         </div>
