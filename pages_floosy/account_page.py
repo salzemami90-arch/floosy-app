@@ -575,8 +575,20 @@ def render(month_key: str, month: str, year: int):
                     format_func=lambda code: tax_label_by_code.get(code, code),
                     key="account_add_tx_tax_tag",
                 )
+                if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
+                    st.caption(
+                        t(
+                            "إذا اخترت أخرى، اكتبي التفاصيل في الملاحظة.",
+                            "If you choose Other, add the details in the note.",
+                        )
+                    )
 
-            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"))
+            note_placeholder = (
+                t("اكتبي التفاصيل هنا إذا اخترت أخرى", "Write the details here if you choose Other")
+                if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
+                else ""
+            )
+            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), placeholder=note_placeholder)
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
             t_currency_options = [default_currency_label] + CURRENCY_OPTIONS
             t_currency = st.selectbox(

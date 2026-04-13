@@ -38,8 +38,8 @@ def default_tax_tags() -> list[TaxTag]:
         TaxTag(code="expense_telecom", name="اتصالات", kind="expense", deductible=True, tax_applicable=True, sort_order=11),
         TaxTag(code="expense_salary", name="رواتب", kind="expense", deductible=True, tax_applicable=False, sort_order=12),
         TaxTag(code="expense_subscription", name="اشتراكات", kind="expense", deductible=True, tax_applicable=True, sort_order=13),
-        TaxTag(code="expense_deductible_generic", name="مصروف قابل للخصم", kind="expense", deductible=True, tax_applicable=False, sort_order=90),
-        TaxTag(code="expense_non_deductible_generic", name="مصروف غير قابل للخصم", kind="expense", deductible=False, tax_applicable=False, sort_order=91),
+        TaxTag(code="expense_non_deductible_generic", name="مصروف شخصي", kind="expense", deductible=False, tax_applicable=False, sort_order=998),
+        TaxTag(code="expense_deductible_generic", name="أخرى", kind="expense", deductible=True, tax_applicable=False, sort_order=999),
     ]
 
 

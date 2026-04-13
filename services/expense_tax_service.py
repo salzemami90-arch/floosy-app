@@ -15,7 +15,7 @@ class ExpenseTaxService:
         "expense_telecom": "Telecom",
         "expense_salary": "Salaries",
         "expense_subscription": "Subscriptions",
-        DEDUCTIBLE_CODE: "Business Expense",
+        DEDUCTIBLE_CODE: "Other",
         NON_DEDUCTIBLE_CODE: "Personal Expense",
     }
     _KNOWN_AR_NAMES_BY_CODE = {
@@ -25,7 +25,7 @@ class ExpenseTaxService:
         "expense_telecom": "اتصالات",
         "expense_salary": "رواتب",
         "expense_subscription": "اشتراكات",
-        DEDUCTIBLE_CODE: "مصروف عام",
+        DEDUCTIBLE_CODE: "أخرى",
         NON_DEDUCTIBLE_CODE: "مصروف شخصي",
     }
     _KNOWN_EN_NAMES_BY_AR = {
@@ -58,20 +58,20 @@ class ExpenseTaxService:
         if deductible:
             return {
                 "code": cls.DEDUCTIBLE_CODE,
-                "name": "مصروف قابل للخصم",
+                "name": "أخرى",
                 "kind": "expense",
                 "deductible": True,
                 "tax_applicable": False,
-                "sort_order": 90,
+                "sort_order": 999,
                 "active": True,
             }
         return {
             "code": cls.NON_DEDUCTIBLE_CODE,
-            "name": "مصروف غير قابل للخصم",
+            "name": "مصروف شخصي",
             "kind": "expense",
             "deductible": False,
             "tax_applicable": False,
-            "sort_order": 91,
+            "sort_order": 998,
             "active": True,
         }
 

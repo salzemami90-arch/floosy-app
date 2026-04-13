@@ -526,7 +526,23 @@ div[data-testid="stForm"] {
                     format_func=lambda code: tax_label_by_code.get(code, code),
                     key="dash_q_tax_code",
                 )
-            q_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), key="dash_q_note")
+                if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
+                    st.caption(
+                        t(
+                            "إذا اخترت أخرى، اكتبي التفاصيل في الملاحظة.",
+                            "If you choose Other, add the details in the note.",
+                        )
+                    )
+            note_placeholder = (
+                t("اكتبي التفاصيل هنا إذا اخترت أخرى", "Write the details here if you choose Other")
+                if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
+                else ""
+            )
+            q_note = st.text_input(
+                t("ملاحظة (اختياري)", "Note (Optional)"),
+                key="dash_q_note",
+                placeholder=note_placeholder,
+            )
 
             b1, b2 = st.columns(2)
             with b1:

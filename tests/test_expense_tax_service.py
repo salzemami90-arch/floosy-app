@@ -20,9 +20,14 @@ class ExpenseTaxServiceTests(unittest.TestCase):
         options = ExpenseTaxService.expense_options(state, is_en=True)
         labels_by_code = {item["code"]: item["label"] for item in options}
         self.assertEqual(labels_by_code["expense_rent"], "Rent")
-        self.assertEqual(labels_by_code[ExpenseTaxService.DEDUCTIBLE_CODE], "Business Expense")
+        self.assertEqual(labels_by_code[ExpenseTaxService.DEDUCTIBLE_CODE], "Other")
         self.assertEqual(labels_by_code[ExpenseTaxService.NON_DEDUCTIBLE_CODE], "Personal Expense")
         self.assertNotIn("إيجار", labels_by_code.values())
+
+    def test_expense_options_keep_other_last(self):
+        state = {"tax_tags": []}
+        options = ExpenseTaxService.expense_options(state, is_en=True)
+        self.assertEqual(options[-1]["code"], ExpenseTaxService.DEDUCTIBLE_CODE)
 
     def test_normalize_income_transaction_marks_not_applicable(self):
         state = {"tax_tags": []}
