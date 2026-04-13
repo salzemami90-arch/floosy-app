@@ -32,6 +32,90 @@ CATEGORY_AR_TO_EN = {
 }
 
 
+def _render_account_summary_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .floosy-account-summary-card {
+            border-radius: 18px;
+            padding: 16px 18px 14px 18px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+            margin-bottom: 0.8rem;
+        }
+
+        .floosy-account-summary-card--remaining {
+            min-height: 118px;
+            background: linear-gradient(135deg, #164c72 0%, #1f7a92 55%, #2aa47c 100%);
+            color: #f8fafc;
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .floosy-account-summary-card--income {
+            background: linear-gradient(180deg, #f3fcf7 0%, #e2f8ed 100%);
+            border-color: rgba(18, 149, 107, 0.18);
+        }
+
+        .floosy-account-summary-card--expense {
+            background: linear-gradient(180deg, #fff6ef 0%, #ffe9da 100%);
+            border-color: rgba(217, 119, 6, 0.18);
+        }
+
+        .floosy-account-summary-card__label {
+            font-size: 0.88rem;
+            font-weight: 700;
+            opacity: 0.92;
+            margin-bottom: 0.55rem;
+        }
+
+        .floosy-account-summary-card__value {
+            font-size: 1.46rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+
+        .floosy-account-summary-card--remaining .floosy-account-summary-card__label,
+        .floosy-account-summary-card--remaining .floosy-account-summary-card__value {
+            color: #ffffff;
+        }
+
+        .floosy-account-summary-card--income .floosy-account-summary-card__label {
+            color: #177254;
+        }
+
+        .floosy-account-summary-card--income .floosy-account-summary-card__value {
+            color: #0f5132;
+        }
+
+        .floosy-account-summary-card--expense .floosy-account-summary-card__label {
+            color: #b45309;
+        }
+
+        .floosy-account-summary-card--expense .floosy-account-summary-card__value {
+            color: #9a3412;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_account_summary_card(label: str, value: str, tone: str, is_en: bool) -> None:
+    direction = "ltr" if is_en else "rtl"
+    align = "left" if is_en else "right"
+
+    st.markdown(
+        f"""
+        <div class="floosy-account-summary-card floosy-account-summary-card--{tone}" style="direction:{direction};text-align:{align};">
+            <div class="floosy-account-summary-card__label">{label}</div>
+            <div class="floosy-account-summary-card__value">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _tx_type_label(value: str, is_en: bool) -> str:
     clean_value = str(value or "").strip()
     if not is_en:
@@ -206,13 +290,29 @@ def render(month_key: str, month: str, year: int):
         total_income = float(df_k[df_k["type"] == "دخل"]["amount"].sum())
         total_expense = float(df_k[df_k["type"] == "مصروف"]["amount"].sum())
 
-    c1, c2, c3 = st.columns(3)
+    _render_account_summary_styles()
+    _render_account_summary_card(
+        t("المتبقي", "Remaining"),
+        f"{(total_income - total_expense):,.0f} {currency_view}",
+        "remaining",
+        is_en=is_en,
+    )
+
+    c1, c2 = st.columns(2)
     with c1:
-        st.metric(t("إجمالي الدخل", "Total Income"), f"{total_income:,.0f} {currency_view}")
+        _render_account_summary_card(
+            t("إجمالي الدخل", "Total Income"),
+            f"{total_income:,.0f} {currency_view}",
+            "income",
+            is_en=is_en,
+        )
     with c2:
-        st.metric(t("إجمالي المصاريف", "Total Expenses"), f"{total_expense:,.0f} {currency_view}", delta_color="inverse")
-    with c3:
-        st.metric(t("المتبقي", "Remaining"), f"{(total_income - total_expense):,.0f} {currency_view}")
+        _render_account_summary_card(
+            t("إجمالي المصاريف", "Total Expenses"),
+            f"{total_expense:,.0f} {currency_view}",
+            "expense",
+            is_en=is_en,
+        )
 
     st.markdown("---")
 

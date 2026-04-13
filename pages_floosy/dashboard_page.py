@@ -10,6 +10,110 @@ from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
 
 
+def _render_summary_card_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .floosy-summary-card {
+            border-radius: 18px;
+            padding: 16px 18px 14px 18px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+            margin-bottom: 0.8rem;
+        }
+
+        .floosy-summary-card--featured {
+            min-height: 124px;
+            background: linear-gradient(135deg, #164c72 0%, #1f7a92 55%, #2aa47c 100%);
+            color: #f8fafc;
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .floosy-summary-card--income {
+            background: linear-gradient(180deg, #f3fcf7 0%, #e2f8ed 100%);
+            border-color: rgba(18, 149, 107, 0.18);
+        }
+
+        .floosy-summary-card--expense {
+            background: linear-gradient(180deg, #fff6ef 0%, #ffe9da 100%);
+            border-color: rgba(217, 119, 6, 0.18);
+        }
+
+        .floosy-summary-card--neutral {
+            background: linear-gradient(180deg, #f8fbff 0%, #edf5fb 100%);
+            border-color: rgba(15, 95, 140, 0.14);
+        }
+
+        .floosy-summary-card__label {
+            font-size: 0.88rem;
+            font-weight: 700;
+            opacity: 0.92;
+            margin-bottom: 0.55rem;
+        }
+
+        .floosy-summary-card__value {
+            font-size: 1.52rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+
+        .floosy-summary-card--featured .floosy-summary-card__label,
+        .floosy-summary-card--featured .floosy-summary-card__value {
+            color: #ffffff;
+        }
+
+        .floosy-summary-card--income .floosy-summary-card__label {
+            color: #177254;
+        }
+
+        .floosy-summary-card--income .floosy-summary-card__value {
+            color: #0f5132;
+        }
+
+        .floosy-summary-card--expense .floosy-summary-card__label {
+            color: #b45309;
+        }
+
+        .floosy-summary-card--expense .floosy-summary-card__value {
+            color: #9a3412;
+        }
+
+        .floosy-summary-card--neutral .floosy-summary-card__label {
+            color: #365f7e;
+        }
+
+        .floosy-summary-card--neutral .floosy-summary-card__value {
+            color: #0f172a;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_summary_card(label: str, value: str, tone: str, is_en: bool, featured: bool = False) -> None:
+    direction = "ltr" if is_en else "rtl"
+    align = "left" if is_en else "right"
+    tone_class = {
+        "balance": "floosy-summary-card--featured",
+        "income": "floosy-summary-card--income",
+        "expense": "floosy-summary-card--expense",
+        "neutral": "floosy-summary-card--neutral",
+    }.get(tone, "floosy-summary-card--neutral")
+    featured_class = " floosy-summary-card--featured" if featured and tone != "balance" else ""
+
+    st.markdown(
+        f"""
+        <div class="floosy-summary-card {tone_class}{featured_class}" style="direction:{direction};text-align:{align};">
+            <div class="floosy-summary-card__label">{label}</div>
+            <div class="floosy-summary-card__value">{value}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render(month_key: str, month: str, year: int):
     """Dashboard page entry point. App expects this function."""
 
@@ -63,6 +167,8 @@ def render(month_key: str, month: str, year: int):
 
     st.caption(t(f"الشهر المعروض: {month_display} {year}", f"Selected month: {month_display} {year}"))
     st.markdown("---")
+
+    _render_summary_card_styles()
 
     # ===== Build metrics =====
     df_all = get_all_transactions_df(currency)
@@ -142,24 +248,70 @@ def render(month_key: str, month: str, year: int):
     metric_items = []
     if show_account:
         metric_items.extend([
-            (t("الرصيد الحالي", "Current Balance"), f"{account_balance:,.0f} {currency_view}"),
-            (t("دخل هذا الشهر", "Income This Month"), f"{month_income:,.0f} {currency_view}"),
-            (t("مصروف هذا الشهر", "Expenses This Month"), f"{month_expenses:,.0f} {currency_view}"),
+            {
+                "label": t("الرصيد الحالي", "Current Balance"),
+                "value": f"{account_balance:,.0f} {currency_view}",
+                "tone": "balance",
+                "featured": True,
+            },
+            {
+                "label": t("دخل هذا الشهر", "Income This Month"),
+                "value": f"{month_income:,.0f} {currency_view}",
+                "tone": "income",
+                "featured": False,
+            },
+            {
+                "label": t("مصروف هذا الشهر", "Expenses This Month"),
+                "value": f"{month_expenses:,.0f} {currency_view}",
+                "tone": "expense",
+                "featured": False,
+            },
         ])
     if show_saving:
-        metric_items.append((t("رصيد التوفير", "Savings Balance"), f"{saving_balance:,.0f} {currency_view}"))
+        metric_items.append(
+            {
+                "label": t("رصيد التوفير", "Savings Balance"),
+                "value": f"{saving_balance:,.0f} {currency_view}",
+                "tone": "neutral",
+                "featured": False,
+            }
+        )
     if show_project:
-        metric_items.append((t("صافي المشاريع هذا الشهر", "Projects Net This Month"), f"{project_net_month:,.0f} {currency_view}"))
+        metric_items.append(
+            {
+                "label": t("صافي المشاريع هذا الشهر", "Projects Net This Month"),
+                "value": f"{project_net_month:,.0f} {currency_view}",
+                "tone": "neutral",
+                "featured": False,
+            }
+        )
 
     if not metric_items:
         st.info(t("كل بطاقات الملخص مخفية من الإعدادات.", "All summary cards are hidden in settings."))
     else:
-        for i in range(0, len(metric_items), 2):
-            row_items = metric_items[i:i + 2]
+        featured_item = next((item for item in metric_items if item.get("featured")), None)
+        if featured_item:
+            _render_summary_card(
+                featured_item["label"],
+                featured_item["value"],
+                featured_item["tone"],
+                is_en=is_en,
+                featured=True,
+            )
+
+        grid_items = [item for item in metric_items if item is not featured_item]
+        for i in range(0, len(grid_items), 2):
+            row_items = grid_items[i:i + 2]
             cols = st.columns(len(row_items))
-            for col, (label, value) in zip(cols, row_items):
+            for col, item in zip(cols, row_items):
                 with col:
-                    st.metric(label, value)
+                    _render_summary_card(
+                        item["label"],
+                        item["value"],
+                        item["tone"],
+                        is_en=is_en,
+                        featured=False,
+                    )
 
     analyzer = FinancialAnalyzer(SessionStateRepository())
     brief = analyzer.dashboard_brief(st.session_state, month_key, currency)
