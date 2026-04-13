@@ -17,9 +17,10 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card {
             border-radius: 18px;
             padding: 16px 18px 14px 18px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
             box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
             margin-bottom: 0.8rem;
+            background: #ffffff;
         }
 
         .floosy-summary-card--featured {
@@ -30,35 +31,40 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--income {
-            background: #f6fcf9;
-            border-color: #d6f1e4;
+            --accent: #059669;
+            --label-color: #047857;
+            --value-color: #111827;
         }
 
         .floosy-summary-card--expense {
-            background: #fff8f2;
-            border-color: #f5ddc8;
+            --accent: #f97316;
+            --label-color: #c2410c;
+            --value-color: #111827;
         }
 
         .floosy-summary-card--neutral {
-            background: linear-gradient(180deg, #f8fbff 0%, #edf5fb 100%);
-            border-color: rgba(15, 95, 140, 0.14);
+            --accent: #64748b;
+            --label-color: #475569;
+            --value-color: #111827;
         }
 
         .floosy-summary-card--savings {
-            background: #edf3ff;
-            border-color: #bcd2ff;
+            --accent: #2e5eaa;
+            --label-color: #2e5eaa;
+            --value-color: #111827;
         }
 
         .floosy-summary-card--projects {
-            background: #f1fbf7;
-            border-color: #c9ebdd;
+            --accent: #1f6f67;
+            --label-color: #1f6f67;
+            --value-color: #111827;
         }
 
         .floosy-summary-card__label {
             font-size: 0.88rem;
             font-weight: 700;
-            opacity: 0.92;
             margin-bottom: 0.55rem;
+            color: var(--label-color, #475569);
         }
 
         .floosy-summary-card__value {
@@ -66,51 +72,12 @@ def _render_summary_card_styles() -> None:
             font-weight: 800;
             line-height: 1.15;
             letter-spacing: -0.02em;
+            color: var(--value-color, #111827);
         }
 
         .floosy-summary-card--featured .floosy-summary-card__label,
         .floosy-summary-card--featured .floosy-summary-card__value {
             color: #ffffff;
-        }
-
-        .floosy-summary-card--income .floosy-summary-card__label {
-            color: #2f7b5a;
-        }
-
-        .floosy-summary-card--income .floosy-summary-card__value {
-            color: #14532d;
-        }
-
-        .floosy-summary-card--expense .floosy-summary-card__label {
-            color: #b66a2c;
-        }
-
-        .floosy-summary-card--expense .floosy-summary-card__value {
-            color: #9a3412;
-        }
-
-        .floosy-summary-card--neutral .floosy-summary-card__label {
-            color: #365f7e;
-        }
-
-        .floosy-summary-card--neutral .floosy-summary-card__value {
-            color: #0f172a;
-        }
-
-        .floosy-summary-card--savings .floosy-summary-card__label {
-            color: #3b64ad;
-        }
-
-        .floosy-summary-card--savings .floosy-summary-card__value {
-            color: #244ea8;
-        }
-
-        .floosy-summary-card--projects .floosy-summary-card__label {
-            color: #2a7b61;
-        }
-
-        .floosy-summary-card--projects .floosy-summary-card__value {
-            color: #166b52;
         }
 
         </style>
@@ -122,6 +89,7 @@ def _render_summary_card_styles() -> None:
 def _render_summary_card(label: str, value: str, tone: str, is_en: bool, featured: bool = False) -> None:
     direction = "ltr" if is_en else "rtl"
     align = "left" if is_en else "right"
+    border_side = "border-left" if is_en else "border-right"
     tone_class = {
         "balance": "floosy-summary-card--featured",
         "income": "floosy-summary-card--income",
@@ -131,10 +99,11 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
         "projects": "floosy-summary-card--projects",
     }.get(tone, "floosy-summary-card--neutral")
     featured_class = " floosy-summary-card--featured" if featured and tone != "balance" else ""
+    side_style = "" if tone == "balance" else f"{border_side}: 5px solid var(--accent);"
 
     st.markdown(
         f"""
-        <div class="floosy-summary-card {tone_class}{featured_class}" style="direction:{direction};text-align:{align};">
+        <div class="floosy-summary-card {tone_class}{featured_class}" style="direction:{direction};text-align:{align};{side_style}">
             <div class="floosy-summary-card__label">{label}</div>
             <div class="floosy-summary-card__value">{value}</div>
         </div>

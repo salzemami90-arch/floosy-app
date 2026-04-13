@@ -39,9 +39,10 @@ def _render_account_summary_styles() -> None:
         .floosy-account-summary-card {
             border-radius: 18px;
             padding: 16px 18px 14px 18px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            border: 1px solid #e5e7eb;
             box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
             margin-bottom: 0.8rem;
+            background: #ffffff;
         }
 
         .floosy-account-summary-card--remaining {
@@ -52,20 +53,22 @@ def _render_account_summary_styles() -> None:
         }
 
         .floosy-account-summary-card--income {
-            background: #f6fcf9;
-            border-color: #d6f1e4;
+            --accent: #059669;
+            --label-color: #047857;
+            --value-color: #111827;
         }
 
         .floosy-account-summary-card--expense {
-            background: #fff8f2;
-            border-color: #f5ddc8;
+            --accent: #f97316;
+            --label-color: #c2410c;
+            --value-color: #111827;
         }
 
         .floosy-account-summary-card__label {
             font-size: 0.88rem;
             font-weight: 700;
-            opacity: 0.92;
             margin-bottom: 0.55rem;
+            color: var(--label-color, #475569);
         }
 
         .floosy-account-summary-card__value {
@@ -73,6 +76,7 @@ def _render_account_summary_styles() -> None:
             font-weight: 800;
             line-height: 1.15;
             letter-spacing: -0.02em;
+            color: var(--value-color, #111827);
         }
 
         .floosy-account-summary-card--remaining .floosy-account-summary-card__label,
@@ -80,21 +84,6 @@ def _render_account_summary_styles() -> None:
             color: #ffffff;
         }
 
-        .floosy-account-summary-card--income .floosy-account-summary-card__label {
-            color: #2f7b5a;
-        }
-
-        .floosy-account-summary-card--income .floosy-account-summary-card__value {
-            color: #14532d;
-        }
-
-        .floosy-account-summary-card--expense .floosy-account-summary-card__label {
-            color: #b66a2c;
-        }
-
-        .floosy-account-summary-card--expense .floosy-account-summary-card__value {
-            color: #9a3412;
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -104,10 +93,12 @@ def _render_account_summary_styles() -> None:
 def _render_account_summary_card(label: str, value: str, tone: str, is_en: bool) -> None:
     direction = "ltr" if is_en else "rtl"
     align = "left" if is_en else "right"
+    border_side = "border-left" if is_en else "border-right"
+    side_style = "" if tone == "remaining" else f"{border_side}: 5px solid var(--accent);"
 
     st.markdown(
         f"""
-        <div class="floosy-account-summary-card floosy-account-summary-card--{tone}" style="direction:{direction};text-align:{align};">
+        <div class="floosy-account-summary-card floosy-account-summary-card--{tone}" style="direction:{direction};text-align:{align};{side_style}">
             <div class="floosy-account-summary-card__label">{label}</div>
             <div class="floosy-account-summary-card__value">{value}</div>
         </div>
