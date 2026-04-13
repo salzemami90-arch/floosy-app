@@ -97,7 +97,7 @@ def main():
 
     page_labels = {
         "home": t("الرئيسية", "Home"),
-        "account": t("الحساب", "Account"),
+        "account": t("الحساب", "My Account"),
         "savings": t("التوفير", "Savings"),
         "assistant": t("المحلل المالي", "Financial Analyzer"),
         "documents": t("مستنداتي", "Documents"),
@@ -122,6 +122,7 @@ def main():
         "الالتزامات": "account",
         "Home": "home",
         "Account": "account",
+        "My Account": "account",
         "Savings": "savings",
         "Financial Analyzer": "assistant",
         "Documents": "documents",

@@ -206,7 +206,7 @@ def _create_invoice_for_manage_flow(
 
 def test_floosy_english_smoke(page: Page) -> None:
     _goto_language(page, "en")
-    _open_account(page, re.compile(r"^Account$"), re.compile(r"^Account$"))
+    _open_account(page, re.compile(r"^My Account$"), re.compile(r"^Account$"))
     _assert_account_core_ui(
         page,
         re.compile(r"Add New Transaction"),
@@ -225,7 +225,7 @@ def test_floosy_arabic_smoke(page: Page) -> None:
 
 def test_account_can_add_transaction_without_opening_monthly_items(page: Page) -> None:
     _goto_language(page, "en")
-    _open_account(page, re.compile(r"^Account$"), re.compile(r"^Account$"))
+    _open_account(page, re.compile(r"^My Account$"), re.compile(r"^Account$"))
     _add_basic_transaction(
         page,
         add_tx_pattern=re.compile(r"Add New Transaction"),
