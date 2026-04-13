@@ -54,7 +54,7 @@ def _render_account_summary_styles() -> None:
         }
 
         .floosy-account-summary-card--income {
-            --accent: #059669;
+            --accent: #047857;
             --label-color: #059669;
             --value-color: #047857;
             --bg-color: #ecfdf5;
