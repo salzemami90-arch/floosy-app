@@ -98,7 +98,7 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--savings .floosy-summary-card__label {
-            color: #5b77af;
+            color: #2e5eaa;
         }
 
         .floosy-summary-card--savings .floosy-summary-card__value {
@@ -106,7 +106,7 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--projects .floosy-summary-card__label {
-            color: #2e7a72;
+            color: #1f6f67;
         }
 
         .floosy-summary-card--projects .floosy-summary-card__value {
