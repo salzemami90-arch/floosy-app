@@ -30,18 +30,28 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--income {
-            background: linear-gradient(180deg, #f3fcf7 0%, #e2f8ed 100%);
-            border-color: rgba(18, 149, 107, 0.18);
+            background: #f6fcf9;
+            border-color: #d6f1e4;
         }
 
         .floosy-summary-card--expense {
-            background: linear-gradient(180deg, #fff6ef 0%, #ffe9da 100%);
-            border-color: rgba(217, 119, 6, 0.18);
+            background: #fff8f2;
+            border-color: #f5ddc8;
         }
 
         .floosy-summary-card--neutral {
             background: linear-gradient(180deg, #f8fbff 0%, #edf5fb 100%);
             border-color: rgba(15, 95, 140, 0.14);
+        }
+
+        .floosy-summary-card--savings {
+            background: #eef4ff;
+            border-color: #c8dbff;
+        }
+
+        .floosy-summary-card--projects {
+            background: #eef8f6;
+            border-color: #cfe9e2;
         }
 
         .floosy-summary-card__label {
@@ -64,15 +74,15 @@ def _render_summary_card_styles() -> None:
         }
 
         .floosy-summary-card--income .floosy-summary-card__label {
-            color: #177254;
+            color: #2f7b5a;
         }
 
         .floosy-summary-card--income .floosy-summary-card__value {
-            color: #0f5132;
+            color: #14532d;
         }
 
         .floosy-summary-card--expense .floosy-summary-card__label {
-            color: #b45309;
+            color: #b66a2c;
         }
 
         .floosy-summary-card--expense .floosy-summary-card__value {
@@ -85,6 +95,22 @@ def _render_summary_card_styles() -> None:
 
         .floosy-summary-card--neutral .floosy-summary-card__value {
             color: #0f172a;
+        }
+
+        .floosy-summary-card--savings .floosy-summary-card__label {
+            color: #5b77af;
+        }
+
+        .floosy-summary-card--savings .floosy-summary-card__value {
+            color: #2e5eaa;
+        }
+
+        .floosy-summary-card--projects .floosy-summary-card__label {
+            color: #2e7a72;
+        }
+
+        .floosy-summary-card--projects .floosy-summary-card__value {
+            color: #1f6f67;
         }
 
         </style>
@@ -101,6 +127,8 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
         "income": "floosy-summary-card--income",
         "expense": "floosy-summary-card--expense",
         "neutral": "floosy-summary-card--neutral",
+        "savings": "floosy-summary-card--savings",
+        "projects": "floosy-summary-card--projects",
     }.get(tone, "floosy-summary-card--neutral")
     featured_class = " floosy-summary-card--featured" if featured and tone != "balance" else ""
 
@@ -305,7 +333,7 @@ def render(month_key: str, month: str, year: int):
             {
                 "label": t("رصيد التوفير", "Savings Balance"),
                 "value": f"{saving_balance:,.0f} {currency_view}",
-                "tone": "neutral",
+                "tone": "savings",
                 "featured": False,
             }
         )
@@ -314,7 +342,7 @@ def render(month_key: str, month: str, year: int):
             {
                 "label": t("صافي المشاريع هذا الشهر", "Projects Net This Month"),
                 "value": f"{project_net_month:,.0f} {currency_view}",
-                "tone": "neutral",
+                "tone": "projects",
                 "featured": False,
             }
         )

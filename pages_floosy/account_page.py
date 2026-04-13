@@ -52,13 +52,13 @@ def _render_account_summary_styles() -> None:
         }
 
         .floosy-account-summary-card--income {
-            background: linear-gradient(180deg, #f3fcf7 0%, #e2f8ed 100%);
-            border-color: rgba(18, 149, 107, 0.18);
+            background: #f6fcf9;
+            border-color: #d6f1e4;
         }
 
         .floosy-account-summary-card--expense {
-            background: linear-gradient(180deg, #fff6ef 0%, #ffe9da 100%);
-            border-color: rgba(217, 119, 6, 0.18);
+            background: #fff8f2;
+            border-color: #f5ddc8;
         }
 
         .floosy-account-summary-card__label {
@@ -81,15 +81,15 @@ def _render_account_summary_styles() -> None:
         }
 
         .floosy-account-summary-card--income .floosy-account-summary-card__label {
-            color: #177254;
+            color: #2f7b5a;
         }
 
         .floosy-account-summary-card--income .floosy-account-summary-card__value {
-            color: #0f5132;
+            color: #14532d;
         }
 
         .floosy-account-summary-card--expense .floosy-account-summary-card__label {
-            color: #b45309;
+            color: #b66a2c;
         }
 
         .floosy-account-summary-card--expense .floosy-account-summary-card__value {
