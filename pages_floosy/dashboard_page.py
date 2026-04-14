@@ -16,10 +16,10 @@ def _render_summary_card_styles() -> None:
         """
         <style>
         .floosy-summary-card {
-            border-radius: 18px;
+            border-radius: 16px;
             padding: 16px 18px 14px 18px;
             border: 1px solid var(--border-color, #e5e7eb);
-            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.09);
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
             margin-bottom: 0.8rem;
             background: var(--bg-color, #ffffff);
         }
@@ -76,6 +76,17 @@ def _render_summary_card_styles() -> None:
             font-weight: 700;
             margin-bottom: 0.55rem;
             color: var(--label-color, #475569);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.38rem;
+            line-height: 1.2;
+        }
+
+        .floosy-summary-card__label-icon {
+            font-size: 0.82rem;
+            line-height: 1;
+            opacity: 0.8;
+            flex: 0 0 auto;
         }
 
         .floosy-summary-card__value {
@@ -120,6 +131,22 @@ def _metric_value_html(value: str) -> str:
     )
 
 
+def _metric_label_html(label: str, tone: str, is_en: bool) -> str:
+    icon_map = {
+        "balance": "◎",
+        "income": "↗",
+        "expense": "↘",
+        "savings": "◌",
+        "projects": "◇",
+        "neutral": "•",
+    }
+    icon = html.escape(icon_map.get(tone, "•"))
+    text = html.escape(label)
+    icon_html = f'<span class="floosy-summary-card__label-icon" aria-hidden="true">{icon}</span>'
+    text_html = f"<span>{text}</span>"
+    return f"{icon_html}{text_html}" if is_en else f"{text_html}{icon_html}"
+
+
 def _render_summary_card(label: str, value: str, tone: str, is_en: bool, featured: bool = False) -> None:
     direction = "ltr" if is_en else "rtl"
     align = "left" if is_en else "right"
@@ -138,7 +165,7 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
     st.markdown(
         f"""
         <div class="floosy-summary-card {tone_class}{featured_class}" style="direction:{direction};text-align:{align};{side_style}">
-            <div class="floosy-summary-card__label">{label}</div>
+            <div class="floosy-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>
             <div class="floosy-summary-card__value">{_metric_value_html(value)}</div>
         </div>
         """,
