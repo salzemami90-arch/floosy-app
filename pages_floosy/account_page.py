@@ -151,17 +151,16 @@ def _render_account_summary_card(label: str, value: str, tone: str, is_en: bool)
     align = "left" if is_en else "right"
     accent_side = "left" if is_en else "right"
     accent_html = "" if tone == "remaining" else f'<div class="floosy-account-summary-card__accent" style="{accent_side}:0;"></div>'
-
-    st.markdown(
-        f"""
-        <div class="floosy-account-summary-card floosy-account-summary-card--{tone}" style="direction:{direction};text-align:{align};">
-            {accent_html}
-            <div class="floosy-account-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>
-            <div class="floosy-account-summary-card__value">{_metric_value_html(value)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    card_markup = (
+        f'<div class="floosy-account-summary-card floosy-account-summary-card--{tone}" '
+        f'style="direction:{direction};text-align:{align};">'
+        f"{accent_html}"
+        f'<div class="floosy-account-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>'
+        f'<div class="floosy-account-summary-card__value">{_metric_value_html(value)}</div>'
+        "</div>"
     )
+
+    st.markdown(card_markup, unsafe_allow_html=True)
 
 
 def _tx_type_label(value: str, is_en: bool) -> str:

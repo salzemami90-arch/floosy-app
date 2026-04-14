@@ -156,17 +156,16 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
     }.get(tone, "floosy-summary-card--neutral")
     featured_class = " floosy-summary-card--featured" if featured and tone != "balance" else ""
     accent_html = "" if tone == "balance" else f'<div class="floosy-summary-card__accent" style="{accent_side}:0;"></div>'
-
-    st.markdown(
-        f"""
-        <div class="floosy-summary-card {tone_class}{featured_class}" style="direction:{direction};text-align:{align};">
-            {accent_html}
-            <div class="floosy-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>
-            <div class="floosy-summary-card__value">{_metric_value_html(value)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    card_markup = (
+        f'<div class="floosy-summary-card {tone_class}{featured_class}" '
+        f'style="direction:{direction};text-align:{align};">'
+        f"{accent_html}"
+        f'<div class="floosy-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>'
+        f'<div class="floosy-summary-card__value">{_metric_value_html(value)}</div>'
+        "</div>"
     )
+
+    st.markdown(card_markup, unsafe_allow_html=True)
 
 
 def _summary_theme(status: str) -> dict:
