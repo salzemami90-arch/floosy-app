@@ -411,12 +411,21 @@ def render(month_key: str, month: str, year: int):
 
     analyzer = FinancialAnalyzer(SessionStateRepository())
     brief = analyzer.dashboard_brief(st.session_state, month_key, currency)
-    summary_theme = _summary_theme(str(brief.get("status", "stable") or "stable"))
+    brief_status = str(brief.get("status", "stable") or "stable")
+    show_spending_note_on_good = brief_status == "spending_high" and float(brief.get("focus_value", 0.0)) >= 0
+    summary_theme = _summary_theme("stable" if show_spending_note_on_good else brief_status)
     summary_border_side = "border-left" if is_en else "border-right"
 
     st.markdown("### " + t("الملخص الذكي", "Smart Summary"))
-    brief_message = brief["message_en"] if is_en else brief["message_ar"]
-    brief_detail = brief["detail_en"] if is_en else brief["detail_ar"]
+    if show_spending_note_on_good:
+        brief_message = t("الوضع المالي تحت السيطرة", "Financial position is under control")
+        brief_detail = t(
+            "صافي 90 يوم ما زال إيجابيًا، لكن مصروف هذا الشهر أعلى من المعتاد.",
+            "Your 90-day net is still positive, but this month's spending is above usual.",
+        )
+    else:
+        brief_message = brief["message_en"] if is_en else brief["message_ar"]
+        brief_detail = brief["detail_en"] if is_en else brief["detail_ar"]
     focus_label = brief["focus_label_en"] if is_en else brief["focus_label_ar"]
     support_label = brief["support_label_en"] if is_en else brief["support_label_ar"]
     focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
