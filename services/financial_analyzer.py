@@ -528,9 +528,10 @@ class FinancialAnalyzer:
 
         recurring_items = session_state.get("recurring", {}).get("items", [])
         active_items = [item for item in recurring_items if item.get("active", True)]
-
         coverage = self.recurring_coverage(active_items, month_key, currency)
         seasonal = self.seasonal_expense_summary(session_state, currency, limit_months=6)
+        savings = self.savings_summary(session_state, month_key)
+        projects = self.projects_summary(session_state, month_key)
         project_impact = self.project_impact_on_personal(session_state, month_key, currency)
         docs = self.documents_summary(session_state)
         cash_flow = CashFlowEngine(self.repo).cash_flow_90d(session_state, currency)
@@ -556,6 +557,35 @@ class FinancialAnalyzer:
         support_label_ar = "يحتاج متابعة"
         support_label_en = "Needs Follow-up"
         support_value = float(follow_up_total)
+        tx_by_month = session_state.get("transactions", {})
+        tx_count = 0
+        if isinstance(tx_by_month, dict):
+            tx_count = sum(len(txs or []) for txs in tx_by_month.values())
+        has_user_data = any(
+            [
+                int(tx_count) > 0,
+                int(savings.get("all_count", 0)) > 0,
+                int(projects.get("all_count", 0)) > 0,
+                int(docs.get("count", 0)) > 0,
+                int(coverage.get("overdue_count", 0)) > 0,
+                int(coverage.get("expected_count", 0)) > 0,
+            ]
+        )
+
+        if not has_user_data:
+            return {
+                "status": "empty",
+                "message_ar": "ابدئي بإضافة أول حركة",
+                "message_en": "Add your first transaction",
+                "detail_ar": "بمجرد إضافة دخل أو مصروف، سيظهر لك ملخص أوضح للوضع المالي.",
+                "detail_en": "Once you add income or expenses, your financial summary will appear here.",
+                "focus_label_ar": "صافي 90 يوم",
+                "focus_label_en": "90-Day Net",
+                "focus_value": 0.0,
+                "support_label_ar": "يحتاج متابعة",
+                "support_label_en": "Needs Follow-up",
+                "support_value": 0.0,
+            }
 
         if projected_90["net"] < 0:
             status = "cash_pressure_90"

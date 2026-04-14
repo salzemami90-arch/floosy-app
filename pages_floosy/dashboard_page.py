@@ -169,6 +169,16 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
 
 
 def _summary_theme(status: str) -> dict:
+    if status == "empty":
+        return {
+            "background": "#FFFFFF",
+            "border": "#E2E8F0",
+            "label": "#64748B",
+            "text": "#0F172A",
+            "pill_bg": "#F8FAFC",
+            "pill_border": "#E2E8F0",
+            "pill_text": "#475569",
+        }
     if status in {"cash_pressure_90", "coverage_gap", "project_pressure"}:
         return {
             "background": "#FEF2F2",

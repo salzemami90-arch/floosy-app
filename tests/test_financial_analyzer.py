@@ -79,7 +79,11 @@ class FinancialAnalyzerTests(unittest.TestCase):
     def test_dashboard_brief_uses_english_currency_code_in_english_detail(self):
         analyzer = FinancialAnalyzer(_FakeRepo())
         session_state = {
-            "transactions": {},
+            "transactions": {
+                "2026-مارس": [
+                    {"type": "دخل", "amount": 150.0, "currency": "د.ك - دينار كويتي", "category": "راتب"}
+                ]
+            },
             "recurring": {"items": []},
             "documents": [],
             "project_data": {},
@@ -93,6 +97,27 @@ class FinancialAnalyzerTests(unittest.TestCase):
 
         self.assertIn("KWD", brief["detail_en"])
         self.assertNotIn("د.ك", brief["detail_en"])
+
+    def test_dashboard_brief_returns_empty_state_when_no_data_exists(self):
+        analyzer = FinancialAnalyzer(_FakeRepo())
+        session_state = {
+            "transactions": {},
+            "recurring": {"items": []},
+            "documents": [],
+            "project_data": {},
+            "savings": {},
+        }
+
+        brief = analyzer.dashboard_brief(
+            session_state,
+            "2026-مارس",
+            "د.ك - دينار كويتي",
+        )
+
+        self.assertEqual(brief["status"], "empty")
+        self.assertEqual(brief["focus_value"], 0.0)
+        self.assertEqual(brief["support_value"], 0.0)
+        self.assertIn("first", brief["message_en"].lower())
 
 
 if __name__ == "__main__":
