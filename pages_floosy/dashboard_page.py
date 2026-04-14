@@ -571,7 +571,11 @@ def render(month_key: str, month: str, year: int):
         current_tax_code = str(st.session_state.get("dash_q_tax_code", default_form_tax_code) or "")
         if current_tax_code not in tax_codes:
             current_tax_code = default_form_tax_code if default_form_tax_code in tax_codes else (tax_codes[0] if tax_codes else "")
-        st.session_state["dash_q_tax_code"] = current_tax_code
+        if tax_codes:
+            if "dash_q_tax_code" not in st.session_state:
+                st.session_state["dash_q_tax_code"] = current_tax_code
+            elif st.session_state.get("dash_q_tax_code") not in tax_codes:
+                st.session_state["dash_q_tax_code"] = current_tax_code
 
         st.markdown(
             """<style>
@@ -620,7 +624,6 @@ div[data-testid="stForm"] {
                 q_tax_code = st.selectbox(
                     t("التصنيف الضريبي", "Tax Classification"),
                     tax_codes,
-                    index=tax_codes.index(st.session_state["dash_q_tax_code"]) if st.session_state["dash_q_tax_code"] in tax_codes else 0,
                     format_func=lambda code: tax_label_by_code.get(code, code),
                     key="dash_q_tax_code",
                 )
