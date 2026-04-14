@@ -449,6 +449,11 @@ def render(month_key: str, month: str, year: int):
     default_quick_form = {"type": "مصروف", "amount": 0.0, "category": "أخرى", "note": "", "tax_tag_code": ""}
     st.session_state.setdefault("dash_quick_open", False)
     st.session_state.setdefault("dash_quick_form", default_quick_form.copy())
+    if st.session_state.pop("dash_quick_reset", False):
+        st.session_state["dash_q_type"] = default_quick_form["type"]
+        st.session_state["dash_q_amount"] = default_quick_form["amount"]
+        st.session_state["dash_q_category"] = default_quick_form["category"]
+        st.session_state["dash_q_note"] = default_quick_form["note"]
 
     fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
 
@@ -568,14 +573,7 @@ def render(month_key: str, month: str, year: int):
         default_form_tax_code = str(form_state.get("tax_tag_code", "") or "")
         if default_form_tax_code not in tax_codes:
             default_form_tax_code = default_expense_tax_code
-        current_tax_code = str(st.session_state.get("dash_q_tax_code", default_form_tax_code) or "")
-        if current_tax_code not in tax_codes:
-            current_tax_code = default_form_tax_code if default_form_tax_code in tax_codes else (tax_codes[0] if tax_codes else "")
-        if tax_codes:
-            if "dash_q_tax_code" not in st.session_state:
-                st.session_state["dash_q_tax_code"] = current_tax_code
-            elif st.session_state.get("dash_q_tax_code") not in tax_codes:
-                st.session_state["dash_q_tax_code"] = current_tax_code
+        current_tax_code = default_form_tax_code if default_form_tax_code in tax_codes else (tax_codes[0] if tax_codes else "")
 
         st.markdown(
             """<style>
@@ -621,11 +619,12 @@ div[data-testid="stForm"] {
             q_selected_type = "مصروف" if q_type_lbl == t("مصروف", "Expense") else "دخل"
             q_tax_code = ""
             if q_selected_type == "مصروف" and tax_codes:
+                q_tax_index = tax_codes.index(current_tax_code) if current_tax_code in tax_codes else 0
                 q_tax_code = st.selectbox(
                     t("التصنيف الضريبي", "Tax Classification"),
                     tax_codes,
+                    index=q_tax_index,
                     format_func=lambda code: tax_label_by_code.get(code, code),
-                    key="dash_q_tax_code",
                 )
                 if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
                     st.caption(
@@ -677,11 +676,7 @@ div[data-testid="stForm"] {
                 add_transaction(month_key, tx_payload)
                 st.session_state["dash_quick_open"] = False
                 st.session_state["dash_quick_form"] = default_quick_form.copy()
-                st.session_state["dash_q_type"] = default_quick_form["type"]
-                st.session_state["dash_q_amount"] = default_quick_form["amount"]
-                st.session_state["dash_q_category"] = default_quick_form["category"]
-                st.session_state["dash_q_note"] = default_quick_form["note"]
-                st.session_state["dash_q_tax_code"] = default_expense_tax_code if tax_codes else ""
+                st.session_state["dash_quick_reset"] = True
                 _toast(t("تمت إضافة المعاملة.", "Transaction added."))
                 st.rerun()
             else:
