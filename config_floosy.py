@@ -338,28 +338,6 @@ def _apply_language_direction_theme() -> None:
     sidebar_side_css = ""
     if not is_en:
         sidebar_side_css = """
-        @keyframes floosySidebarRtlEnter {
-            from {
-                transform: translate3d(100%, 0, 0);
-                -webkit-transform: translate3d(100%, 0, 0);
-            }
-            to {
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-            }
-        }
-
-        @keyframes floosySidebarRtlExit {
-            from {
-                transform: translate3d(0, 0, 0);
-                -webkit-transform: translate3d(0, 0, 0);
-            }
-            to {
-                transform: translate3d(100%, 0, 0);
-                -webkit-transform: translate3d(100%, 0, 0);
-            }
-        }
-
         section[data-testid="stSidebar"],
         .stSidebar {
             position: fixed !important;
@@ -374,13 +352,7 @@ def _apply_language_direction_theme() -> None:
             border-left: 1px solid rgba(255,255,255,0.14) !important;
             z-index: 1000 !important;
             overflow: hidden !important;
-            transform: translate3d(0, 0, 0) !important;
-            -webkit-transform: translate3d(0, 0, 0) !important;
-            transform-origin: right center !important;
-            -webkit-transform-origin: right center !important;
-            will-change: transform !important;
-            -webkit-backface-visibility: hidden !important;
-            backface-visibility: hidden !important;
+            transition: transform 0.22s ease !important;
         }
 
         section[data-testid="stSidebar"] > div:first-child,
@@ -388,12 +360,6 @@ def _apply_language_direction_theme() -> None:
             width: 16rem !important;
             min-width: 16rem !important;
             max-width: 16rem !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="true"],
-        .stSidebar[aria-expanded="true"] {
-            animation: floosySidebarRtlEnter 0.22s ease both !important;
-            -webkit-animation: floosySidebarRtlEnter 0.22s ease both !important;
         }
 
         .stMain {
@@ -404,11 +370,8 @@ def _apply_language_direction_theme() -> None:
 
         section[data-testid="stSidebar"][aria-expanded="false"],
         .stSidebar[aria-expanded="false"] {
-            transform: translate3d(100%, 0, 0) !important;
-            -webkit-transform: translate3d(100%, 0, 0) !important;
+            transform: translateX(100%) !important;
             border-left: none !important;
-            animation: floosySidebarRtlExit 0.22s ease both !important;
-            -webkit-animation: floosySidebarRtlExit 0.22s ease both !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="false"] + .stMain,
