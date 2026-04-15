@@ -338,11 +338,22 @@ def _apply_language_direction_theme() -> None:
     sidebar_side_css = ""
     if not is_en:
         sidebar_side_css = """
+        section[data-testid="stSidebar"],
         [data-testid="stSidebar"] {
             left: auto !important;
             right: 0 !important;
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"],
+        div[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="false"],
+        div[data-testid="stSidebar"][aria-expanded="false"] {
+            transform: translateX(100%) !important;
         }
 
         [data-testid="collapsedControl"],
@@ -354,6 +365,7 @@ def _apply_language_direction_theme() -> None:
         }
 
         @media (max-width: 768px) {
+            section[data-testid="stSidebar"],
             [data-testid="stSidebar"] {
                 left: auto !important;
                 right: 0 !important;
