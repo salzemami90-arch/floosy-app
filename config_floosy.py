@@ -360,9 +360,19 @@ def _apply_language_direction_theme() -> None:
             max-width: 16rem !important;
         }
 
+        section[data-testid="stMain"] {
+            margin-right: 16rem !important;
+            margin-left: 0 !important;
+            transition: margin-right 0.22s ease !important;
+        }
+
         section[data-testid="stSidebar"][aria-expanded="false"] {
             transform: translateX(100%) !important;
             border-left: none !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="false"] + section[data-testid="stMain"] {
+            margin-right: 0 !important;
         }
 
         [data-testid="collapsedControl"],
@@ -384,6 +394,11 @@ def _apply_language_direction_theme() -> None:
                 width: 13rem !important;
                 min-width: 13rem !important;
                 max-width: 13rem !important;
+            }
+
+            section[data-testid="stMain"],
+            section[data-testid="stSidebar"][aria-expanded="false"] + section[data-testid="stMain"] {
+                margin-right: 0 !important;
             }
 
             [data-testid="collapsedControl"],
