@@ -338,7 +338,8 @@ def _apply_language_direction_theme() -> None:
     sidebar_side_css = ""
     if not is_en:
         sidebar_side_css = """
-        section[data-testid="stSidebar"] {
+        section[data-testid="stSidebar"],
+        .stSidebar {
             position: fixed !important;
             top: 0 !important;
             bottom: 0 !important;
@@ -354,25 +355,28 @@ def _apply_language_direction_theme() -> None:
             transition: transform 0.22s ease !important;
         }
 
-        section[data-testid="stSidebar"] > div:first-child {
+        section[data-testid="stSidebar"] > div:first-child,
+        .stSidebar > div:first-child {
             width: 16rem !important;
             min-width: 16rem !important;
             max-width: 16rem !important;
         }
 
-        section[data-testid="stMain"] {
-            margin-right: 16rem !important;
-            margin-left: 0 !important;
-            transition: margin-right 0.22s ease !important;
+        .stMain {
+            padding-right: 16rem !important;
+            box-sizing: border-box !important;
+            transition: padding-right 0.22s ease !important;
         }
 
-        section[data-testid="stSidebar"][aria-expanded="false"] {
+        section[data-testid="stSidebar"][aria-expanded="false"],
+        .stSidebar[aria-expanded="false"] {
             transform: translateX(100%) !important;
             border-left: none !important;
         }
 
-        section[data-testid="stSidebar"][aria-expanded="false"] + section[data-testid="stMain"] {
-            margin-right: 0 !important;
+        section[data-testid="stSidebar"][aria-expanded="false"] + .stMain,
+        .stSidebar[aria-expanded="false"] + .stMain {
+            padding-right: 0 !important;
         }
 
         [data-testid="collapsedControl"],
@@ -384,21 +388,24 @@ def _apply_language_direction_theme() -> None:
         }
 
         @media (max-width: 768px) {
-            section[data-testid="stSidebar"] {
+            section[data-testid="stSidebar"],
+            .stSidebar {
                 width: 13rem !important;
                 min-width: 13rem !important;
                 max-width: 13rem !important;
             }
 
-            section[data-testid="stSidebar"] > div:first-child {
+            section[data-testid="stSidebar"] > div:first-child,
+            .stSidebar > div:first-child {
                 width: 13rem !important;
                 min-width: 13rem !important;
                 max-width: 13rem !important;
             }
 
-            section[data-testid="stMain"],
-            section[data-testid="stSidebar"][aria-expanded="false"] + section[data-testid="stMain"] {
-                margin-right: 0 !important;
+            .stMain,
+            section[data-testid="stSidebar"][aria-expanded="false"] + .stMain,
+            .stSidebar[aria-expanded="false"] + .stMain {
+                padding-right: 0 !important;
             }
 
             [data-testid="collapsedControl"],
