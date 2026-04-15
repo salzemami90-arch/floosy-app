@@ -352,6 +352,36 @@ def _apply_language_direction_theme() -> None:
             left: auto !important;
             right: 0.75rem !important;
         }
+
+        @media (max-width: 768px) {
+            [data-testid="stSidebar"] {
+                left: auto !important;
+                right: 0 !important;
+            }
+
+            [data-testid="stSidebar"] > div:first-child {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+
+            section[data-testid="stSidebar"][aria-expanded="false"],
+            div[data-testid="stSidebar"][aria-expanded="false"] {
+                transform: translateX(100%) !important;
+            }
+
+            section[data-testid="stSidebar"][aria-expanded="true"],
+            div[data-testid="stSidebar"][aria-expanded="true"] {
+                transform: translateX(0) !important;
+            }
+
+            [data-testid="collapsedControl"],
+            [data-testid="stSidebarCollapsedControl"],
+            button[title="Open sidebar"],
+            button[aria-label="Open sidebar"] {
+                left: auto !important;
+                right: 0.75rem !important;
+            }
+        }
         """
 
     st.markdown(
