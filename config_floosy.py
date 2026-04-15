@@ -340,10 +340,14 @@ def _apply_language_direction_theme() -> None:
         sidebar_side_css = """
         section[data-testid="stSidebar"],
         [data-testid="stSidebar"] {
+            position: fixed !important;
+            top: 0 !important;
+            bottom: 0 !important;
             left: auto !important;
             right: 0 !important;
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
+            z-index: 1000 !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="false"],
@@ -369,6 +373,18 @@ def _apply_language_direction_theme() -> None:
         button[aria-label="Open sidebar"] {
             left: auto !important;
             right: 0.75rem !important;
+        }
+
+        @media (min-width: 769px) {
+            .stApp:has(section[data-testid="stSidebar"][aria-expanded="true"]) .main .block-container {
+                padding-right: calc(0.9rem + 16rem) !important;
+                padding-left: 0.9rem !important;
+            }
+
+            .stApp:has(section[data-testid="stSidebar"][aria-expanded="false"]) .main .block-container {
+                padding-right: 0.9rem !important;
+                padding-left: 0.9rem !important;
+            }
         }
 
         @media (max-width: 768px) {
