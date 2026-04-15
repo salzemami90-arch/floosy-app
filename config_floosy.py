@@ -362,6 +362,11 @@ def _apply_language_direction_theme() -> None:
             max-width: 16rem !important;
         }
 
+        section[data-testid="stSidebar"][aria-expanded="true"],
+        .stSidebar[aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+
         .stMain {
             padding-right: 16rem !important;
             box-sizing: border-box !important;
