@@ -338,33 +338,31 @@ def _apply_language_direction_theme() -> None:
     sidebar_side_css = ""
     if not is_en:
         sidebar_side_css = """
-        section[data-testid="stSidebar"],
-        [data-testid="stSidebar"] {
+        section[data-testid="stSidebar"] {
             position: fixed !important;
             top: 0 !important;
             bottom: 0 !important;
             left: auto !important;
             right: 0 !important;
+            width: 16rem !important;
+            min-width: 16rem !important;
+            max-width: 16rem !important;
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
             z-index: 1000 !important;
+            overflow: hidden !important;
+            transition: transform 0.22s ease !important;
         }
 
-        section[data-testid="stSidebar"][aria-expanded="false"],
-        div[data-testid="stSidebar"][aria-expanded="false"] {
-            min-width: 0 !important;
-            max-width: 0 !important;
-            width: 0 !important;
+        section[data-testid="stSidebar"] > div:first-child {
+            width: 16rem !important;
+            min-width: 16rem !important;
+            max-width: 16rem !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="false"] {
+            transform: translateX(100%) !important;
             border-left: none !important;
-            overflow: hidden !important;
-        }
-
-        section[data-testid="stSidebar"][aria-expanded="false"] > div:first-child,
-        div[data-testid="stSidebar"][aria-expanded="false"] > div:first-child {
-            min-width: 0 !important;
-            max-width: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
         }
 
         [data-testid="collapsedControl"],
@@ -375,38 +373,17 @@ def _apply_language_direction_theme() -> None:
             right: 0.75rem !important;
         }
 
-        @media (min-width: 769px) {
-            .stApp:has(section[data-testid="stSidebar"][aria-expanded="true"]) .main .block-container {
-                padding-right: calc(0.9rem + 16rem) !important;
-                padding-left: 0.9rem !important;
-            }
-
-            .stApp:has(section[data-testid="stSidebar"][aria-expanded="false"]) .main .block-container {
-                padding-right: 0.9rem !important;
-                padding-left: 0.9rem !important;
-            }
-        }
-
         @media (max-width: 768px) {
-            section[data-testid="stSidebar"],
-            [data-testid="stSidebar"] {
-                left: auto !important;
-                right: 0 !important;
+            section[data-testid="stSidebar"] {
+                width: 13rem !important;
+                min-width: 13rem !important;
+                max-width: 13rem !important;
             }
 
-            [data-testid="stSidebar"] > div:first-child {
-                margin-left: 0 !important;
-                margin-right: 0 !important;
-            }
-
-            section[data-testid="stSidebar"][aria-expanded="false"],
-            div[data-testid="stSidebar"][aria-expanded="false"] {
-                transform: translateX(100%) !important;
-            }
-
-            section[data-testid="stSidebar"][aria-expanded="true"],
-            div[data-testid="stSidebar"][aria-expanded="true"] {
-                transform: translateX(0) !important;
+            section[data-testid="stSidebar"] > div:first-child {
+                width: 13rem !important;
+                min-width: 13rem !important;
+                max-width: 13rem !important;
             }
 
             [data-testid="collapsedControl"],
