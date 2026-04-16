@@ -119,6 +119,49 @@ class FinancialAnalyzerTests(unittest.TestCase):
         self.assertEqual(brief["support_value"], 0.0)
         self.assertIn("first", brief["message_en"].lower())
 
+    def test_seasonal_summary_needs_history_before_warning(self):
+        analyzer = FinancialAnalyzer(_FakeRepo())
+        session_state = {
+            "transactions": {
+                "2026-أبريل": [
+                    {"type": "مصروف", "amount": 80.0, "currency": "د.ك - دينار كويتي", "category": "كوفي"}
+                ]
+            }
+        }
+
+        seasonal = analyzer.seasonal_expense_summary(
+            session_state,
+            "د.ك - دينار كويتي",
+        )
+
+        self.assertEqual(seasonal["status"], "normal")
+        self.assertFalse(seasonal["comparison_ready"])
+        self.assertEqual(seasonal["history_month_count"], 0)
+
+    def test_dashboard_brief_uses_repeated_note_keyword_signal(self):
+        analyzer = FinancialAnalyzer(_FakeRepo())
+        session_state = {
+            "transactions": {
+                "2026-أبريل": [
+                    {"type": "دخل", "amount": 500.0, "currency": "د.ك - دينار كويتي", "category": "راتب", "note": ""},
+                    {"type": "مصروف", "amount": 4.0, "currency": "د.ك - دينار كويتي", "category": "طلعات وكوفي", "note": "Starbucks morning"},
+                    {"type": "مصروف", "amount": 5.0, "currency": "د.ك - دينار كويتي", "category": "طلعات وكوفي", "note": "Starbucks evening"},
+                ]
+            },
+            "recurring": {"items": []},
+            "documents": [],
+            "project_data": {},
+        }
+
+        brief = analyzer.dashboard_brief(
+            session_state,
+            "2026-أبريل",
+            "د.ك - دينار كويتي",
+        )
+
+        self.assertEqual(brief["status"], "note_pattern")
+        self.assertIn("Starbucks", brief["message_en"])
+
 
 if __name__ == "__main__":
     unittest.main()

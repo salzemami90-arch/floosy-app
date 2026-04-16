@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from datetime import date, datetime
 
@@ -373,6 +374,8 @@ class FinancialAnalyzer:
         if not monthly_rows:
             return {
                 "months": [],
+                "history_month_count": 0,
+                "comparison_ready": False,
                 "current_expense": 0.0,
                 "average_expense": 0.0,
                 "delta_from_avg": 0.0,
@@ -382,21 +385,24 @@ class FinancialAnalyzer:
                 "status": "normal",
             }
 
-        expenses = [r["expense"] for r in monthly_rows]
-        average = sum(expenses) / len(expenses)
         current = monthly_rows[-1]["expense"]
+        history_expenses = [r["expense"] for r in monthly_rows[:-1] if r["expense"] > 0]
+        comparison_ready = len(history_expenses) >= 2
+        average = sum(history_expenses) / len(history_expenses) if history_expenses else 0.0
         delta = current - average
         delta_pct = (delta / average * 100.0) if average > 0 else 0.0
 
         peak = max(monthly_rows, key=lambda r: r["expense"])
         status = "normal"
-        if average > 0 and delta_pct >= 15:
+        if comparison_ready and average > 0 and delta_pct >= 15:
             status = "high"
-        elif average > 0 and delta_pct <= -15:
+        elif comparison_ready and average > 0 and delta_pct <= -15:
             status = "low"
 
         return {
             "months": monthly_rows,
+            "history_month_count": len(history_expenses),
+            "comparison_ready": bool(comparison_ready),
             "current_expense": float(current),
             "average_expense": float(average),
             "delta_from_avg": float(delta),
@@ -404,6 +410,62 @@ class FinancialAnalyzer:
             "peak_month": str(peak["month_key"]),
             "peak_expense": float(peak["expense"]),
             "status": status,
+        }
+
+    @staticmethod
+    def _merchant_keyword_from_note(note: str) -> str:
+        stopwords = {
+            "paid", "payment", "spent", "buy", "bought", "for", "from", "the", "and", "at",
+            "order", "online", "cash", "card", "note", "expense", "purchase",
+            "دفعت", "دفع", "صرف", "مصروف", "شراء", "اشتريت", "طلب", "اونلاين",
+            "أونلاين", "من", "في", "على", "عن", "حق", "هذا", "هذه",
+        }
+        for token in re.findall(r"[\w\u0600-\u06FF]+", str(note or "")):
+            key = token.casefold().strip()
+            if len(key) < 3 or key.isdigit() or key in stopwords:
+                continue
+            return token.strip()
+        return ""
+
+    def merchant_note_signal(self, session_state, month_key: str, currency: str) -> dict:
+        txs = session_state.get("transactions", {}).get(month_key, [])
+        grouped: dict[str, dict] = defaultdict(lambda: {"label": "", "amount": 0.0, "count": 0})
+        total_expense = 0.0
+        expense_count = 0
+
+        for tx in txs:
+            if tx.get("currency") != currency or tx.get("type") != "مصروف":
+                continue
+            amount = float(tx.get("amount", 0.0))
+            total_expense += amount
+            expense_count += 1
+            keyword = self._merchant_keyword_from_note(str(tx.get("note", "") or ""))
+            if not keyword:
+                continue
+            key = keyword.casefold()
+            grouped[key]["label"] = grouped[key]["label"] or keyword
+            grouped[key]["amount"] += amount
+            grouped[key]["count"] += 1
+
+        if not grouped:
+            return {
+                "status": "normal",
+                "label": "",
+                "amount": 0.0,
+                "count": 0,
+                "share": 0.0,
+            }
+
+        top = max(grouped.values(), key=lambda item: (float(item["amount"]), int(item["count"])))
+        share = (float(top["amount"]) / total_expense) if total_expense > 0 else 0.0
+        is_signal = int(top["count"]) >= 2 or (expense_count >= 2 and share >= 0.35)
+
+        return {
+            "status": "highlight" if is_signal else "normal",
+            "label": str(top["label"]),
+            "amount": float(top["amount"]),
+            "count": int(top["count"]),
+            "share": float(share),
         }
 
     def seasonal_category_signal(self, session_state, month_key: str, currency: str, history_months: int = 6) -> dict:
@@ -530,6 +592,7 @@ class FinancialAnalyzer:
         active_items = [item for item in recurring_items if item.get("active", True)]
         coverage = self.recurring_coverage(active_items, month_key, currency)
         seasonal = self.seasonal_expense_summary(session_state, currency, limit_months=6)
+        merchant_signal = self.merchant_note_signal(session_state, month_key, currency)
         savings = self.savings_summary(session_state, month_key)
         projects = self.projects_summary(session_state, month_key)
         project_impact = self.project_impact_on_personal(session_state, month_key, currency)
@@ -630,6 +693,21 @@ class FinancialAnalyzer:
             message_en = "Your spending is above usual"
             detail_ar = "مصروف هذا الشهر أعلى من متوسط آخر 6 أشهر."
             detail_en = "This month expenses are above the 6-month average."
+        elif merchant_signal["status"] == "highlight":
+            status = "note_pattern"
+            merchant_label = str(merchant_signal["label"])
+            merchant_amount = float(merchant_signal["amount"])
+            merchant_count = int(merchant_signal["count"])
+            message_ar = f"{merchant_label} واضح في مصروفك"
+            message_en = f"{merchant_label} stands out this month"
+            detail_ar = (
+                f"الملاحظات تظهر {merchant_count} حركة مرتبطة بـ {merchant_label} "
+                f"بقيمة {merchant_amount:,.2f} {currency_symbol_ar}."
+            )
+            detail_en = (
+                f"Your notes show {merchant_count} transactions linked to {merchant_label} "
+                f"for {merchant_amount:,.2f} {currency_symbol_en}."
+            )
         elif docs["expired_count"] > 0 or docs["upcoming_30_count"] > 0:
             status = "docs_due"
             message_ar = "توجد مستندات تحتاج متابعة"

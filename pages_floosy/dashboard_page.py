@@ -9,6 +9,7 @@ from config_floosy import add_transaction, arabic_months, english_months, get_al
 from repositories.session_repo import SessionStateRepository
 from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
+from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, localized_all_categories
 
 
 def _render_summary_card_styles() -> None:
@@ -189,7 +190,7 @@ def _summary_theme(status: str) -> dict:
             "pill_border": "#FECACA",
             "pill_text": "#991B1B",
         }
-    if status in {"needs_follow_up", "spending_high", "docs_due"}:
+    if status in {"needs_follow_up", "spending_high", "docs_due", "note_pattern"}:
         return {
             "background": "#FFFBEB",
             "border": "#F59E0B",
@@ -200,13 +201,13 @@ def _summary_theme(status: str) -> dict:
             "pill_text": "#92400E",
         }
     return {
-        "background": "#ECFDF5",
-        "border": "#22C55E",
-        "label": "#166534",
-        "text": "#14532D",
-        "pill_bg": "#F0FDF4",
-        "pill_border": "#BBF7D0",
-        "pill_text": "#166534",
+        "background": "#EAF5EF",
+        "border": "#047857",
+        "label": "#065F46",
+        "text": "#064E3B",
+        "pill_bg": "#F6FBF8",
+        "pill_border": "#BFD8CC",
+        "pill_text": "#064E3B",
     }
 
 
@@ -514,37 +515,12 @@ def render(month_key: str, month: str, year: int):
         st.rerun()
 
     if st.session_state["dash_quick_open"]:
-        categories = [
-            t("راتب", "Salary"),
-            t("دخل إضافي", "Extra Income"),
-            t("إيجار / قسط", "Rent / Installment"),
-            t("فواتير", "Bills"),
-            t("مشتريات", "Shopping"),
-            t("طلعات وكوفي", "Coffee / Outings"),
-            t("أكل أونلاين", "Food Delivery"),
-            t("مواصلات", "Transport"),
-            t("صحة / صالون", "Health / Salon"),
-            t("أخرى", "Other"),
-        ]
         st.markdown(f"### {t('إضافة معاملة', 'Add Transaction')}")
 
         form_state = st.session_state["dash_quick_form"]
         type_map_ar_en = {"مصروف": "Expense", "دخل": "Income"}
         type_map_en_ar = {"Expense": "مصروف", "Income": "دخل"}
         type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
-        cat_map_ar_en = {
-            "راتب": "Salary",
-            "دخل إضافي": "Extra Income",
-            "إيجار / قسط": "Rent / Installment",
-            "فواتير": "Bills",
-            "مشتريات": "Shopping",
-            "طلعات وكوفي": "Coffee / Outings",
-            "أكل أونلاين": "Food Delivery",
-            "مواصلات": "Transport",
-            "صحة / صالون": "Health / Salon",
-            "أخرى": "Other",
-        }
-        cat_map_en_ar = {v: k for k, v in cat_map_ar_en.items()}
 
         default_type = form_state.get("type", "مصروف")
         if is_en and default_type in type_map_ar_en:
@@ -566,12 +542,13 @@ def render(month_key: str, month: str, year: int):
         if current_type not in type_options:
             current_type = default_type if default_type in type_options else type_options[0]
         st.session_state["dash_q_type"] = current_type
+        categories = localized_all_categories(is_en)
 
         current_category = st.session_state.get("dash_q_category", default_category)
-        if is_en and current_category in cat_map_ar_en:
-            current_category = cat_map_ar_en[current_category]
-        elif (not is_en) and current_category in cat_map_en_ar:
-            current_category = cat_map_en_ar[current_category]
+        if is_en and current_category in CATEGORY_AR_TO_EN:
+            current_category = CATEGORY_AR_TO_EN[current_category]
+        elif (not is_en) and current_category in CATEGORY_EN_TO_AR:
+            current_category = CATEGORY_EN_TO_AR[current_category]
         if current_category not in categories:
             current_category = default_category if default_category in categories else categories[-1]
         st.session_state["dash_q_category"] = current_category
@@ -643,9 +620,9 @@ div[data-testid="stForm"] {
                         )
                     )
             note_placeholder = (
-                t("اكتبي التفاصيل هنا إذا اخترت أخرى", "Write the details here if you choose Other")
+                t("مثال: ستاربكس، اسم عميل، رقم فاتورة، أو سبب الحركة", "Example: Starbucks, client name, invoice #, or reason")
                 if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
-                else ""
+                else t("مثال: ستاربكس، اسم عميل، أو سبب الحركة", "Example: Starbucks, client name, or reason")
             )
             q_note = st.text_input(
                 t("ملاحظة (اختياري)", "Note (Optional)"),

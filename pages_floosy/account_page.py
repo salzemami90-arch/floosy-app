@@ -8,6 +8,7 @@ import streamlit as st
 
 from config_floosy import CURRENCY_OPTIONS, add_transaction, arabic_months, english_months, load_transactions
 from services.expense_tax_service import ExpenseTaxService
+from services.transaction_categories import category_label, localized_all_categories
 
 
 TX_TYPE_AR_TO_EN = {"دخل": "Income", "مصروف": "Expense"}
@@ -19,19 +20,6 @@ CURRENCY_OPTION_AR_TO_EN = {
     "$ - دولار أمريكي": "USD - US Dollar",
     "€ - يورو": "EUR - Euro",
 }
-CATEGORY_AR_TO_EN = {
-    "راتب": "Salary",
-    "دخل إضافي": "Extra Income",
-    "إيجار / قسط": "Rent / Installment",
-    "فواتير": "Bills",
-    "مشتريات": "Shopping",
-    "طلعات وكوفي": "Coffee / Outings",
-    "أكل أونلاين": "Food Delivery",
-    "مواصلات": "Transport",
-    "صحة / صالون": "Health / Salon",
-    "أخرى": "Other",
-}
-
 
 def _render_account_summary_styles() -> None:
     st.markdown(
@@ -190,10 +178,7 @@ def _currency_short_label(value: str, is_en: bool) -> str:
 
 
 def _category_label(value: str, is_en: bool) -> str:
-    clean_value = str(value or "").strip()
-    if not is_en:
-        return clean_value
-    return CATEGORY_AR_TO_EN.get(clean_value, clean_value)
+    return category_label(value, is_en)
 
 
 def _build_filtered_df(
@@ -598,18 +583,7 @@ def render(month_key: str, month: str, year: int):
                 t_date = st.date_input(t("التاريخ", "Date"), value=datetime.today())
                 t_category = st.selectbox(
                     t("التصنيف", "Category"),
-                    [
-                        t("راتب", "Salary"),
-                        t("دخل إضافي", "Extra Income"),
-                        t("إيجار / قسط", "Rent / Installment"),
-                        t("فواتير", "Bills"),
-                        t("مشتريات", "Shopping"),
-                        t("طلعات وكوفي", "Coffee / Outings"),
-                        t("أكل أونلاين", "Food Delivery"),
-                        t("مواصلات", "Transport"),
-                        t("صحة / صالون", "Health / Salon"),
-                        t("أخرى", "Other"),
-                    ],
+                    localized_all_categories(is_en),
                 )
 
             selected_tx_type = "مصروف" if t_type_lbl == t("مصروف", "Expense") else "دخل"
@@ -631,9 +605,9 @@ def render(month_key: str, month: str, year: int):
                     )
 
             note_placeholder = (
-                t("اكتبي التفاصيل هنا إذا اخترت أخرى", "Write the details here if you choose Other")
+                t("مثال: ستاربكس، اسم عميل، رقم فاتورة، أو سبب الحركة", "Example: Starbucks, client name, invoice #, or reason")
                 if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
-                else ""
+                else t("مثال: ستاربكس، اسم عميل، أو سبب الحركة", "Example: Starbucks, client name, or reason")
             )
             t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), placeholder=note_placeholder)
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
