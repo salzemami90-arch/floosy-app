@@ -529,10 +529,10 @@ def render(month_key: str, month: str, year: int):
             default_type = type_map_en_ar[default_type]
 
         default_category = form_state.get("category", "أخرى")
-        if is_en and default_category in cat_map_ar_en:
-            default_category = cat_map_ar_en[default_category]
-        if (not is_en) and default_category in cat_map_en_ar:
-            default_category = cat_map_en_ar[default_category]
+        if is_en and default_category in CATEGORY_AR_TO_EN:
+            default_category = CATEGORY_AR_TO_EN[default_category]
+        if (not is_en) and default_category in CATEGORY_EN_TO_AR:
+            default_category = CATEGORY_EN_TO_AR[default_category]
 
         current_type = st.session_state.get("dash_q_type", default_type)
         if is_en and current_type in type_map_ar_en:
