@@ -619,15 +619,9 @@ div[data-testid="stForm"] {
                             "If you choose Other, add the details in the note.",
                         )
                     )
-            note_placeholder = (
-                t("مثال: ستاربكس، اسم عميل، رقم فاتورة، أو سبب الحركة", "Example: Starbucks, client name, invoice #, or reason")
-                if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
-                else t("مثال: ستاربكس، اسم عميل، أو سبب الحركة", "Example: Starbucks, client name, or reason")
-            )
             q_note = st.text_input(
                 t("ملاحظة (اختياري)", "Note (Optional)"),
                 key="dash_q_note",
-                placeholder=note_placeholder,
             )
 
             b1, b2 = st.columns(2)

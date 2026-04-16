@@ -604,12 +604,7 @@ def render(month_key: str, month: str, year: int):
                         )
                     )
 
-            note_placeholder = (
-                t("مثال: ستاربكس، اسم عميل، رقم فاتورة، أو سبب الحركة", "Example: Starbucks, client name, invoice #, or reason")
-                if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE
-                else t("مثال: ستاربكس، اسم عميل، أو سبب الحركة", "Example: Starbucks, client name, or reason")
-            )
-            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), placeholder=note_placeholder)
+            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"))
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
             t_currency_options = [default_currency_label] + CURRENCY_OPTIONS
             t_currency = st.selectbox(
