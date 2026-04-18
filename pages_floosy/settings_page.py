@@ -727,16 +727,15 @@ def render():
             is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
             is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
 
-            with st.form("cloud_auth_form", clear_on_submit=False):
-                email = st.text_input(t("الإيميل", "Email"))
-                password = ""
-                confirm_password = ""
-                if not is_reset_mode:
-                    password = st.text_input(t("كلمة المرور", "Password"), type="password")
-                if is_sign_up_mode:
-                    confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password")
-                submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
-                submit = st.form_submit_button(submit_label, use_container_width=True)
+            email = st.text_input(t("الإيميل", "Email"), type="default", key="cloud_auth_email")
+            password = ""
+            confirm_password = ""
+            if not is_reset_mode:
+                password = st.text_input(t("كلمة المرور", "Password"), type="password", key="cloud_auth_password")
+            if is_sign_up_mode:
+                confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password", key="cloud_auth_confirm_password")
+            submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
+            submit = st.button(submit_label, use_container_width=True, key="cloud_auth_submit")
 
             if submit:
                 clean_email = email.strip().lower()
