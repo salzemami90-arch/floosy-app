@@ -718,16 +718,52 @@ def render():
             with st.form("cloud_auth_form", clear_on_submit=False):
                 mode = st.selectbox(
                     t("العملية", "Action"),
-                    [t("تسجيل دخول", "Sign In"), t("إنشاء حساب", "Sign Up")],
+                    [
+                        t("تسجيل دخول", "Sign In"),
+                        t("إنشاء حساب", "Sign Up"),
+                        t("نسيت كلمة المرور", "Forgot Password"),
+                    ],
                 )
+                is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
+                is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
                 email = st.text_input(t("الإيميل", "Email"))
-                password = st.text_input(t("كلمة المرور", "Password"), type="password")
-                submit = st.form_submit_button(t("متابعة", "Continue"), use_container_width=True)
+                password = ""
+                confirm_password = ""
+                if not is_reset_mode:
+                    password = st.text_input(t("كلمة المرور", "Password"), type="password")
+                if is_sign_up_mode:
+                    confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password")
+                submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
+                submit = st.form_submit_button(submit_label, use_container_width=True)
 
             if submit:
                 clean_email = email.strip().lower()
-                if not clean_email or not password:
+                if not clean_email:
+                    st.warning(t("يرجى إدخال البريد الإلكتروني.", "Please enter your email."))
+                elif is_reset_mode:
+                    reset_res = client.request_password_reset(clean_email)
+                    if reset_res.get("ok"):
+                        st.success(
+                            t(
+                                "إذا كان الإيميل مسجلًا، سيتم إرسال رابط استعادة كلمة المرور. راجعي البريد والـ Spam.",
+                                "If the email is registered, a password reset link will be sent. Check your inbox and spam folder.",
+                            )
+                        )
+                        st.caption(
+                            t(
+                                "إذا لم يصلك الإيميل، تأكدي من إعدادات البريد في Supabase Auth.",
+                                "If the email does not arrive, check the email settings in Supabase Auth.",
+                            )
+                        )
+                    else:
+                        cloud_error = _cloud_error_text(reset_res.get("error", ""), t)
+                        st.error(t(f"تعذر إرسال رابط الاستعادة: {cloud_error}", f"Could not send reset link: {cloud_error}"))
+                elif not password:
                     st.warning(t("يرجى إدخال البريد الإلكتروني وكلمة المرور.", "Please enter email and password."))
+                elif is_sign_up_mode and password != confirm_password:
+                    st.warning(t("كلمتا المرور غير متطابقتين.", "Passwords do not match."))
+                elif is_sign_up_mode and len(password) < 6:
+                    st.warning(t("كلمة المرور يجب أن تكون 6 أحرف على الأقل.", "Password must be at least 6 characters."))
                 else:
                     if mode == t("إنشاء حساب", "Sign Up"):
                         auth_res = client.sign_up(clean_email, password)
@@ -745,8 +781,8 @@ def render():
                         if not access_token:
                             st.info(
                                 t(
-                                    "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، يرجى مراجعة بريدك الإلكتروني ثم تسجيل الدخول.",
-                                    "Account created. If email confirmation is enabled, please check your inbox and then sign in.",
+                                    "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، راجعي بريدك والـ Spam ثم سجلي دخول.",
+                                    "Account created. If email confirmation is enabled, check your inbox and spam folder, then sign in.",
                                 )
                             )
                         else:

@@ -137,6 +137,25 @@ class SupabaseSyncClient:
             "raw": data,
         }
 
+    def request_password_reset(self, email: str) -> dict[str, Any]:
+        if not self.is_configured:
+            return {"ok": False, "error": "Supabase config is missing."}
+
+        url = f"{self.supabase_url}/auth/v1/recover"
+        payload = {"email": email.strip()}
+
+        try:
+            resp = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout_sec)
+        except Exception as exc:
+            return {"ok": False, "error": f"Network error: {exc}"}
+
+        data = self._json_or_text(resp)
+        if resp.status_code >= 400:
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
+            return {"ok": False, "error": message}
+
+        return {"ok": True, "raw": data}
+
     def get_user(self, access_token: str) -> dict[str, Any]:
         if not self.is_configured:
             return {"ok": False, "error": "Supabase config is missing."}

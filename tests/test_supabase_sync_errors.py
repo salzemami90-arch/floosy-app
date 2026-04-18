@@ -28,3 +28,32 @@ def test_json_error_message_is_preserved():
     )
 
     assert message == "Invalid login credentials"
+
+
+def test_password_reset_uses_recover_endpoint(monkeypatch):
+    captured = {}
+
+    class RecoverResponse:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {}
+
+    def fake_post(url, json, headers, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return RecoverResponse()
+
+    monkeypatch.setattr("services.supabase_sync.requests.post", fake_post)
+
+    client = SupabaseSyncClient("https://example.supabase.co", "anon-key", timeout_sec=7)
+    result = client.request_password_reset(" user@example.com ")
+
+    assert result["ok"] is True
+    assert captured["url"] == "https://example.supabase.co/auth/v1/recover"
+    assert captured["json"] == {"email": "user@example.com"}
+    assert captured["headers"]["apikey"] == "anon-key"
+    assert captured["timeout"] == 7
