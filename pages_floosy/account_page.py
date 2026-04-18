@@ -518,6 +518,9 @@ def render(month_key: str, month: str, year: int):
     else:
         for idx, item in enumerate(active_items):
             pending = item.get("pending_entitlements", [])
+            pay_form_key = f"open_pay_form_{idx}"
+            if not pending and st.session_state.get(pay_form_key, False):
+                st.session_state[pay_form_key] = False
             is_income = item.get("type") == "دخل"
             state_txt = (f"{t('معلّق', 'Pending')}: {len(pending)} {t('شهر', 'month')}" if pending else t("مكتمل", "Completed"))
             var_txt = t("متغير", "Variable") if item.get("is_variable", False) else t("ثابت", "Fixed")
@@ -539,16 +542,19 @@ def render(month_key: str, month: str, year: int):
 
             c_pay, c_open = st.columns([1, 4])
             with c_pay:
-                if st.button(t("تأكيد", "Confirm"), key=f"tick_open_{idx}", use_container_width=True):
-                    st.session_state[f"open_pay_form_{idx}"] = not st.session_state.get(f"open_pay_form_{idx}", False)
-                    st.rerun()
+                if pending:
+                    if st.button(t("تأكيد", "Confirm"), key=f"tick_open_{idx}", use_container_width=True):
+                        st.session_state[pay_form_key] = not st.session_state.get(pay_form_key, False)
+                        st.rerun()
+                else:
+                    st.button(t("مكتمل", "Completed"), key=f"tick_complete_{idx}", use_container_width=True, disabled=True)
             with c_open:
                 if pending:
                     st.caption(f"{t('الأشهر غير المؤكدة', 'Unconfirmed months')}: {', '.join(pending)}")
                 else:
                     st.caption(t("لا توجد أشهر معلقة.", "No pending months."))
 
-            if st.session_state.get(f"open_pay_form_{idx}", False):
+            if pending and st.session_state.get(pay_form_key, False):
                 with st.form(f"confirm_item_form_{idx}", clear_on_submit=False):
                     f1, f2, f3 = st.columns(3)
                     with f1:
@@ -583,7 +589,7 @@ def render(month_key: str, month: str, year: int):
                         cancel_btn = st.form_submit_button(t("إلغاء", "Cancel"), use_container_width=True)
 
                 if cancel_btn:
-                    st.session_state[f"open_pay_form_{idx}"] = False
+                    st.session_state[pay_form_key] = False
                     st.rerun()
 
                 if confirm_btn:
@@ -611,7 +617,7 @@ def render(month_key: str, month: str, year: int):
                         item["last_paid_month"] = entitlement_key
                         if update_template:
                             item["amount"] = float(pay_amount)
-                        st.session_state[f"open_pay_form_{idx}"] = False
+                        st.session_state[pay_form_key] = False
                     st.success(t("تم تسجيل المعاملة في الحساب.", "Transaction recorded in account."))
                     st.rerun()
 
