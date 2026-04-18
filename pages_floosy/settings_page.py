@@ -43,7 +43,7 @@ def _cloud_error_text(error, t) -> str:
         or "error code 521" in raw_lower
     ):
         return t(
-            "السحابة غير متاحة مؤقتًا أو مشروع Supabase لا يزال قيد التجهيز. انتظري دقائق ثم جرّبي مرة ثانية.",
+            "السحابة غير متاحة مؤقتًا أو مشروع Supabase لا يزال قيد التجهيز. يرجى الانتظار دقائق ثم المحاولة مرة ثانية.",
             "Cloud is temporarily unavailable or the Supabase project is still setting up. Wait a few minutes, then try again.",
         )
     return raw[:500]
@@ -746,13 +746,13 @@ def render():
                     if reset_res.get("ok"):
                         st.success(
                             t(
-                                "إذا كان الإيميل مسجلًا، سيتم إرسال رابط استعادة كلمة المرور. راجعي البريد والـ Spam.",
+                                "إذا كان الإيميل مسجلًا، سيتم إرسال رابط استعادة كلمة المرور. يرجى مراجعة البريد والـ Spam.",
                                 "If the email is registered, a password reset link will be sent. Check your inbox and spam folder.",
                             )
                         )
                         st.caption(
                             t(
-                                "إذا لم يصلك الإيميل، تأكدي من إعدادات البريد في Supabase Auth.",
+                                "إذا لم يصل الإيميل، يرجى التأكد من إعدادات البريد في Supabase Auth.",
                                 "If the email does not arrive, check the email settings in Supabase Auth.",
                             )
                         )
@@ -782,7 +782,7 @@ def render():
                         if not access_token:
                             st.info(
                                 t(
-                                    "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، راجعي بريدك والـ Spam ثم سجلي دخول.",
+                                    "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، يرجى مراجعة البريد والـ Spam ثم تسجيل الدخول.",
                                     "Account created. If email confirmation is enabled, check your inbox and spam folder, then sign in.",
                                 )
                             )

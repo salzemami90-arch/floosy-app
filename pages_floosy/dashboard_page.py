@@ -625,7 +625,7 @@ div[data-testid="stForm"] {
                 if q_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
                     st.caption(
                         t(
-                            "إذا اخترت أخرى، اكتبي التفاصيل في الملاحظة.",
+                            "إذا تم اختيار أخرى، يرجى إضافة التفاصيل في الملاحظة.",
                             "If you choose Other, add the details in the note.",
                         )
                     )
@@ -640,7 +640,7 @@ div[data-testid="stForm"] {
             )
             st.caption(
                 t(
-                    "اختياري: ارفعي صورة الكابچر أو PDF، وبتلقينه لاحقًا في سجل الحساب.",
+                    "اختياري: يمكن إرفاق صورة كابچر أو PDF، وسيظهر لاحقًا في سجل الحساب.",
                     "Optional: upload a screenshot or PDF, then find it later in the account log.",
                 )
             )

@@ -748,7 +748,7 @@ def render(month_key: str, month: str, year: int):
                     )
                     st.caption(
                         t(
-                            "ارفعي صورة الكابچر أو PDF الدفع. بعد الحفظ سيظهر الإثبات مع المعاملة في السجل.",
+                            "يمكن إرفاق صورة كابچر أو PDF الدفع. بعد الحفظ سيظهر الإثبات مع المعاملة في السجل.",
                             "Upload a payment screenshot or PDF. After saving, the proof appears with the transaction log entry.",
                         )
                     )
@@ -823,7 +823,7 @@ def render(month_key: str, month: str, year: int):
                 if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
                     st.caption(
                         t(
-                            "إذا اخترت أخرى، اكتبي التفاصيل في الملاحظة.",
+                            "إذا تم اختيار أخرى، يرجى إضافة التفاصيل في الملاحظة.",
                             "If you choose Other, add the details in the note.",
                         )
                     )
@@ -836,7 +836,7 @@ def render(month_key: str, month: str, year: int):
             )
             st.caption(
                 t(
-                    "اختياري: ارفعي صورة أو PDF عشان تقدرين تحملينه لاحقًا من سجل المعاملات.",
+                    "اختياري: يمكن إرفاق صورة أو PDF لتنزيله لاحقًا من سجل المعاملات.",
                     "Optional: upload an image or PDF so you can download it later from the transaction log.",
                 )
             )
