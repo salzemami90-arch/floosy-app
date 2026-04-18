@@ -33,6 +33,22 @@ def _currency_option_label(value: str, is_en: bool) -> str:
     return CURRENCY_OPTION_AR_TO_EN.get(clean_value, clean_value)
 
 
+def _cloud_error_text(error, t) -> str:
+    raw = str(error or "").strip()
+    raw_lower = raw.lower()
+    if (
+        "temporarily unavailable or still setting up" in raw_lower
+        or "web server is down" in raw_lower
+        or "cloudflare" in raw_lower
+        or "error code 521" in raw_lower
+    ):
+        return t(
+            "السحابة غير متاحة مؤقتًا أو مشروع Supabase لا يزال قيد التجهيز. انتظري دقائق ثم جرّبي مرة ثانية.",
+            "Cloud is temporarily unavailable or the Supabase project is still setting up. Wait a few minutes, then try again.",
+        )
+    return raw[:500]
+
+
 def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_token: str = "", refresh_token: str = "") -> None:
     st.session_state["cloud_auth"] = {
         "logged_in": bool(logged_in),
@@ -569,7 +585,8 @@ def render():
                 if st.button(t("تحميل بياناتي", "Load My Data"), use_container_width=True, key="cloud_load_btn"):
                     pull = client.fetch_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
                     if not pull.get("ok"):
-                        st.error(t(f"تعذر تحميل البيانات: {pull.get('error', '')}", f"Load failed: {pull.get('error', '')}"))
+                        cloud_error = _cloud_error_text(pull.get("error", ""), t)
+                        st.error(t(f"تعذر تحميل البيانات: {cloud_error}", f"Load failed: {cloud_error}"))
                     elif pull.get("data") is None:
                         _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
                         _mark_cloud_sync_now()
@@ -595,7 +612,8 @@ def render():
                         save_persistent_state()
                         st.success(t("تم حفظ بياناتك في السحابة.", "Your data was saved to cloud."))
                     else:
-                        st.error(t(f"تعذر الحفظ: {push.get('error', '')}", f"Save failed: {push.get('error', '')}"))
+                        cloud_error = _cloud_error_text(push.get("error", ""), t)
+                        st.error(t(f"تعذر الحفظ: {cloud_error}", f"Save failed: {cloud_error}"))
 
             r2c1, r2c2 = st.columns(2)
             with r2c1:
@@ -629,7 +647,8 @@ def render():
                         )
                         st.rerun()
                     else:
-                        st.error(t(f'تعذر حذف البيانات: {delete_res.get("error", "")}', f'Delete failed: {delete_res.get("error", "")}'))
+                        cloud_error = _cloud_error_text(delete_res.get("error", ""), t)
+                        st.error(t(f"تعذر حذف البيانات: {cloud_error}", f"Delete failed: {cloud_error}"))
 
             st.caption(
                 t(
@@ -678,18 +697,20 @@ def render():
 
                     account_error = str(account_delete_res.get("error", ""))
                     data_error = str(data_delete_res.get("error", ""))
+                    account_error_display = _cloud_error_text(account_error, t)
+                    data_error_display = _cloud_error_text(data_error, t)
                     if data_delete_res.get("ok"):
                         st.warning(
                             t(
-                                f"تم حذف البيانات السحابية لكن حذف الحساب فشل: {account_error}",
-                                f"Cloud data deleted, but account deletion failed: {account_error}",
+                                f"تم حذف البيانات السحابية لكن حذف الحساب فشل: {account_error_display}",
+                                f"Cloud data deleted, but account deletion failed: {account_error_display}",
                             )
                         )
                     else:
                         st.error(
                             t(
-                                f"تعذر حذف الحساب: {account_error} | وتعذر حذف البيانات: {data_error}",
-                                f"Account deletion failed: {account_error} | Data deletion failed: {data_error}",
+                                f"تعذر حذف الحساب: {account_error_display} | وتعذر حذف البيانات: {data_error_display}",
+                                f"Account deletion failed: {account_error_display} | Data deletion failed: {data_error_display}",
                             )
                         )
 
@@ -714,7 +735,8 @@ def render():
                         auth_res = client.sign_in(clean_email, password)
 
                     if not auth_res.get("ok"):
-                        st.error(t(f"فشل العملية: {auth_res.get('error', '')}", f"Action failed: {auth_res.get('error', '')}"))
+                        cloud_error = _cloud_error_text(auth_res.get("error", ""), t)
+                        st.error(t(f"فشل العملية: {cloud_error}", f"Action failed: {cloud_error}"))
                     else:
                         access_token = str(auth_res.get("access_token") or "")
                         refresh_token = str(auth_res.get("refresh_token") or "")

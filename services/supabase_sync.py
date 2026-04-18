@@ -58,6 +58,35 @@ class SupabaseSyncClient:
         except Exception:
             return resp.text
 
+    @staticmethod
+    def _friendly_error(resp: requests.Response, data: Any, keys: tuple[str, ...]) -> str:
+        status_code = int(getattr(resp, "status_code", 0) or 0)
+        if isinstance(data, dict):
+            for key in keys:
+                value = str(data.get(key) or "").strip()
+                if value:
+                    return value
+            return str(data)
+
+        message = str(data or "").strip()
+        message_lower = message.lower()
+        if (
+            status_code in {521, 522, 523, 524}
+            or "<html" in message_lower
+            or "<!doctype html" in message_lower
+            or "cloudflare" in message_lower
+            or "web server is down" in message_lower
+        ):
+            return (
+                "Supabase is temporarily unavailable or still setting up the project. "
+                "Please wait a few minutes, then try again."
+            )
+
+        if not message:
+            return f"Supabase request failed with status {status_code}."
+
+        return message[:500]
+
     def sign_up(self, email: str, password: str) -> dict[str, Any]:
         if not self.is_configured:
             return {"ok": False, "error": "Supabase config is missing."}
@@ -72,10 +101,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("msg") or data.get("error_description") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
             return {"ok": False, "error": message}
 
         return {
@@ -100,10 +126,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("msg") or data.get("error_description") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
             return {"ok": False, "error": message}
 
         return {
@@ -126,10 +149,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("msg") or data.get("error_description") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
             return {"ok": False, "error": message}
 
         return {"ok": True, "user": data if isinstance(data, dict) else None}
@@ -162,10 +182,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("message") or data.get("hint") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("message", "hint", "error"))
             return {"ok": False, "error": message}
 
         return {"ok": True, "raw": data}
@@ -190,10 +207,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("message") or data.get("hint") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("message", "hint", "error"))
             return {"ok": False, "error": message}
 
         if isinstance(data, list) and data:
@@ -230,10 +244,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("message") or data.get("hint") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("message", "hint", "error"))
             return {"ok": False, "error": message}
 
         return {"ok": True, "raw": data}
@@ -259,10 +270,7 @@ class SupabaseSyncClient:
 
         data = self._json_or_text(resp)
         if resp.status_code >= 400:
-            if isinstance(data, dict):
-                message = str(data.get("msg") or data.get("error_description") or data.get("error") or data)
-            else:
-                message = str(data)
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
             return {"ok": False, "error": message}
 
         return {"ok": True, "raw": data}
