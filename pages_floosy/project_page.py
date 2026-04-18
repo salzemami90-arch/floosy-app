@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import uuid4
 
 import pandas as pd
 import streamlit as st
 
-from config_floosy import arabic_months, english_months
+from config_floosy import add_transaction, arabic_months, english_months
 from services.expense_tax_service import ExpenseTaxService
 
 
@@ -49,6 +50,53 @@ def _project_tx_type_label(value: str, is_en: bool) -> str:
     if clean_value == "مصروف":
         return "Expense"
     return clean_value
+
+
+def _month_key_from_date(dt: datetime) -> str:
+    return f"{dt.year}-{arabic_months[dt.month - 1]}"
+
+
+def _account_link_note(project_name: str, tx_type: str, note: str, t) -> str:
+    action = t("تحويل إلى مشروع", "Transfer to project") if tx_type == "دخل" else t("مصروف مشروع", "Project expense")
+    clean_note = str(note or "").strip()
+    base_note = f"{action}: {project_name}"
+    return f"{base_note} | {clean_note}" if clean_note else base_note
+
+
+def _record_project_account_link(month_key: str, tx_payload: dict, currency: str, t) -> None:
+    link_id = str(tx_payload.get("account_link_id") or "").strip()
+    if not link_id:
+        return
+    project_name = str(tx_payload.get("project_name") or "").strip()
+    add_transaction(
+        month_key,
+        {
+            "date": tx_payload.get("date", datetime.today().strftime("%Y-%m-%d")),
+            "type": "مصروف",
+            "amount": float(tx_payload.get("amount", 0.0) or 0.0),
+            "currency": currency,
+            "category": t("تحويل للمشروع", "Project Transfer"),
+            "note": _account_link_note(project_name, str(tx_payload.get("type") or ""), str(tx_payload.get("note") or ""), t),
+            "project_name": project_name,
+            "project_link_id": link_id,
+        },
+    )
+
+
+def _delete_linked_account_transaction(link_id: str) -> bool:
+    clean_link_id = str(link_id or "").strip()
+    if not clean_link_id:
+        return False
+    transactions_by_month = st.session_state.get("transactions", {})
+    for tx_list in transactions_by_month.values():
+        if not isinstance(tx_list, list):
+            continue
+        for tx_index in range(len(tx_list) - 1, -1, -1):
+            tx = tx_list[tx_index]
+            if isinstance(tx, dict) and str(tx.get("project_link_id") or "").strip() == clean_link_id:
+                tx_list.pop(tx_index)
+                return True
+    return False
 
 
 def _ensure_project_defaults(project_obj: dict) -> None:
@@ -398,9 +446,15 @@ def render(month_key: str, month: str, year: int):
                     format_func=lambda code: tax_label_by_code.get(code, code),
                 )
     
-            funded_from_personal = st.checkbox(
-                t("هذا المصروف مدفوع من الحساب الشخصي", "This expense is funded from personal account"),
+            linked_to_account = st.checkbox(
+                t("تسجيل أثر هذه الحركة في الحساب", "Record this transaction in account"),
                 value=False,
+            )
+            st.caption(
+                t(
+                    "إذا كانت من الحساب، سيتم تسجيل مصروف تلقائي في الحساب بنفس المبلغ.",
+                    "If it came from the account, an automatic account expense will be recorded for the same amount.",
+                )
             )
             p_note = st.text_input(t("ملاحظة", "Note"), value="")
             save_btn = st.form_submit_button(t("حفظ المعاملة", "Save Transaction"), use_container_width=True)
@@ -415,11 +469,17 @@ def render(month_key: str, month: str, year: int):
             "note": p_note,
             "project_name": selected_name,
             "project_type": selected_project.get("project_type", "أخرى"),
-            "funded_from_personal": bool(funded_from_personal) if tx_type == "مصروف" else False,
+            "funded_from_personal": bool(linked_to_account) if tx_type == "مصروف" else False,
+            "transferred_from_account": bool(linked_to_account) if tx_type == "دخل" else False,
         }
+        if linked_to_account:
+            tx_payload["account_link_id"] = uuid4().hex
+            tx_payload["account_link_month_key"] = _month_key_from_date(datetime.combine(p_date, datetime.min.time()))
         if tx_type == "مصروف" and p_tax_code:
             tx_payload["tax_tag_code"] = p_tax_code
         selected_project["transactions"].append(tx_payload)
+        if linked_to_account:
+            _record_project_account_link(tx_payload["account_link_month_key"], tx_payload, currency, t)
         _sync_legacy_fields(month_obj)
         st.success(t("تمت إضافة معاملة المشروع.", "Project transaction saved."))
         st.rerun()
@@ -448,6 +508,11 @@ def render(month_key: str, month: str, year: int):
         for x in all_txs
         if x.get("type") == "مصروف" and x.get("funded_from_personal")
     )
+    account_transfers = sum(
+        float(x.get("amount", 0.0))
+        for x in all_txs
+        if x.get("type") == "دخل" and x.get("transferred_from_account")
+    )
     active_projects_count = sum(1 for proj in month_obj.get("projects", {}).values() if proj.get("transactions"))
 
     st.markdown(f"### {t('ملخص هذا الشهر', 'This Month Summary')}")
@@ -455,7 +520,7 @@ def render(month_key: str, month: str, year: int):
     with a1:
         st.metric(t("صافي كل المشاريع", "All Projects Net"), f"{all_net:,.0f} {currency_view}")
     with a2:
-        st.metric(t("دعم من الحساب الشخصي", "Funded From Personal"), f"{personal_support:,.0f} {currency_view}", delta_color="inverse")
+        st.metric(t("من الحساب", "From Account"), f"{(personal_support + account_transfers):,.0f} {currency_view}", delta_color="inverse")
     with a3:
         st.metric(t("المشاريع النشطة", "Active Projects"), f"{active_projects_count}")
 
@@ -464,6 +529,11 @@ def render(month_key: str, month: str, year: int):
         st.info(t("لا توجد حركات لهذا المشروع في هذا الشهر.", "No transactions for this project this month."))
     else:
         df_p = pd.DataFrame(selected_txs).copy()
+        technical_cols = ["account_link_id", "account_link_month_key", "project_link_id"]
+        df_p.drop(columns=[col for col in technical_cols if col in df_p.columns], inplace=True)
+        for bool_col in ["funded_from_personal", "transferred_from_account"]:
+            if bool_col not in df_p.columns:
+                df_p[bool_col] = False
         if is_en and "type" in df_p.columns:
             df_p["type"] = df_p["type"].apply(lambda x: _project_tx_type_label(x, True))
         if is_en and "project_type" in df_p.columns:
@@ -481,7 +551,8 @@ def render(month_key: str, month: str, year: int):
                     "note": t("ملاحظة", "Note"),
                     "project_name": t("المشروع", "Project"),
                     "project_type": t("نوع المشروع", "Project Type"),
-                    "funded_from_personal": t("من الحساب الشخصي", "From Personal"),
+                    "funded_from_personal": t("مصروف من الحساب", "Expense From Account"),
+                    "transferred_from_account": t("دخل من الحساب", "Income From Account"),
                 }
             ),
             use_container_width=True,
@@ -495,7 +566,8 @@ def render(month_key: str, month: str, year: int):
                 t("ملاحظة", "Note"),
                 t("المشروع", "Project"),
                 t("نوع المشروع", "Project Type"),
-                t("من الحساب الشخصي", "From Personal"),
+                t("مصروف من الحساب", "Expense From Account"),
+                t("دخل من الحساب", "Income From Account"),
             ],
             key="project_tx_editor",
         )
@@ -505,12 +577,23 @@ def render(month_key: str, month: str, year: int):
             if not selected_rows:
                 st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
             else:
+                removed_account_links = 0
                 for row_num in sorted(selected_rows, reverse=True):
                     tx_index = int(row_num) - 1
                     if 0 <= tx_index < len(selected_txs):
-                        selected_txs.pop(tx_index)
+                        deleted_project_tx = selected_txs.pop(tx_index)
+                        if _delete_linked_account_transaction(deleted_project_tx.get("account_link_id", "")):
+                            removed_account_links += 1
                 _sync_legacy_fields(month_obj)
-                st.success(t(f"تم حذف {len(selected_rows)} معاملة.", f"Deleted {len(selected_rows)} transaction(s)."))
+                if removed_account_links:
+                    st.success(
+                        t(
+                            f"تم حذف {len(selected_rows)} معاملة وحذف {removed_account_links} حركة مرتبطة من الحساب.",
+                            f"Deleted {len(selected_rows)} transaction(s) and {removed_account_links} linked account transaction(s).",
+                        )
+                    )
+                else:
+                    st.success(t(f"تم حذف {len(selected_rows)} معاملة.", f"Deleted {len(selected_rows)} transaction(s)."))
                 st.rerun()
 
     with st.expander(t("مقارنة المشاريع", "Projects Comparison"), expanded=False):
