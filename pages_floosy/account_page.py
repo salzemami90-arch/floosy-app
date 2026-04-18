@@ -798,16 +798,27 @@ def render(month_key: str, month: str, year: int):
     st.divider()
 
     with st.expander(t("إضافة معاملة جديدة", "Add New Transaction"), expanded=False):
+        form_nonce = int(st.session_state.get("account_tx_form_nonce", 0))
         with st.form("add_transaction_account_form"):
             t1, t2 = st.columns(2)
             with t1:
-                t_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, step=1.0)
-                t_type_lbl = st.selectbox(t("النوع", "Type"), [t("مصروف", "Expense"), t("دخل", "Income")])
+                t_amount = st.number_input(
+                    t("المبلغ", "Amount"),
+                    min_value=0.0,
+                    step=1.0,
+                    key=f"account_tx_amount_{form_nonce}",
+                )
+                t_type_lbl = st.selectbox(
+                    t("النوع", "Type"),
+                    [t("مصروف", "Expense"), t("دخل", "Income")],
+                    key=f"account_tx_type_{form_nonce}",
+                )
             with t2:
-                t_date = st.date_input(t("التاريخ", "Date"), value=datetime.today())
+                t_date = st.date_input(t("التاريخ", "Date"), value=datetime.today(), key=f"account_tx_date_{form_nonce}")
                 t_category = st.selectbox(
                     t("التصنيف", "Category"),
                     localized_all_categories(is_en),
+                    key=f"account_tx_category_{form_nonce}",
                 )
 
             selected_tx_type = "مصروف" if t_type_lbl == t("مصروف", "Expense") else "دخل"
@@ -818,7 +829,7 @@ def render(month_key: str, month: str, year: int):
                     tax_codes,
                     index=tax_codes.index(default_expense_tax_code) if default_expense_tax_code in tax_codes else 0,
                     format_func=lambda code: tax_label_by_code.get(code, code),
-                    key="account_add_tx_tax_tag",
+                    key=f"account_add_tx_tax_tag_{form_nonce}",
                 )
                 if selected_tax_code == ExpenseTaxService.DEDUCTIBLE_CODE:
                     st.caption(
@@ -828,7 +839,7 @@ def render(month_key: str, month: str, year: int):
                         )
                     )
 
-            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"))
+            t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), key=f"account_tx_note_{form_nonce}")
             t_proof = st.file_uploader(
                 t("إرفاق فاتورة/إثبات الدفع (اختياري)", "Attach Invoice/Payment Proof (Optional)"),
                 type=["png", "jpg", "jpeg", "pdf"],
@@ -846,6 +857,7 @@ def render(month_key: str, month: str, year: int):
                 t("العملة", "Currency"),
                 t_currency_options,
                 format_func=lambda opt: opt if opt == default_currency_label else _currency_option_label(opt, is_en),
+                key=f"account_tx_currency_{form_nonce}",
             )
             submit_btn = st.form_submit_button(t("حفظ المعاملة", "Save Transaction"), use_container_width=True)
 
@@ -864,6 +876,7 @@ def render(month_key: str, month: str, year: int):
                     tx_payload["tax_tag_code"] = selected_tax_code
                 tx_payload.update(_proof_payload(t_proof))
                 add_transaction(target_month_key, tx_payload)
+                st.session_state["account_tx_form_nonce"] = form_nonce + 1
                 st.session_state["account_tx_proof_nonce"] = int(st.session_state.get("account_tx_proof_nonce", 0)) + 1
                 st.session_state["account_templates_open"] = False
                 if target_month_key == month_key:
