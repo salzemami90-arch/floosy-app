@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import html
+from uuid import uuid4
 
 import pandas as pd
 import streamlit as st
@@ -312,6 +313,14 @@ def _sort_month_keys(keys: list[str]) -> list[str]:
     return sorted(keys, key=_key)
 
 
+def _ensure_item_id(item: dict) -> str:
+    item_id = str(item.get("id") or "").strip()
+    if not item_id:
+        item_id = str(uuid4())
+        item["id"] = item_id
+    return item_id
+
+
 def _ensure_pending_month(item: dict, month_key: str) -> None:
     pending = item.setdefault("pending_entitlements", [])
     if not isinstance(pending, list):
@@ -321,6 +330,86 @@ def _ensure_pending_month(item: dict, month_key: str) -> None:
     if month_key not in pending and item.get("last_paid_month") != month_key:
         pending.append(month_key)
         item["pending_entitlements"] = _sort_month_keys(pending)
+
+
+def _iter_transactions(transactions_by_month) -> list[dict]:
+    if not isinstance(transactions_by_month, dict):
+        return []
+
+    rows = []
+    for month_transactions in transactions_by_month.values():
+        if not isinstance(month_transactions, list):
+            continue
+        rows.extend(tx for tx in month_transactions if isinstance(tx, dict))
+    return rows
+
+
+def _monthly_transaction_matches_item(tx: dict, item: dict) -> bool:
+    source_id = str(tx.get("source_template_id") or "").strip()
+    item_id = str(item.get("id") or "").strip()
+    if source_id and item_id:
+        return source_id == item_id
+
+    source_name = str(tx.get("source_template_name") or "").strip()
+    item_name = str(item.get("name") or "").strip()
+    if not source_name or source_name != item_name:
+        return False
+
+    tx_type = str(tx.get("type") or "").strip()
+    item_type = str(item.get("type") or "").strip()
+    if tx_type and item_type and tx_type != item_type:
+        return False
+
+    tx_currency = str(tx.get("currency") or "").strip()
+    item_currency = str(item.get("currency") or "").strip()
+    if tx_currency and item_currency and tx_currency != item_currency:
+        return False
+
+    return True
+
+
+def _sync_monthly_item_after_transaction_delete(deleted_tx: dict, recurring_items: list[dict], transactions_by_month) -> bool:
+    entitlement_key = str(deleted_tx.get("entitlement_month_key") or "").strip()
+    if not entitlement_key:
+        return False
+
+    all_transactions = _iter_transactions(transactions_by_month)
+    changed = False
+
+    for item in recurring_items:
+        if not isinstance(item, dict):
+            continue
+        _ensure_item_id(item)
+        if not _monthly_transaction_matches_item(deleted_tx, item):
+            continue
+
+        remaining_confirmed_keys = [
+            str(tx.get("entitlement_month_key") or "").strip()
+            for tx in all_transactions
+            if _monthly_transaction_matches_item(tx, item)
+            and str(tx.get("entitlement_month_key") or "").strip()
+        ]
+
+        if entitlement_key not in remaining_confirmed_keys:
+            pending = item.setdefault("pending_entitlements", [])
+            if not isinstance(pending, list):
+                pending = []
+                item["pending_entitlements"] = pending
+            if entitlement_key not in pending:
+                pending.append(entitlement_key)
+                item["pending_entitlements"] = _sort_month_keys(pending)
+                changed = True
+
+        if remaining_confirmed_keys:
+            latest_paid = _sort_month_keys(remaining_confirmed_keys)[-1]
+            if item.get("last_paid_month") != latest_paid:
+                item["last_paid_month"] = latest_paid
+                changed = True
+        elif item.get("last_paid_month") == entitlement_key:
+            item["last_paid_month"] = ""
+            changed = True
+
+    return changed
 
 
 def render(month_key: str, month: str, year: int):
@@ -415,6 +504,9 @@ def render(month_key: str, month: str, year: int):
     st.markdown("---")
 
     recurring_items = st.session_state.setdefault("recurring", {}).setdefault("items", [])
+    for item in recurring_items:
+        if isinstance(item, dict):
+            _ensure_item_id(item)
 
     st.markdown(f"### {t('الالتزامات والدخل الشهري', 'Monthly Commitments and Income')}")
 
@@ -447,6 +539,7 @@ def render(month_key: str, month: str, year: int):
                     recurring_items.append(
                         {
                             "name": name.strip(),
+                            "id": str(uuid4()),
                             "type": "مصروف" if tx_type == t("مصروف", "Expense") else "دخل",
                             "amount": float(amount),
                             "currency": item_currency,
@@ -649,9 +742,15 @@ def render(month_key: str, month: str, year: int):
                             key=f"pay_tax_tag_{idx}",
                         )
                     pay_proof = st.file_uploader(
-                        t("إثبات الدفع (اختياري)", "Payment Proof (Optional)"),
+                        t("إرفاق فاتورة/إثبات الدفع (اختياري)", "Attach Invoice/Payment Proof (Optional)"),
                         type=["png", "jpg", "jpeg", "pdf"],
                         key=f"pay_proof_{idx}_{int(st.session_state.get(f'pay_proof_nonce_{idx}', 0))}",
+                    )
+                    st.caption(
+                        t(
+                            "ارفعي صورة الكابچر أو PDF الدفع. بعد الحفظ سيظهر الإثبات مع المعاملة في السجل.",
+                            "Upload a payment screenshot or PDF. After saving, the proof appears with the transaction log entry.",
+                        )
                     )
                     b1, b2 = st.columns(2)
                     with b1:
@@ -679,6 +778,7 @@ def render(month_key: str, month: str, year: int):
                             "note": f"{t('تأكيد من الالتزامات الشهرية', 'Confirmed from monthly commitments')}: {item.get('name', '')}",
                             "payment_month_key": payment_month_key,
                             "entitlement_month_key": entitlement_key,
+                            "source_template_id": _ensure_item_id(item),
                             "source_template_name": item.get("name", ""),
                         }
                         if tx_payload["type"] == "مصروف" and pay_tax_code:
@@ -730,9 +830,15 @@ def render(month_key: str, month: str, year: int):
 
             t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"))
             t_proof = st.file_uploader(
-                t("إثبات الدفع (اختياري)", "Payment Proof (Optional)"),
+                t("إرفاق فاتورة/إثبات الدفع (اختياري)", "Attach Invoice/Payment Proof (Optional)"),
                 type=["png", "jpg", "jpeg", "pdf"],
                 key=f"account_tx_proof_{int(st.session_state.get('account_tx_proof_nonce', 0))}",
+            )
+            st.caption(
+                t(
+                    "اختياري: ارفعي صورة أو PDF عشان تقدرين تحملينه لاحقًا من سجل المعاملات.",
+                    "Optional: upload an image or PDF so you can download it later from the transaction log.",
+                )
             )
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
             t_currency_options = [default_currency_label] + CURRENCY_OPTIONS
@@ -880,7 +986,7 @@ def render(month_key: str, month: str, year: int):
                     caption = f"{caption} | {t('استحقاق', 'Entitlement')}: {_month_label_from_key(entitlement_key, is_en)}"
                 st.caption(caption)
                 st.download_button(
-                    t("تحميل الإثبات", "Download Proof"),
+                    t("تحميل الفاتورة/الإثبات", "Download Invoice/Proof"),
                     data=proof_data,
                     file_name=proof_name,
                     mime=str(tx.get("proof_type") or "application/octet-stream"),
@@ -894,8 +1000,24 @@ def render(month_key: str, month: str, year: int):
             st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
         else:
             st.session_state["account_templates_open"] = False
+            deleted_transactions = []
             for idx in sorted(to_delete, reverse=True):
                 if 0 <= int(idx) < len(tx_list):
-                    tx_list.pop(int(idx))
-            st.success(t(f"تم حذف {len(to_delete)} معاملة.", f"Deleted {len(to_delete)} transaction(s)."))
+                    deleted_transactions.append(tx_list.pop(int(idx)))
+
+            restored_monthly_items = 0
+            transactions_by_month = st.session_state.get("transactions", {})
+            for deleted_tx in deleted_transactions:
+                if _sync_monthly_item_after_transaction_delete(deleted_tx, recurring_items, transactions_by_month):
+                    restored_monthly_items += 1
+
+            if restored_monthly_items:
+                st.success(
+                    t(
+                        f"تم حذف {len(deleted_transactions)} معاملة وإرجاع {restored_monthly_items} عنصر شهري للتأكيد.",
+                        f"Deleted {len(deleted_transactions)} transaction(s) and returned {restored_monthly_items} monthly item(s) to confirmation.",
+                    )
+                )
+            else:
+                st.success(t(f"تم حذف {len(deleted_transactions)} معاملة.", f"Deleted {len(deleted_transactions)} transaction(s)."))
             st.rerun()

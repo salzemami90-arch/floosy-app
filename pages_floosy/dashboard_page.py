@@ -634,9 +634,15 @@ div[data-testid="stForm"] {
                 key="dash_q_note",
             )
             q_proof = st.file_uploader(
-                t("إثبات الحركة (اختياري)", "Transaction Proof (Optional)"),
+                t("إرفاق فاتورة/إثبات الحركة (اختياري)", "Attach Invoice/Transaction Proof (Optional)"),
                 type=["png", "jpg", "jpeg", "pdf"],
                 key=f"dash_q_proof_{int(st.session_state.get('dash_q_proof_nonce', 0))}",
+            )
+            st.caption(
+                t(
+                    "اختياري: ارفعي صورة الكابچر أو PDF، وبتلقينه لاحقًا في سجل الحساب.",
+                    "Optional: upload a screenshot or PDF, then find it later in the account log.",
+                )
             )
 
             b1, b2 = st.columns(2)
