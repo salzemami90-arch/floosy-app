@@ -405,25 +405,69 @@ def render(month_key: str, month: str, year: int):
             item_type_label = _tx_type_label(item.get("type", ""), is_en)
             st.markdown(f"**{item.get('name','بدون اسم')}** • {item_type_label} • {state}")
 
-            e1, e2, e3, e4 = st.columns(4)
+            type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
+            current_type_label = _tx_type_label(item.get("type", "مصروف"), is_en)
+            type_index = type_options.index(current_type_label) if current_type_label in type_options else 0
+            current_currency = item.get("currency", currency)
+            currency_index = CURRENCY_OPTIONS.index(current_currency) if current_currency in CURRENCY_OPTIONS else 0
+
+            e1, e2 = st.columns(2)
             with e1:
-                new_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, value=float(item.get("amount", 0.0)), step=1.0, key=f"acct_tpl_amt_{i}")
+                new_name = st.text_input(
+                    t("اسم العنصر", "Item Name"),
+                    value=str(item.get("name", "") or ""),
+                    key=f"acct_tpl_name_{i}",
+                )
             with e2:
-                new_day = st.number_input(t("اليوم", "Day"), min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
+                new_type_label = st.selectbox(
+                    t("النوع", "Type"),
+                    type_options,
+                    index=type_index,
+                    key=f"acct_tpl_type_{i}",
+                )
+
+            e3, e4 = st.columns(2)
             with e3:
-                new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
+                new_category = st.text_input(
+                    t("التصنيف", "Category"),
+                    value=str(item.get("category", t("أخرى", "Other")) or t("أخرى", "Other")),
+                    key=f"acct_tpl_cat_{i}",
+                )
             with e4:
+                new_currency = st.selectbox(
+                    t("العملة", "Currency"),
+                    CURRENCY_OPTIONS,
+                    index=currency_index,
+                    format_func=lambda opt: _currency_option_label(opt, is_en),
+                    key=f"acct_tpl_currency_{i}",
+                )
+
+            e5, e6, e7, e8 = st.columns(4)
+            with e5:
+                new_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, value=float(item.get("amount", 0.0)), step=1.0, key=f"acct_tpl_amt_{i}")
+            with e6:
+                new_day = st.number_input(t("اليوم", "Day"), min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
+            with e7:
+                new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
+            with e8:
                 new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{i}")
 
             a1, a2 = st.columns(2)
             with a1:
                 if st.button(t("تعديل", "Edit"), key=f"acct_tpl_update_{i}", use_container_width=True):
-                    item["amount"] = float(new_amount)
-                    item["day"] = int(new_day)
-                    item["active"] = bool(new_active)
-                    item["is_variable"] = bool(new_variable)
-                    st.success(t("تم تعديل العنصر.", "Item updated."))
-                    st.rerun()
+                    if not str(new_name).strip() or float(new_amount) <= 0:
+                        st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
+                    else:
+                        item["name"] = str(new_name).strip()
+                        item["type"] = "مصروف" if new_type_label == t("مصروف", "Expense") else "دخل"
+                        item["category"] = str(new_category).strip() or t("أخرى", "Other")
+                        item["currency"] = new_currency
+                        item["amount"] = float(new_amount)
+                        item["day"] = int(new_day)
+                        item["active"] = bool(new_active)
+                        item["is_variable"] = bool(new_variable)
+                        st.success(t("تم تعديل العنصر.", "Item updated."))
+                        st.rerun()
             with a2:
                 if st.button(t("حذف", "Delete"), key=f"acct_tpl_delete_{i}", use_container_width=True):
                     recurring_items.pop(i)
