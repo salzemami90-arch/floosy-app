@@ -57,3 +57,39 @@ def test_password_reset_uses_recover_endpoint(monkeypatch):
     assert captured["json"] == {"email": "user@example.com"}
     assert captured["headers"]["apikey"] == "anon-key"
     assert captured["timeout"] == 7
+
+
+def test_refresh_session_uses_refresh_token_endpoint(monkeypatch):
+    captured = {}
+
+    class RefreshResponse:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+                "user": {"id": "user-1", "email": "user@example.com"},
+            }
+
+    def fake_post(url, json, headers, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return RefreshResponse()
+
+    monkeypatch.setattr("services.supabase_sync.requests.post", fake_post)
+
+    client = SupabaseSyncClient("https://example.supabase.co", "anon-key", timeout_sec=7)
+    result = client.refresh_session("old-refresh")
+
+    assert result["ok"] is True
+    assert result["access_token"] == "new-access"
+    assert result["refresh_token"] == "new-refresh"
+    assert result["user"]["id"] == "user-1"
+    assert captured["url"] == "https://example.supabase.co/auth/v1/token?grant_type=refresh_token"
+    assert captured["json"] == {"refresh_token": "old-refresh"}
+    assert captured["headers"]["apikey"] == "anon-key"
+    assert captured["timeout"] == 7

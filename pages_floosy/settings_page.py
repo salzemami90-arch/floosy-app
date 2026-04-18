@@ -14,6 +14,7 @@ from config_floosy import (
     save_persistent_state,
     sync_browser_preferences_state,
 )
+from services.cloud_auth_cookie import clear_cloud_auth_cookie, remember_cloud_auth
 from services.supabase_sync import SupabaseSyncClient
 
 
@@ -553,6 +554,8 @@ def render():
             if bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token")):
                 if st.button(t("تسجيل خروج من السحابة", "Sign Out from Cloud"), key="cloud_signout_disabled_btn"):
                     _set_cloud_auth(False)
+                    st.session_state["_cloud_remember_login"] = False
+                    clear_cloud_auth_cookie()
                     st.session_state["_cloud_last_pull_user"] = ""
                     st.success(t("تم تسجيل الخروج.", "Signed out."))
                     st.rerun()
@@ -619,6 +622,8 @@ def render():
             with r2c1:
                 if st.button(t("تسجيل خروج", "Sign Out"), use_container_width=True, key="cloud_signout_btn"):
                     _set_cloud_auth(False)
+                    st.session_state["_cloud_remember_login"] = False
+                    clear_cloud_auth_cookie()
                     st.session_state["_cloud_last_pull_user"] = ""
                     st.success(t("تم تسجيل الخروج.", "Signed out."))
                     st.rerun()
@@ -684,6 +689,8 @@ def render():
 
                     if account_delete_res.get("ok"):
                         _set_cloud_auth(False)
+                        st.session_state["_cloud_remember_login"] = False
+                        clear_cloud_auth_cookie()
                         _set_scope_owner("", "")
                         st.session_state["_cloud_last_snapshot"] = ""
                         st.session_state["_cloud_last_pull_user"] = ""
@@ -734,6 +741,19 @@ def render():
                 password = st.text_input(t("كلمة المرور", "Password"), type="password", key="cloud_auth_password")
             if is_sign_up_mode:
                 confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password", key="cloud_auth_confirm_password")
+            remember_login = False
+            if not is_reset_mode:
+                remember_login = st.checkbox(
+                    t("تذكر تسجيل الدخول على هذا الجهاز", "Remember sign-in on this device"),
+                    value=True,
+                    key="cloud_remember_login",
+                )
+                st.caption(
+                    t(
+                        "عند التفعيل، يبقى تسجيل الدخول محفوظًا على هذا المتصفح. استخدم تسجيل الخروج لإزالته.",
+                        "When enabled, sign-in stays saved on this browser. Use Sign Out to remove it.",
+                    )
+                )
             submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
             submit = st.button(submit_label, use_container_width=True, key="cloud_auth_submit")
 
@@ -814,6 +834,11 @@ def render():
                                     access_token=access_token,
                                     refresh_token=refresh_token,
                                 )
+                                st.session_state["_cloud_remember_login"] = bool(remember_login)
+                                if remember_login:
+                                    remember_cloud_auth(clean_email, user_id, refresh_token)
+                                else:
+                                    clear_cloud_auth_cookie()
                                 _set_scope_owner(user_id, clean_email)
 
                                 pull = client.fetch_user_data(user_id, access_token)

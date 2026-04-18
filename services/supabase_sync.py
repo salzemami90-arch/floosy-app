@@ -156,6 +156,35 @@ class SupabaseSyncClient:
 
         return {"ok": True, "raw": data}
 
+    def refresh_session(self, refresh_token: str) -> dict[str, Any]:
+        if not self.is_configured:
+            return {"ok": False, "error": "Supabase config is missing."}
+
+        clean_refresh_token = str(refresh_token or "").strip()
+        if not clean_refresh_token:
+            return {"ok": False, "error": "Missing refresh token."}
+
+        url = f"{self.supabase_url}/auth/v1/token?grant_type=refresh_token"
+        payload = {"refresh_token": clean_refresh_token}
+
+        try:
+            resp = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout_sec)
+        except Exception as exc:
+            return {"ok": False, "error": f"Network error: {exc}"}
+
+        data = self._json_or_text(resp)
+        if resp.status_code >= 400:
+            message = self._friendly_error(resp, data, ("msg", "error_description", "error"))
+            return {"ok": False, "error": message}
+
+        return {
+            "ok": True,
+            "user": data.get("user") if isinstance(data, dict) else None,
+            "access_token": data.get("access_token") if isinstance(data, dict) else None,
+            "refresh_token": data.get("refresh_token") if isinstance(data, dict) else None,
+            "raw": data,
+        }
+
     def get_user(self, access_token: str) -> dict[str, Any]:
         if not self.is_configured:
             return {"ok": False, "error": "Supabase config is missing."}

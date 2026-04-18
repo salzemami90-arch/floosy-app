@@ -8,10 +8,132 @@ from config_floosy import (
     ensure_month_keys,
     export_app_state_payload,
     get_month_selection,
+    import_app_state_payload,
     init_session_state,
     save_persistent_state,
 )
+from services.cloud_auth_cookie import clear_cloud_auth_cookie, read_cloud_auth_cookie, remember_cloud_auth
 from services.supabase_sync import SupabaseSyncClient
+
+
+def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_token: str = "", refresh_token: str = "") -> None:
+    st.session_state["cloud_auth"] = {
+        "logged_in": bool(logged_in),
+        "email": email,
+        "user_id": user_id,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+    }
+
+
+def _set_scope_owner(user_id: str = "", email: str = "") -> None:
+    scope = st.session_state.get("app_scope")
+    if not isinstance(scope, dict):
+        scope = {}
+    scope["owner_user_id"] = str(user_id or "")
+    scope["owner_email"] = str(email or "")
+    st.session_state["app_scope"] = scope
+
+
+def _clear_scoped_finance_state() -> None:
+    st.session_state["transactions"] = {}
+    st.session_state["savings"] = {}
+    st.session_state["project_data"] = {}
+    st.session_state["recurring"] = {"items": []}
+    st.session_state["documents"] = []
+    st.session_state["mustndaty_documents"] = st.session_state["documents"]
+    st.session_state["invoices"] = []
+    st.session_state["tax_profile"] = {}
+    st.session_state["tax_tags"] = []
+    st.session_state["_persist_last_snapshot"] = ""
+    st.session_state["_cloud_last_snapshot"] = ""
+    st.session_state["_cloud_last_pull_user"] = ""
+
+
+def _set_cloud_snapshot_now(user_id: str = "") -> None:
+    try:
+        snapshot = json.dumps(export_app_state_payload(), ensure_ascii=False, sort_keys=True)
+    except Exception:
+        snapshot = ""
+    st.session_state["_cloud_last_snapshot"] = snapshot
+    st.session_state["_cloud_last_pull_user"] = str(user_id or "")
+
+
+def _restore_cloud_auth_from_cookie() -> None:
+    if st.session_state.get("_cloud_cookie_restore_checked", False):
+        return
+    st.session_state["_cloud_cookie_restore_checked"] = True
+
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    if isinstance(cloud_auth, dict) and cloud_auth.get("logged_in") and cloud_auth.get("access_token"):
+        return
+
+    remembered_auth = read_cloud_auth_cookie()
+    refresh_token = str(remembered_auth.get("refresh_token") or "").strip()
+    if not refresh_token:
+        return
+
+    client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
+    if not client.is_configured:
+        return
+
+    refreshed = client.refresh_session(refresh_token)
+    if not refreshed.get("ok"):
+        clear_cloud_auth_cookie()
+        return
+
+    access_token = str(refreshed.get("access_token") or "")
+    new_refresh_token = str(refreshed.get("refresh_token") or refresh_token)
+    user_obj = refreshed.get("user") if isinstance(refreshed.get("user"), dict) else {}
+    user_id = str(user_obj.get("id") or remembered_auth.get("user_id") or "")
+    email = str(user_obj.get("email") or remembered_auth.get("email") or "")
+
+    if not access_token or not user_id:
+        clear_cloud_auth_cookie()
+        return
+
+    previous_owner = ""
+    scope = st.session_state.get("app_scope", {})
+    if isinstance(scope, dict):
+        previous_owner = str(scope.get("owner_user_id") or "")
+    if previous_owner and previous_owner != user_id:
+        _clear_scoped_finance_state()
+
+    _set_cloud_auth(True, email=email, user_id=user_id, access_token=access_token, refresh_token=new_refresh_token)
+    _set_scope_owner(user_id, email)
+    if isinstance(st.session_state.get("settings"), dict):
+        st.session_state.settings["cloud_sync_enabled"] = True
+    remember_cloud_auth(email, user_id, new_refresh_token)
+
+    pull = client.fetch_user_data(user_id, access_token)
+    if pull.get("ok") and pull.get("data") is not None:
+        import_app_state_payload(pull.get("data"))
+        _set_scope_owner(user_id, email)
+        _set_cloud_auth(True, email=email, user_id=user_id, access_token=access_token, refresh_token=new_refresh_token)
+        _set_cloud_snapshot_now(user_id)
+        if isinstance(st.session_state.get("settings"), dict):
+            st.session_state.settings["cloud_sync_enabled"] = True
+            st.session_state.settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
+        save_persistent_state()
+    elif pull.get("ok") and pull.get("data") is None:
+        _set_cloud_snapshot_now(user_id)
+    else:
+        _set_cloud_snapshot_now(user_id)
+
+
+def _sync_cloud_auth_cookie_preference() -> None:
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    if not isinstance(cloud_auth, dict):
+        return
+    if not cloud_auth.get("logged_in") or not cloud_auth.get("refresh_token"):
+        return
+    if st.session_state.get("_cloud_remember_login") is False:
+        return
+    remember_cloud_auth(
+        str(cloud_auth.get("email") or ""),
+        str(cloud_auth.get("user_id") or ""),
+        str(cloud_auth.get("refresh_token") or ""),
+    )
 
 
 def _sync_cloud_if_logged_in() -> None:
@@ -73,6 +195,8 @@ def main():
 
     # تهيئة عامة (session_state + css إن كانت داخل config_floosy)
     init_session_state()
+    _restore_cloud_auth_from_cookie()
+    _sync_cloud_auth_cookie_preference()
 
     # تحميل الصفحات بشكل آمن
     try:
