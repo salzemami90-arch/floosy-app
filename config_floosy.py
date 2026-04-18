@@ -789,6 +789,14 @@ div[data-testid="stFileUploader"] small,
     box-shadow: 0 0 0 3px rgba(95, 163, 200, 0.18) !important;
 }
 
+div[data-testid="InputInstructions"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
 .stForm {
     border: none !important;
 }
