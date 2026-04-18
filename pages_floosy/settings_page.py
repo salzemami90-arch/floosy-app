@@ -715,17 +715,19 @@ def render():
                         )
 
         else:
+            mode = st.selectbox(
+                t("العملية", "Action"),
+                [
+                    t("تسجيل دخول", "Sign In"),
+                    t("إنشاء حساب", "Sign Up"),
+                    t("نسيت كلمة المرور", "Forgot Password"),
+                ],
+                key="cloud_auth_mode",
+            )
+            is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
+            is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
+
             with st.form("cloud_auth_form", clear_on_submit=False):
-                mode = st.selectbox(
-                    t("العملية", "Action"),
-                    [
-                        t("تسجيل دخول", "Sign In"),
-                        t("إنشاء حساب", "Sign Up"),
-                        t("نسيت كلمة المرور", "Forgot Password"),
-                    ],
-                )
-                is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
-                is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
                 email = st.text_input(t("الإيميل", "Email"))
                 password = ""
                 confirm_password = ""
