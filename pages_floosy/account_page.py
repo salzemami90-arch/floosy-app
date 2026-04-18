@@ -181,6 +181,62 @@ def _category_label(value: str, is_en: bool) -> str:
     return category_label(value, is_en)
 
 
+def _proof_payload(uploaded_file) -> dict:
+    if uploaded_file is None:
+        return {}
+    return {
+        "proof_name": getattr(uploaded_file, "name", "") or "",
+        "proof_bytes": uploaded_file.getvalue(),
+        "proof_type": getattr(uploaded_file, "type", "") or "",
+    }
+
+
+def _proof_bytes(tx: dict) -> bytes:
+    proof_data = tx.get("proof_bytes")
+    if isinstance(proof_data, bytes):
+        return proof_data
+    if isinstance(proof_data, bytearray):
+        return bytes(proof_data)
+    return b""
+
+
+def _has_proof(tx: dict) -> bool:
+    return bool(_proof_bytes(tx))
+
+
+def _proof_label(tx: dict, fallback: str = "") -> str:
+    name = str(tx.get("proof_name") or "").strip()
+    if not name or name.lower() == "nan":
+        return fallback
+    return name or fallback
+
+
+def _month_search_text(value) -> str:
+    raw = str(value or "").strip()
+    if not raw or raw.lower() == "nan":
+        return ""
+
+    parts = [raw]
+    if "-" in raw:
+        year_txt, month_name = raw.split("-", 1)
+        if month_name in arabic_months:
+            month_index = arabic_months.index(month_name)
+            month_number = month_index + 1
+            english_name = english_months[month_index]
+            arabic_number = str(month_number).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
+            parts.extend(
+                [
+                    f"{month_name} {year_txt}",
+                    f"{english_name} {year_txt}",
+                    f"{year_txt}-{month_number:02d}",
+                    f"شهر {month_number}",
+                    f"شهر {arabic_number}",
+                    f"month {month_number}",
+                ]
+            )
+    return " ".join(parts)
+
+
 def _build_filtered_df(
     tx_list: list[dict],
     currency: str,
@@ -195,7 +251,10 @@ def _build_filtered_df(
     df = pd.DataFrame(tx_list).copy()
     df["tx_id"] = df.index
     df["date_dt"] = pd.to_datetime(df["date"], errors="coerce")
-    df["note"] = df["note"].fillna("")
+    for optional_col in ["note", "proof_name", "payment_month_key", "entitlement_month_key"]:
+        if optional_col not in df.columns:
+            df[optional_col] = ""
+        df[optional_col] = df[optional_col].fillna("")
 
     # same behavior as existing summary: focus on selected currency
     df = df[df["currency"] == currency].copy()
@@ -210,10 +269,17 @@ def _build_filtered_df(
 
     q = query.strip().lower()
     if q:
+        month_search = (
+            df["payment_month_key"].apply(_month_search_text)
+            + " "
+            + df["entitlement_month_key"].apply(_month_search_text)
+        )
         df = df[
             df["category"].astype(str).str.lower().str.contains(q, na=False)
             | df["note"].astype(str).str.lower().str.contains(q, na=False)
             | df["date"].astype(str).str.lower().str.contains(q, na=False)
+            | df["proof_name"].astype(str).str.lower().str.contains(q, na=False)
+            | month_search.astype(str).str.lower().str.contains(q, na=False)
         ]
 
     ascending = [not newest_first, not newest_first]
@@ -582,6 +648,11 @@ def render(month_key: str, month: str, year: int):
                             format_func=lambda code: tax_label_by_code.get(code, code),
                             key=f"pay_tax_tag_{idx}",
                         )
+                    pay_proof = st.file_uploader(
+                        t("إثبات الدفع (اختياري)", "Payment Proof (Optional)"),
+                        type=["png", "jpg", "jpeg", "pdf"],
+                        key=f"pay_proof_{idx}_{int(st.session_state.get(f'pay_proof_nonce_{idx}', 0))}",
+                    )
                     b1, b2 = st.columns(2)
                     with b1:
                         confirm_btn = st.form_submit_button(t("تأكيد المعاملة", "Confirm Transaction"), use_container_width=True)
@@ -590,6 +661,7 @@ def render(month_key: str, month: str, year: int):
 
                 if cancel_btn:
                     st.session_state[pay_form_key] = False
+                    st.session_state[f"pay_proof_nonce_{idx}"] = int(st.session_state.get(f"pay_proof_nonce_{idx}", 0)) + 1
                     st.rerun()
 
                 if confirm_btn:
@@ -611,6 +683,7 @@ def render(month_key: str, month: str, year: int):
                         }
                         if tx_payload["type"] == "مصروف" and pay_tax_code:
                             tx_payload["tax_tag_code"] = pay_tax_code
+                        tx_payload.update(_proof_payload(pay_proof))
                         add_transaction(payment_month_key, tx_payload)
                         if entitlement_key in item.get("pending_entitlements", []):
                             item["pending_entitlements"].remove(entitlement_key)
@@ -618,8 +691,9 @@ def render(month_key: str, month: str, year: int):
                         if update_template:
                             item["amount"] = float(pay_amount)
                         st.session_state[pay_form_key] = False
-                    st.success(t("تم تسجيل المعاملة في الحساب.", "Transaction recorded in account."))
-                    st.rerun()
+                        st.session_state[f"pay_proof_nonce_{idx}"] = int(st.session_state.get(f"pay_proof_nonce_{idx}", 0)) + 1
+                        st.success(t("تم تسجيل المعاملة في الحساب.", "Transaction recorded in account."))
+                        st.rerun()
 
     st.divider()
 
@@ -655,6 +729,11 @@ def render(month_key: str, month: str, year: int):
                     )
 
             t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"))
+            t_proof = st.file_uploader(
+                t("إثبات الدفع (اختياري)", "Payment Proof (Optional)"),
+                type=["png", "jpg", "jpeg", "pdf"],
+                key=f"account_tx_proof_{int(st.session_state.get('account_tx_proof_nonce', 0))}",
+            )
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
             t_currency_options = [default_currency_label] + CURRENCY_OPTIONS
             t_currency = st.selectbox(
@@ -677,7 +756,9 @@ def render(month_key: str, month: str, year: int):
                 }
                 if selected_tx_type == "مصروف" and selected_tax_code:
                     tx_payload["tax_tag_code"] = selected_tax_code
+                tx_payload.update(_proof_payload(t_proof))
                 add_transaction(target_month_key, tx_payload)
+                st.session_state["account_tx_proof_nonce"] = int(st.session_state.get("account_tx_proof_nonce", 0)) + 1
                 st.session_state["account_templates_open"] = False
                 if target_month_key == month_key:
                     st.session_state["account_save_notice"] = t(
@@ -701,7 +782,10 @@ def render(month_key: str, month: str, year: int):
     with f1:
         query = st.text_input(
             t("بحث", "Search"),
-            placeholder=t("البحث بالتاريخ أو التصنيف أو الملاحظة", "Search by date, category, or note"),
+            placeholder=t(
+                "البحث بالتاريخ أو التصنيف أو الملاحظة أو الإثبات",
+                "Search by date, category, note, or proof",
+            ),
             on_change=_close_templates_panel,
         )
     with f2:
@@ -738,6 +822,7 @@ def render(month_key: str, month: str, year: int):
     amount_col = t("المبلغ", "Amount")
     currency_col = t("العملة", "Currency")
     note_col = t("ملاحظة", "Note")
+    proof_col = t("إثبات", "Proof")
     delete_col = t("حذف", "Delete")
 
     view_df = filtered_df[["tx_id", "date", "type", "category", "amount", "currency", "note"]].copy()
@@ -747,6 +832,12 @@ def render(month_key: str, month: str, year: int):
         view_df["category"] = view_df["category"].apply(lambda x: _category_label(x, True))
     if is_en and "currency" in view_df.columns:
         view_df["currency"] = view_df["currency"].apply(lambda x: _currency_option_label(x, True))
+    proof_lookup = {
+        int(row["tx_id"]): _proof_label(row, t("مرفق", "Attached"))
+        for _, row in filtered_df.iterrows()
+        if _has_proof(row.to_dict())
+    }
+    view_df[proof_col] = view_df["tx_id"].apply(lambda idx: proof_lookup.get(int(idx), ""))
     view_df.rename(
         columns={
             "tx_id": id_col,
@@ -765,7 +856,7 @@ def render(month_key: str, month: str, year: int):
         view_df,
         use_container_width=True,
         hide_index=True,
-        disabled=[id_col, date_col, type_col, category_col, amount_col, currency_col, note_col],
+        disabled=[id_col, date_col, type_col, category_col, amount_col, currency_col, note_col, proof_col],
         column_config={
             delete_col: st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
             id_col: st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
@@ -773,6 +864,29 @@ def render(month_key: str, month: str, year: int):
         key="account_tx_editor",
         on_change=_close_templates_panel,
     )
+
+    proof_rows = [row.to_dict() for _, row in filtered_df.iterrows() if _has_proof(row.to_dict())]
+    if proof_rows:
+        st.markdown(f"#### {t('إثباتات المعاملات', 'Transaction Proofs')}")
+        proof_cols = st.columns(2)
+        for proof_idx, tx in enumerate(proof_rows):
+            col = proof_cols[proof_idx % 2]
+            with col:
+                proof_name = _proof_label(tx, t("إثبات", "Proof"))
+                proof_data = _proof_bytes(tx)
+                caption = f"{tx.get('date', '')} | {_category_label(tx.get('category', ''), is_en)} | {tx.get('amount', 0)} {_currency_short_label(tx.get('currency', currency), is_en)}"
+                entitlement_key = str(tx.get("entitlement_month_key") or "").strip()
+                if entitlement_key:
+                    caption = f"{caption} | {t('استحقاق', 'Entitlement')}: {_month_label_from_key(entitlement_key, is_en)}"
+                st.caption(caption)
+                st.download_button(
+                    t("تحميل الإثبات", "Download Proof"),
+                    data=proof_data,
+                    file_name=proof_name,
+                    mime=str(tx.get("proof_type") or "application/octet-stream"),
+                    key=f"download_tx_proof_{int(tx.get('tx_id', proof_idx))}_{proof_idx}",
+                    use_container_width=True,
+                )
 
     to_delete = edited[edited[delete_col]][id_col].tolist()
     if st.button(t("حذف المحدد", "Delete Selected"), type="secondary", use_container_width=True):

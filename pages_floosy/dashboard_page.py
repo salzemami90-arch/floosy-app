@@ -12,6 +12,16 @@ from services.financial_analyzer import FinancialAnalyzer
 from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, localized_all_categories
 
 
+def _proof_payload(uploaded_file) -> dict:
+    if uploaded_file is None:
+        return {}
+    return {
+        "proof_name": getattr(uploaded_file, "name", "") or "",
+        "proof_bytes": uploaded_file.getvalue(),
+        "proof_type": getattr(uploaded_file, "type", "") or "",
+    }
+
+
 def _render_summary_card_styles() -> None:
     st.markdown(
         """
@@ -623,6 +633,11 @@ div[data-testid="stForm"] {
                 t("ملاحظة (اختياري)", "Note (Optional)"),
                 key="dash_q_note",
             )
+            q_proof = st.file_uploader(
+                t("إثبات الحركة (اختياري)", "Transaction Proof (Optional)"),
+                type=["png", "jpg", "jpeg", "pdf"],
+                key=f"dash_q_proof_{int(st.session_state.get('dash_q_proof_nonce', 0))}",
+            )
 
             b1, b2 = st.columns(2)
             with b1:
@@ -632,6 +647,7 @@ div[data-testid="stForm"] {
 
         if cancel_btn:
             st.session_state["dash_quick_open"] = False
+            st.session_state["dash_q_proof_nonce"] = int(st.session_state.get("dash_q_proof_nonce", 0)) + 1
             st.rerun()
 
         if save_btn:
@@ -653,9 +669,11 @@ div[data-testid="stForm"] {
                 }
                 if q_selected_type == "مصروف" and q_tax_code:
                     tx_payload["tax_tag_code"] = q_tax_code
+                tx_payload.update(_proof_payload(q_proof))
                 add_transaction(month_key, tx_payload)
                 st.session_state["dash_quick_open"] = False
                 st.session_state["dash_quick_form"] = default_quick_form.copy()
+                st.session_state["dash_q_proof_nonce"] = int(st.session_state.get("dash_q_proof_nonce", 0)) + 1
                 st.session_state["dash_quick_reset"] = True
                 _toast(t("تمت إضافة المعاملة.", "Transaction added."))
                 st.rerun()
