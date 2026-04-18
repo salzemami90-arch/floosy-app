@@ -12,3 +12,6 @@ test-results/
 data/floosy_data.json
 data/floosy_data.sqlite3
 data/*.tmp
+data/*.backup-*
+data/*.sqlite3-wal
+data/*.sqlite3-shm
