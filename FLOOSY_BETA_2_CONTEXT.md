@@ -21,6 +21,60 @@ For any new Codex/AI conversation:
 
 In short: every meaningful change to Floosy should leave a trace in this context file.
 
+## Timeline / Change History
+
+Use this section to show how Floosy evolved over time and how much work each phase took.
+
+When adding future updates:
+
+- Add the date.
+- Add the commit hash if available.
+- Summarize the product change, not only the code change.
+- Keep older entries. Do not delete history unless creating a cleaner Beta 3 context file.
+
+### 2026-04-19
+
+- `71abd4b` Reorganized this context file into a source-of-truth handoff with an explicit bugs log.
+- `2aacb0c` Improved Monthly Items entitlement tracking:
+  - Separated entitlement month from actual payment/receipt date.
+  - Changed expected income language so salary/income does not look like overdue expenses.
+  - Added tests for social security, delayed income, and expected income cases.
+- `61fdc20` Created `FLOOSY_BETA_2_CONTEXT.md` as the official Beta 2 context file.
+- `6d1b898` Added Remember Sign-In:
+  - Stores a local browser refresh token.
+  - Restores cloud sign-in after refresh.
+  - Pulls cloud data before syncing to avoid overwriting with empty local state.
+- `18153ac` Linked project funding to account transactions:
+  - Project movements funded from My Account now deduct from My Account.
+  - Deleting linked project movements removes linked account transactions.
+- `9fc9167` Reset Account Add Transaction form after save.
+
+### 2026-04-18
+
+- `ba51ecc` Neutralized Arabic app copy so it is general for all users, not personally addressed.
+- `c7310df` Hid Streamlit input instructions that overlapped with typing.
+- `02e5683`, `1dd5f4d`, `ea21e4e` Improved cloud auth flow:
+  - Removed enter-submit issues.
+  - Refreshed auth mode fields immediately.
+  - Added password recovery.
+- `785c4aa` Replaced raw Supabase/Cloudflare HTML errors with friendly messages.
+- `4127452` Documented auth and cloud strategy.
+- `c8a1c4b` Ignored local backup/test data files.
+- `cfcd0b2` Reopened Monthly Items after deleting generated transactions.
+- `ce22d5c` Added transaction proof attachments.
+- `a0ea269` Allowed full editing of monthly items.
+
+### 2026-04-17
+
+- `3c9d35f` Refined Smart Summary and transaction notes.
+- `dbdf5ac` Fixed Dashboard quick add category maps.
+- `e5fe001` Removed note placeholder examples that were too specific.
+
+### 2026-04-15
+
+- Multiple commits fixed Arabic sidebar/RTL behavior on web and mobile.
+- `c869564` pinned Streamlit to `1.45.1` to keep sidebar behavior stable.
+
 ## Quick Handoff
 
 Floosy is a real beta finance/admin app for a small business owner. It is not just an accounting demo.
