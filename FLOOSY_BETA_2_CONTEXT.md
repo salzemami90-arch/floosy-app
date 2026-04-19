@@ -1,280 +1,479 @@
 # Floosy Beta 2 Context
 
-## 1. الهدف من التطبيق
+Last updated: 2026-04-19
 
-Floosy هو تطبيق مالي وإداري لصاحبة مشروع/شركة صغيرة، يساعد على ترتيب:
+Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
-- الدخل والمصاريف
-- الالتزامات الشهرية
-- التوفير ورأس المال
-- المشاريع الصغيرة
-- المستندات والإثباتات
-- الفواتير والضرائب
-- متابعة الوضع المالي بدون ضياع بين واتساب، أوراق، وسكرينشوتات
+## Operating Rule for Every New Conversation
 
-الهدف مو بس "محاسبة"، الهدف إن المستخدم يلقى بسرعة:
+This file is the source of truth for Floosy Beta 2.
 
-- شنو اندفع؟
-- حق أي شهر؟
-- وين الإثبات؟
-- شنو باقي؟
-- شنو أثره على الحساب؟
+For any new Codex/AI conversation:
 
-## 2. منطق الفلوس
+- Read this file before planning or editing.
+- Treat it as the baseline for product logic, tone, rules, and current bugs.
+- If a feature is added, update this file.
+- If a bug is found, add it under `Bugs Log > Open / Needs Review`.
+- If a bug is fixed, move or copy it under `Bugs Log > Resolved Bugs`.
+- If a product rule changes, update the relevant rule section.
+- If a plan changes, update `Next Work Plan`.
+- Do not rely only on chat memory; keep important decisions here.
 
-كل مبلغ يدخل أو يطلع لازم يكون له معنى واضح.
+In short: every meaningful change to Floosy should leave a trace in this context file.
 
-**الحساب / My Account:**
-هو الحقيقة المالية اليومية. أي فلوس دخلت أو طلعت فعليًا تسجل هنا.
+## Quick Handoff
 
-**التوفير / Savings:**
-فلوس موجودة لكن محجوزة لهدف مثل رأس مال، احتياطي، توسعة، أو أمان.
+Floosy is a real beta finance/admin app for a small business owner. It is not just an accounting demo.
 
-**المشاريع / Projects:**
-أي نشاط نبي نقيس ربحه وخسارته بروحه، مثل مزرعة أو مشروع معين.
+Current working focus:
 
-**المستندات / Documents:**
-أي إثبات أو ورقة مهمة، مثل رخصة، عقد، استقالة، إثبات دفع، أوراق حكومية، تجديدات.
+- Dashboard: make Smart Summary smarter and less dramatic when data is still new.
+- Account: keep testing Monthly Items with real cases like salary, social security, and delayed income.
+- Projects: keep validating that project transactions linked to the account deduct from My Account correctly.
+- Documents: organize company papers, proofs, government documents, renewals, contracts, and sensitive evidence.
 
-**الفواتير والضرائب / Invoices & Tax:**
-للفواتير، التصنيفات الضريبية، والمصاريف القابلة/غير القابلة للخصم.
+Most important product rule:
 
-## 3. تعريف كل قسم
+- My Account is the money truth.
+- Projects measure project performance.
+- Savings holds reserved money.
+- Documents preserve proof.
+- Monthly Items must separate entitlement month from actual payment/receipt date.
 
-**Dashboard:**
-يعطي صورة عامة وسريعة عن الوضع المالي، الرصيد، الدخل، المصاريف، التوفير، المشاريع، والملخص الذكي.
+## 1. App Goal
 
-**My Account:**
-المكان الأساسي لتسجيل كل حركة فعلية في المال. يشمل الدخل، المصروف، الالتزامات الشهرية، وسجل المعاملات.
+Floosy helps a small business owner manage financial and administrative chaos in one place.
 
-**Monthly Items:**
-عناصر شهرية متكررة مثل راتب، إيجار، تأمينات، رسوم، أو دخل متوقع. لازم نفرق فيها بين شهر الاستحقاق وتاريخ الدفع الفعلي.
+It helps answer:
 
-**Savings:**
-فلوس محجوزة. مو كل مبلغ محفوظ يعتبر ربح، ممكن يكون احتياطي التزامات أو رأس مال.
+- What was paid?
+- What month was it for?
+- When was it actually paid or received?
+- Where is the proof?
+- What is still pending?
+- How did this affect the account balance?
 
-**Projects:**
-يقيس مشروع معين بروحه. إذا المبلغ جاي من الحساب للمشروع، لازم يتسجل أثره في الحساب وينخصم.
+The app should feel practical, calm, and protective. It is built from real daily use, not theoretical finance.
 
-**Documents:**
-أرشيف أدلة. لازم يخدم البحث السريع والربط مع المعاملات أو الحالات.
+## 2. Money Model
 
-**Financial Analyzer:**
-يفسر الوضع المالي ويعطي مؤشرات، بس لازم يكون ذكي وما يبالغ بالتحذيرات إذا ماكو بيانات كافية.
+Every amount must have a clear meaning.
 
-**Invoices & Tax:**
-إدارة الفواتير والتصنيف الضريبي، خصوصًا التفريق بين المصاريف الشخصية، التجارية، والقابلة للخصم.
+### My Account
 
-**Settings:**
-اللغة، العملة، السحابة، الخصوصية، النسخ الاحتياطي، وتسجيل الدخول.
+The daily money truth. Any money that actually enters or leaves the account should appear here.
 
-## 4. قواعد ثابتة
+Examples:
 
-- أي مبلغ دخل أو طلع فعليًا لازم يظهر في My Account.
-- إذا مشروع أخذ فلوس من الحساب، لازم ينخصم من الحساب.
-- إذا المشروع حقق دخل من طرف خارجي، يدخل في Projects بدون خصم من الحساب.
-- إذا دخل نادر أو غير متكرر وما نبي نقيسه كمشروع، يروح My Account مع ملاحظة واضحة.
-- إذا المبلغ محجوز للمستقبل، يروح Savings كهدف أو احتياطي.
-- لا نخلط المصاريف الشخصية مع مصاريف المشروع.
-- لا نكتب داخل التطبيق نصوص شخصية موجهة للمطورة مثل "راجعي/ارفعي/تقدرين". الصياغة لازم تكون عامة لأي مستخدم.
-- لا نستخدم تفاصيل حساسة أو أسماء أشخاص في الملاحظات إذا ممكن تسبب مشكلة. الأفضل ملاحظات عامة وواضحة.
-- الإثباتات مهمة: أي دفع حساس أو حكومي أو قابل للنقاش الأفضل ينربط بصورة/PDF.
-- التطبيق bilingual عربي/إنجليزي، ولازم كل النصوص تتحول حسب اللغة بدون خلط داخل workflow.
+- Rent paid
+- Salary received
+- Government fee paid
+- One-time income
+- Personal expense
+- Transfer from account into a project
 
-## 5. طريقة اتخاذ القرار
+### Savings
 
-إذا السؤال: وين أحط العملية؟
+Reserved money. It is still money the user has, but it is mentally/operationally set aside.
 
-- إذا الفلوس دخلت أو طلعت فعليًا: حطها في My Account.
-- إذا الفلوس جزء من مشروع وتبي تعرف ربح/خسارة المشروع: حطها في Projects.
-- إذا الفلوس دخلت المشروع من الحساب: حطها في Projects وفعّل تسجيل أثر الحركة في الحساب.
-- إذا الفلوس محفوظة لرأس مال أو احتياطي: حطها في Savings.
-- إذا العملية لها إثبات مهم: ارفع الإثبات مع المعاملة أو في Documents.
-- إذا العملية مرتبطة بشهر غير تاريخ الدفع: استخدم شهر الاستحقاق، وخلي تاريخ الدفع الفعلي منفصل.
-- إذا مو متأكد من آخر شهر مدفوع: لا تأكد العنصر. خله pending لين تراجع الأوراق.
+Examples:
 
-## 6. آخر Features مضافة
+- Capital reserve
+- Emergency reserve
+- Future expansion
+- Liability reserve
 
-**Cloud Sync:**
-السحابة شغالة عبر Supabase، وكل مستخدم عنده بيانات منفصلة حسب user_id.
+### Projects
 
-**Remember Sign-In:**
-تمت إضافة تذكر تسجيل الدخول على هذا الجهاز. التطبيق يحفظ refresh token محليًا في المتصفح، مو كلمة المرور.
+Used when the user wants to measure profit/loss for a specific activity.
 
-**Cloud Auth:**
-تمت إضافة إنشاء حساب، تسجيل دخول، تأكيد كلمة المرور، ونسيت كلمة المرور.
+Examples:
 
-**Project to Account Link:**
-إذا أضيفت حركة مشروع وتم تفعيل "تسجيل أثر هذه الحركة في الحساب"، يتم إنشاء مصروف تلقائي في My Account بنفس المبلغ.
+- Farm expansion
+- A specific business activity
+- A temporary project that needs separate tracking
 
-**Delete Linked Project Transaction:**
-إذا حُذفت حركة مشروع مرتبطة بالحساب، يتم حذف الحركة المرتبطة من الحساب.
+Important:
 
-**Transaction Proofs:**
-يمكن إرفاق صورة أو PDF كإثبات للمعاملة، وتظهر لاحقًا في سجل الحساب مع زر تحميل.
+- If money comes from outside directly into the project, it does not deduct from My Account.
+- If money comes from My Account into the project, it must deduct from My Account.
 
-**Monthly Item Confirmation Proof:**
-يمكن إرفاق إثبات عند تأكيد عنصر شهري.
+### Documents
 
-**Monthly Item Reopen:**
-إذا تم حذف معاملة ناتجة من عنصر شهري، يرجع العنصر الشهري لحالة التأكيد بدل ما يبقى مكتمل بالغلط.
+Proof and admin archive.
 
-**Monthly Entitlement Tracking:**
-تم فصل شهر الاستحقاق عن تاريخ الدفع/الاستلام الفعلي في العناصر الشهرية. المعاملة تحفظ `payment_month_key` حسب تاريخ الحركة و`entitlement_month_key` حسب الشهر اللي يخصه المبلغ.
+Examples:
 
-**Income Monthly Status Language:**
-الدخل الشهري المتوقع لم يعد يظهر كأنه "متأخر" بنفس منطق المصاريف. يظهر كدخل متوقع أو لم يُستلم بعد، والمصروف يظهر كمدفوع/بانتظار الدفع/متأخر حسب الحالة.
+- Licenses
+- Contracts
+- Resignations
+- Government papers
+- Payment screenshots
+- PDFs
+- Renewal documents
 
-**Account Form Reset:**
-فورم إضافة معاملة في الحساب صار يفضى بعد الحفظ بدل ما يحتفظ بالبيانات القديمة.
+### Invoices & Tax
 
-**Neutral Arabic Messaging:**
-تم تعديل الصياغات العربية لتكون عامة ومناسبة لكل المستخدمين.
+Invoices, tax classification, and separating business/personal/deductible expenses.
 
-**Input Hint Fix:**
-تم إخفاء تلميح Streamlit المزعج مثل "Press Enter to apply" من حقول الإدخال.
+## 3. Page Responsibilities
 
-**Friendly Supabase Errors:**
-بدل عرض HTML أو Cloudflare error raw، صار يظهر خطأ مفهوم للمستخدم.
+### Dashboard
 
-## 7. آخر Bugs تم حلها
+Shows the overall financial picture and Smart Summary.
 
-- المشروع ما كان يخصم من الحساب إذا المبلغ مسحوب من الحساب. تم الحل.
-- فورم إضافة معاملة في الحساب كان يحتفظ بالبيانات بعد الحفظ. تم الحل.
-- العنصر الشهري كان يبقى مكتمل حتى لو حُذفت معاملته من السجل. تم الحل.
-- رسائل Supabase كانت تظهر HTML طويل بدل رسالة مفهومة. تم الحل.
-- حقول تسجيل الدخول كانت تعرض "Press Enter" فوق الكتابة. تم الحل.
-- تسجيل الدخول كان يضيع بعد refresh. تم الحل بإضافة Remember Sign-In.
-- النصوص العربية كانت أحيانًا شخصية وموجهة للمطورة. تم تحويلها لصياغة عامة.
+Must not over-warn if data is too new or not enough history exists.
 
-## 8. الأشياء اللي تحتاج تعديل
+### My Account
 
-**Dashboard Smart Summary:**
-لازم يصير أذكى، خصوصًا إذا التطبيق جديد وما عنده شهر سابق للمقارنة. لا يقارن أو يحذر بقوة إذا ماكو بيانات كافية.
+Main transaction log and Monthly Items.
 
-**Documents:**
-نحتاج تحسين تنظيم مستندات الشركة، التصنيفات، البحث، وربطها بالمعاملات أو الحالات.
+It should reflect reality:
 
-**Account:**
-نحتاج اختبار استخدام فعلي للعناصر الشهرية بعد فصل الاستحقاق عن تاريخ الدفع، خصوصًا الراتب، التأمينات، وجهات تدفع عن أشهر سابقة مثل شرق.
+- Money entered
+- Money left
+- What month the amount belongs to
+- When it was actually paid/received
+- Proof when available
 
-**Projects:**
-نحتاج اختبار ربط المشروع بالحساب بعد الاستخدام الفعلي، خصوصًا الحذف والتعديل.
+### Monthly Items
 
-**UI:**
-نحتاج polish خفيف بعد تثبيت السلوك، مو redesign كبير.
+Recurring commitments or expected income.
 
-## 9. الخطط القادمة
+Examples:
 
-العمل القادم يكون على 4 أقسام بالترتيب:
+- Rent
+- Salary
+- Social security
+- Expected monthly income
+- Delayed income from a client
 
-1. Dashboard: مراجعة الملخص الذكي، التحذيرات، ومتى يعطي good/warning/critical.
-2. Account: تطوير Monthly Items ليشمل شهر الاستحقاق وتاريخ الدفع، وتعديل منطق الدخل المتوقع.
-3. Projects: اختبار الربط بين المشروع والحساب، والتأكد أن الحركة تنعكس صح في الرصيد.
-4. Documents: رفع وترتيب أوراق الشركة، مثل الرخص، العقود، الاستقالات، إثباتات الدفع، والأوراق الحكومية.
+Must distinguish income from expense. Income should not be treated like an overdue bill.
 
-## خطة Documents المستقبلية
+### Savings
 
-إضافة تصنيفات أوضح، بحث أقوى، وربط المستندات بالمعاملات أو الحالات.
+Reserved funds and goals.
 
-## فكرة مستقبلية
+### Projects
 
-**Case Folder / ملف حالة:**
-يجمع معاملات ومستندات وتواريخ وملاحظات مرتبطة بموضوع واحد.
+Project-level tracking. Can optionally record the account effect when the project money comes from My Account.
 
-## نقطة مهمة جدًا: الراتب والتأمينات وشهر الاستحقاق
+### Documents
 
-في Floosy لازم نفرق بين 3 أشياء:
+Company/admin proof center.
 
-1. **شهر الاستحقاق:** الشهر اللي المبلغ يخصه فعليًا، مثل راتب مارس، تأمينات مارس، أو إيجار أبريل.
-2. **تاريخ الدفع/الاستلام الفعلي:** اليوم اللي الفلوس دخلت أو طلعت فيه من الحساب، مثل دفع التأمينات يوم 20 مارس أو نزول الراتب يوم 1 أبريل.
-3. **شهر العرض/التسجيل:** الشهر المفتوح في التطبيق أو الشهر اللي ظهرت فيه الحركة ماليًا.
+### Financial Analyzer
 
-### مثال التأمينات
+Explains financial position, but should be careful with warnings when there is limited data.
 
-ممكن في شهر مارس يتم دفع التأمينات مرتين:
+### Settings
 
-- دفعة عن استحقاق فبراير.
-- دفعة عن استحقاق مارس.
+Language, currency, cloud sync, privacy, backup/restore, cloud account.
 
-لذلك كل دفعة تحتاج:
+## 4. Fixed Rules
 
-- تاريخ الدفع الفعلي.
-- شهر الاستحقاق.
-- النوع والتصنيف.
-- ملاحظة أو إثبات.
+- Any actual money movement must be visible in My Account.
+- A project funded from My Account must deduct from My Account.
+- External project income should not deduct from My Account.
+- Rare/one-time income goes to My Account unless it is intentionally tracked as a project.
+- Reserved money goes to Savings.
+- Do not mix personal expenses with project expenses.
+- Do not write app copy that sounds personally addressed to the developer.
+- Arabic copy inside the app should be neutral and general.
+- Avoid sensitive personal names/details in notes when they could create risk.
+- Proof matters. Important or disputed payments should have screenshot/PDF proof.
+- Arabic/English workflow text should not be mixed inside user flows.
+- Brand/logo text can be bilingual if intentional.
+- Do not touch `FLOOSY_PRICING_PLANS.md` if it is untracked unless explicitly requested.
 
-مثال:
+## 5. Decision Rules
 
-- تاريخ الدفع: `2026-03-20`
-- شهر الاستحقاق: فبراير 2026
-- النوع: مصروف
-- التصنيف: تأمينات
-- إثبات: Screenshot/PDF
+When deciding where a transaction belongs:
 
-### مثال الراتب أو الدخل المتوقع
+- If money actually entered or left the account: My Account.
+- If it belongs to a project and we need project profit/loss: Projects.
+- If project money came from My Account: Projects + enable account effect.
+- If money is reserved for later: Savings.
+- If there is proof: attach it to the transaction or add it in Documents.
+- If payment date differs from entitlement month: record both.
+- If the last paid month is unknown: leave it pending until papers are reviewed.
 
-الراتب أو الدخل الشهري المتوقع لا يظهر كأنه "متأخر" بنفس معنى الالتزامات. إذا لم ينزل بعد، التسمية الأفضل:
+## 6. Critical Logic: Salary, Social Security, and Entitlement Month
 
-- دخل متوقع لم يُستلم بعد
-- بانتظار الاستلام
+Floosy must separate three concepts:
 
-وليس:
+### Entitlement Month
 
-- متأخر
-- معلق بطريقة توحي أنه فاتورة أو تقصير
+The month the money belongs to.
 
-الدخل المتوقع يعتمد على وصول المال، وليس التزامًا يجب دفعه.
+Examples:
 
-### مثال شرق
+- March salary
+- March social security
+- February delayed income
 
-شرق يدفعون متأخر. ممكن في شهر أبريل يدفعون عن استحقاق فبراير.
+### Actual Payment / Receipt Date
 
-المطلوب:
+The real date money entered or left the account.
 
-- الجهة: شرق
-- تاريخ الاستلام: `2026-04-10`
-- شهر الاستحقاق: فبراير 2026
-- النوع: دخل
-- الحالة: مستلم
-- إمكانية البحث لاحقًا باسم الجهة أو شهر الاستحقاق
+Examples:
 
-### القاعدة النهائية للعناصر الشهرية
+- Paid social security on 2026-03-20
+- Received February income on 2026-04-10
 
-أي عنصر شهري لازم يعرف:
+### Display / Accounting Month
 
-- هل هو دخل أو مصروف؟
-- شنو شهر الاستحقاق؟
-- شنو تاريخ الدفع أو الاستلام الفعلي؟
-- هل تم دفعه/استلامه؟
-- وين الإثبات؟
+The month being viewed in the app, or the month where the cash movement appears.
 
-ولا يجوز اعتبار الدخل المتوقع "متأخر" بنفس منطق المصاريف.
+### Social Security Example
 
-### خطة تعديل Monthly Items
+A user may pay social security twice in March:
 
-Monthly Items يحتاج يدعم:
+- One payment for February entitlement
+- One payment for March entitlement
 
-- Entitlement Month: شهر الاستحقاق
-- Due Day: يوم الاستحقاق أو اليوم المتوقع
-- Payment Date: تاريخ الدفع أو الاستلام الفعلي
-- Status حسب النوع:
-  - للمصاريف: بانتظار الدفع / مدفوع / متأخر
-  - للدخل: متوقع / مستلم / لم يُستلم بعد
-- Proof Attachment: إثبات الدفع أو الاستلام
-- Search by entitlement month: البحث بشهر الاستحقاق، مو بس تاريخ الدفع
+Also, the system may only show March entitlement on April 1.
 
-## ملاحظات مهمة للمحادثة الجديدة
+Therefore a payment needs:
 
-**اللغة المفضلة:**
-عربي كويتي بسيط وواضح.
+- Payment date
+- Entitlement month
+- Type
+- Category
+- Proof
 
-**طريقة العمل:**
+Example:
 
-- افحص الكود قبل التعديل.
-- لا تغير أشياء خارج المطلوب.
-- شغل tests بعد أي تعديل.
-- اعمل commit و push بعد نجاح التعديل.
-- لا تلمس ملف `FLOOSY_PRICING_PLANS.md` إذا كان untracked إلا إذا طُلب صراحة.
-- لا تكتب داخل التطبيق كلام شخصي يبين أنه موجه للمطورة.
-- ركز على الاستخدام الواقعي، مو features عشوائية.
+- Payment date: 2026-03-20
+- Entitlement month: February 2026
+- Type: Expense
+- Category: Social Security
+- Proof: Screenshot/PDF
+
+### Salary / Expected Income Example
+
+Expected income should not be labeled as "late" the same way expenses are.
+
+Better labels:
+
+- Expected income not received yet
+- Waiting for receipt
+- Not received
+
+Avoid labels that sound like a bill is overdue.
+
+### Delayed Income Example
+
+If a client pays in April for February entitlement:
+
+- Receipt date: April
+- Entitlement month: February
+- Status: received
+- Search should find it by client name or entitlement month.
+
+## 7. Recently Added Features
+
+- Cloud Sync through Supabase with per-user data separation by `user_id`.
+- Remember Sign-In on device using a local browser refresh token, not password storage.
+- Cloud Auth with Sign Up, Sign In, Confirm Password, and Forgot Password.
+- Project to Account Link: project movements can create automatic My Account expenses when the money comes from the account.
+- Deleting linked project transactions also removes linked account transactions.
+- Transaction Proofs: account transactions can include screenshot/PDF proof and download later.
+- Monthly Item Confirmation Proof: proof can be attached when confirming monthly items.
+- Monthly Item Reopen: deleting a generated transaction can return the monthly item to confirmation.
+- Monthly Entitlement Tracking: stores `payment_month_key` and `entitlement_month_key`.
+- Income Monthly Status Language: income is expected/not received/received, not "overdue" like expenses.
+- Account Form Reset: account add transaction form clears after saving.
+- Neutral Arabic Messaging: no personal Arabic copy aimed at the developer.
+- Streamlit Input Hint Fix: hides "Press Enter to apply/submit" instruction overlay.
+- Friendly Supabase Errors: HTML/Cloudflare errors are converted to user-friendly messages.
+
+## 8. Bugs Log
+
+Keep this section as a running log. Add new bugs under "Open / Needs Review" first, then move to "Resolved" after fixing.
+
+### Resolved Bugs
+
+- Project transaction did not deduct from My Account when the project was funded from the account.
+  Fixed by adding linked account transactions for project movements with account effect.
+
+- Deleting a linked project transaction could leave the account transaction behind.
+  Fixed by deleting linked account transactions using `account_link_id` / `project_link_id`.
+
+- Account Add Transaction form kept old values after save.
+  Fixed by using a form nonce so the form resets after saving.
+
+- Monthly item stayed completed even after deleting its generated transaction.
+  Fixed by reopening the related monthly item when the transaction is deleted.
+
+- Monthly items mixed payment date and entitlement month.
+  Fixed by storing separate payment and entitlement month keys.
+
+- Expected income was worded like an overdue expense.
+  Fixed by changing income wording to expected/not received/received.
+
+- Supabase Cloudflare/HTML errors appeared raw in the UI.
+  Fixed by sanitizing/friendly formatting Supabase errors.
+
+- Sign-in was lost after refresh.
+  Fixed by Remember Sign-In using local refresh token and session refresh.
+
+- Streamlit showed "Press Enter to apply/submit" over input fields.
+  Fixed by hiding Streamlit input instructions.
+
+- Arabic user-facing copy included personal wording like "راجعي/ارفعي/تقدرين".
+  Fixed by neutralizing Arabic copy.
+
+- Project/account linked behavior did not reflect the real balance.
+  Fixed so project funding from account creates the correct My Account expense.
+
+- RTL/sidebar behavior had deployment/mobile differences earlier.
+  Fixed enough for current beta after CSS/Streamlit version handling.
+
+- Local Playwright smoke test data appeared in local transactions.
+  Identified as test data, cleaned locally, and local data backup files were ignored.
+
+### Open / Needs Review
+
+- Dashboard Smart Summary may over-warn when there is not enough history or when the month is just starting.
+
+- Monthly Items need real-life testing with:
+  - Social security February paid in March
+  - Social security March paid in March/April
+  - Expected salary not received yet
+  - Delayed income received in April for February
+
+- Documents need better organization for company papers.
+
+- Documents may need categories such as:
+  - Government
+  - License
+  - Contract
+  - Resignation
+  - Payment proof
+  - Renewal
+  - Sensitive
+
+- Documents may need linking to transactions or cases.
+
+- Project linked transaction edit behavior needs review.
+  Current behavior is mainly safe for add/delete, but editing linked transactions may need rules later.
+
+- Cloud sync UX may need clearer wording around Save My Data / Load My Data / auto-sync.
+
+- Dashboard colors and summary tone still need final polish after logic stabilizes.
+
+### Bug Entry Template
+
+Use this when adding new bugs:
+
+```text
+- Bug:
+  Where:
+  What happened:
+  Expected:
+  Status:
+  Notes:
+```
+
+## 9. Things Still Needing Work
+
+### Dashboard Smart Summary
+
+Make it smarter and calmer:
+
+- Do not compare with previous month if there is no meaningful previous month.
+- Do not over-warn when the user just started entering data.
+- Show neutral empty/new-user states.
+- Use good/warning/critical only when data supports it.
+
+### Account / Monthly Items
+
+Continue testing real workflows after entitlement tracking:
+
+- Social security
+- Salary
+- Delayed income
+- Rent
+- Unknown last-paid month
+
+### Documents
+
+Build a better company paper workflow:
+
+- Upload company papers
+- Search quickly
+- Add renewal dates
+- Add categories
+- Attach proof
+- Possibly link documents to transactions later
+
+### Projects
+
+Validate:
+
+- Add project income from outside
+- Add project funding from account
+- Delete linked project movement
+- Confirm account balance stays correct
+
+### UI Polish
+
+Only after behavior is stable:
+
+- Light spacing cleanup
+- Dashboard summary visuals
+- Card hierarchy
+- Document page organization
+
+## 10. Next Work Plan
+
+Recommended order:
+
+1. Test Monthly Items with real social security/salary/delayed income examples.
+2. Fix Dashboard Smart Summary based on the new entitlement logic.
+3. Organize Documents for company papers.
+4. Review Projects linked-account edge cases.
+5. Do light UI polish only after behavior is stable.
+
+## 11. Future Ideas
+
+### Case Folder / ملف حالة
+
+A future feature that groups:
+
+- Related transactions
+- Documents
+- Important dates
+- Notes
+- Proofs
+
+Useful for company/admin cases where the user needs to quickly answer: "Where is my proof?"
+
+## 12. Collaboration Style
+
+The user prefers Kuwaiti/Gulf Arabic with a warm, practical tone.
+
+Codex should:
+
+- Be a thinking partner, not just a code writer.
+- Explain decisions simply.
+- Be direct but kind.
+- Execute when the task is clear.
+- Read files before editing.
+- Use `apply_patch` for manual edits.
+- Run tests after code changes.
+- Commit and push after successful verification.
+- Keep final answers concise.
+- Preserve user work and avoid reverting unrelated changes.
+- Keep app copy professional and general.
+
+If context is compressed or unclear:
+
+1. Read this file.
+2. Check latest git status/log if needed.
+3. Continue from the current plan.
+
+## 13. One-Line Reminder
+
+Floosy should reduce financial/admin confusion by showing what happened, when it happened, what month it belongs to, and where the proof is.
