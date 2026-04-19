@@ -451,6 +451,11 @@ Continue testing real workflows after entitlement tracking:
 - Rent
 - Unknown last-paid month
 
+- Scenario:
+  Description: Social security for February was paid in March.
+  Input: Entitlement month = February, payment date = a date in March.
+  Expected behavior: The transaction appears by the March payment date, but remains searchable and understandable as February entitlement.
+
 ### Documents
 
 Build a better company paper workflow:
