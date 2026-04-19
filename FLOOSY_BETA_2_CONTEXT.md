@@ -30,6 +30,8 @@ Codex must proactively update this file when important Floosy context appears, e
 - If a new bug appears, add it under `Bugs Log > Open / Needs Review`.
 - If a bug is fixed, move or copy it under `Bugs Log > Resolved Bugs`.
 - If a real-life scenario appears during testing, add it under the relevant `Things Still Needing Work` section.
+- If the user mentions an idea, adjustment, concern, or "do this later" item that is not implemented immediately, capture it as a to-do/backlog item under `Things Still Needing Work`, `Next Work Plan`, or `Future Ideas`.
+- Do not assume unimplemented ideas are rejected. If they are useful but not done now, preserve them for later review.
 - If a plan changes, update `Next Work Plan`.
 - If the correct section is unclear, add a short dated note in the closest relevant section instead of leaving it only in chat memory.
 - Preserve the timeline. Do not remove history unless the user explicitly asks to create a cleaner Beta 3 context file.
@@ -48,6 +50,7 @@ When adding future updates:
 ### 2026-04-20
 
 - Added an explicit Context Capture Duty so future Codex/AI conversations proactively append important changes, scenarios, bugs, fixes, testing notes, and product decisions to this file without deleting prior history.
+- Added an explicit to-do/backlog capture rule so ideas and requested changes that are not implemented immediately are preserved for later review.
 
 ### 2026-04-19
 
