@@ -461,6 +461,11 @@ Continue testing real workflows after entitlement tracking:
   Input: Entitlement month = February, receipt date = a date in April, customer/client name is included.
   Expected behavior: The receipt appears by the April receipt date, remains linked and understandable as February entitlement, is searchable by customer/client name or entitlement month, and does not look like normal April income.
 
+- Scenario:
+  Description: Expected salary for March has not been received yet.
+  Input: Entitlement month = March, no actual receipt date yet.
+  Expected behavior: The item appears as expected/not received income, does not affect account balance, and is clearly shown as pending without being treated like an overdue expense.
+
 ### Documents
 
 Build a better company paper workflow:
