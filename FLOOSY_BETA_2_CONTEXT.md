@@ -456,6 +456,11 @@ Continue testing real workflows after entitlement tracking:
   Input: Entitlement month = February, payment date = a date in March.
   Expected behavior: The transaction appears by the March payment date, but remains searchable and understandable as February entitlement.
 
+- Scenario:
+  Description: Delayed income for February was received in April.
+  Input: Entitlement month = February, receipt date = a date in April, customer/client name is included.
+  Expected behavior: The receipt appears by the April receipt date, remains linked and understandable as February entitlement, is searchable by customer/client name or entitlement month, and does not look like normal April income.
+
 ### Documents
 
 Build a better company paper workflow:
