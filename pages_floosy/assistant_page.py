@@ -94,7 +94,7 @@ def render(month_key: str, month: str, year: int):
 
     with st.expander(
         _section_label(
-            t("المتأخرات والتغطية", "Delayed Items and Coverage"),
+            t("الاستحقاقات والتغطية", "Entitlements and Coverage"),
             f"{t('صافي التغطية', 'Coverage Net')} {coverage['net_coverage']:,.2f} {currency_view}",
         ),
         expanded=False,
@@ -103,16 +103,16 @@ def render(month_key: str, month: str, year: int):
         with r1:
             st.metric(t("عدد العناصر الشهرية المفعلة", "Active Monthly Items"), f"{len(active_items)}")
         with r2:
-            st.metric(t("إجمالي الدخل المتأخر", "Total Delayed Income"), f"{coverage['expected_income']:,.2f} {currency_view}")
+            st.metric(t("إجمالي الدخل المتوقع غير المستلم", "Total Expected Income Not Received"), f"{coverage['expected_income']:,.2f} {currency_view}")
         with r3:
             st.metric(t("إجمالي الالتزامات المتأخرة", "Total Overdue Commitments"), f"{coverage['overdue_commitments']:,.2f} {currency_view}")
 
         st.caption(
             t(
                 f"الفعلي المسجل الآن: دخل {current['income']:,.2f} / مصاريف {current['expense']:,.2f}. "
-                f"المتأخر (دخل {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}) لا يدخل في الفعلي إلا بعد التأكيد.",
+                f"غير المؤكد (دخل متوقع {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}) لا يدخل في الفعلي إلا بعد التأكيد.",
                 f"Recorded now: income {current['income']:,.2f} / expenses {current['expense']:,.2f}. "
-                f"Delayed values (income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}) are not included in actual totals until confirmed.",
+                f"Unconfirmed values (expected income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}) are not included in actual totals until confirmed.",
             )
         )
 
@@ -121,11 +121,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(t("الصافي الفعلي الآن", "Actual Net Now"), f"{current['net']:,.2f} {currency_view}")
         with u2:
             st.metric(
-                t("صافي المتأخر (غير مسجل)", "Delayed Net (Unrecorded)"),
+                t("صافي الاستحقاقات غير المؤكدة", "Unconfirmed Entitlement Net"),
                 f"{coverage['net_coverage']:,.2f} {currency_view}",
                 delta=t(
-                    f"دخل {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}",
-                    f"Income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}",
+                    f"دخل متوقع {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}",
+                    f"Expected income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}",
                 ),
                 delta_color="off",
             )
@@ -150,7 +150,7 @@ def render(month_key: str, month: str, year: int):
             )
         with k2:
             st.metric(
-                t("دخل متأخر (غير مستلم)", "Delayed Income (Not Received)"),
+                t("دخل متوقع غير مستلم", "Expected Income Not Received"),
                 f"{coverage['expected_income']:,.2f} {currency_view}",
                 delta=t(
                     f"{coverage['expected_count']} عنصر | {coverage.get('expected_pending_months', coverage['expected_count'])} شهر",
@@ -159,7 +159,7 @@ def render(month_key: str, month: str, year: int):
             )
         with k3:
             st.metric(
-                t("صافي التغطية المتأخرة", "Delayed Net Coverage"),
+                t("صافي تغطية الاستحقاقات", "Entitlement Coverage Net"),
                 f"{coverage['net_coverage']:,.2f} {currency_view}",
             )
 
@@ -168,7 +168,7 @@ def render(month_key: str, month: str, year: int):
         elif coverage["net_coverage"] < 0:
             st.warning(t("في فجوة تغطية حالياً وتحتاج متابعة.", "There is a current coverage gap that needs follow-up."))
         else:
-            st.info(t("الوضع متعادل تقريباً بين المتأخرات والمستحقات.", "The situation is nearly balanced between overdues and expected income."))
+            st.info(t("الوضع متعادل تقريباً بين الالتزامات والدخل المتوقع.", "The situation is nearly balanced between commitments and expected income."))
 
     cash_flow = cash_flow_engine.cash_flow_90d(
         st.session_state,
@@ -252,19 +252,19 @@ def render(month_key: str, month: str, year: int):
 
         st.caption(
             t(
-                "آخر 90 يوم = الفعلي المسجل فقط. الـ 90 يوم القادمة = المتوقع من المتكرر والفواتير المفتوحة ورسوم المستندات. المتأخر الحالي يبقى منفصل للوضوح.",
-                "Last 90 days = recorded actual movement only. Next 90 days = projection from recurring items, open invoices, and upcoming document fees. Current overdue amounts stay separate for clarity.",
+                "آخر 90 يوم = الفعلي المسجل فقط. الـ 90 يوم القادمة = المتوقع من المتكرر والفواتير المفتوحة ورسوم المستندات. الاستحقاقات الحالية تبقى منفصلة للوضوح.",
+                "Last 90 days = recorded actual movement only. Next 90 days = projection from recurring items, open invoices, and upcoming document fees. Current entitlements stay separate for clarity.",
             )
         )
 
         h1, h2, h3 = st.columns(3)
         with h1:
             st.metric(
-                t("صافي المتأخر الحالي", "Current Delayed Net"),
+                t("صافي الاستحقاقات الحالية", "Current Entitlement Net"),
                 f"{carry_over['recurring_delayed_net']:,.2f} {currency_view}",
                 delta=t(
-                    f"دخل {carry_over['delayed_income']:,.2f} | التزامات {carry_over['overdue_commitments']:,.2f}",
-                    f"Income {carry_over['delayed_income']:,.2f} | commitments {carry_over['overdue_commitments']:,.2f}",
+                    f"دخل متوقع {carry_over['delayed_income']:,.2f} | التزامات {carry_over['overdue_commitments']:,.2f}",
+                    f"Expected income {carry_over['delayed_income']:,.2f} | commitments {carry_over['overdue_commitments']:,.2f}",
                 ),
                 delta_color="off",
             )

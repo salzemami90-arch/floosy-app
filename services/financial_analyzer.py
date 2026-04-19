@@ -638,7 +638,7 @@ class FinancialAnalyzer:
         if not has_user_data:
             return {
                 "status": "empty",
-                "message_ar": "ابدئي بإضافة أول حركة",
+                "message_ar": "إضافة أول حركة مالية",
                 "message_en": "Add your first transaction",
                 "detail_ar": "بمجرد إضافة دخل أو مصروف، سيظهر لك ملخص أوضح للوضع المالي.",
                 "detail_en": "Once you add income or expenses, your financial summary will appear here.",
@@ -672,8 +672,8 @@ class FinancialAnalyzer:
             detail_en = "Overdue commitments are higher than expected income."
             focus_label_ar = "صافي 90 يوم"
             focus_label_en = "90-Day Net"
-            support_label_ar = "فجوة المتأخر"
-            support_label_en = "Delayed Gap"
+            support_label_ar = "فجوة الاستحقاقات"
+            support_label_en = "Entitlement Gap"
             support_value = float(abs(coverage["net_coverage"]))
         elif follow_up_total > 0:
             status = "needs_follow_up"

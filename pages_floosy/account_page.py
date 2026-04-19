@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
+import calendar
+from datetime import date, datetime
 import html
 from uuid import uuid4
 
@@ -291,6 +292,57 @@ def _month_key_from_date(dt: datetime) -> str:
     return f"{dt.year}-{arabic_months[dt.month - 1]}"
 
 
+def _month_key_to_parts(month_key: str) -> tuple[int, int] | None:
+    raw = str(month_key or "").strip()
+    if "-" not in raw:
+        return None
+    year_txt, month_name = raw.split("-", 1)
+    if month_name not in arabic_months:
+        return None
+    try:
+        return int(year_txt), arabic_months.index(month_name) + 1
+    except ValueError:
+        return None
+
+
+def _month_key_from_parts(year_value: int, month_value: int) -> str:
+    return f"{int(year_value)}-{arabic_months[int(month_value) - 1]}"
+
+
+def _shift_month_key(month_key: str, month_delta: int) -> str:
+    parts = _month_key_to_parts(month_key)
+    if not parts:
+        return str(month_key or "")
+    year_value, month_value = parts
+    month_index = (year_value * 12) + (month_value - 1) + int(month_delta)
+    shifted_year = month_index // 12
+    shifted_month = (month_index % 12) + 1
+    return _month_key_from_parts(shifted_year, shifted_month)
+
+
+def _month_keys_between(start_key: str, end_key: str) -> list[str]:
+    start = _month_key_to_parts(start_key)
+    end = _month_key_to_parts(end_key)
+    if not start or not end:
+        return []
+
+    start_index = start[0] * 12 + (start[1] - 1)
+    end_index = end[0] * 12 + (end[1] - 1)
+    if start_index > end_index:
+        return []
+
+    keys = []
+    for month_index in range(start_index, end_index + 1):
+        keys.append(_month_key_from_parts(month_index // 12, (month_index % 12) + 1))
+    return keys
+
+
+def _month_key_window(anchor_key: str, months_before: int = 12, months_after: int = 3) -> list[str]:
+    start_key = _shift_month_key(anchor_key, -abs(int(months_before)))
+    end_key = _shift_month_key(anchor_key, abs(int(months_after)))
+    return _month_keys_between(start_key, end_key) or [anchor_key]
+
+
 def _month_label_from_key(month_key: str, is_en: bool) -> str:
     if "-" not in month_key:
         return month_key
@@ -300,15 +352,30 @@ def _month_label_from_key(month_key: str, is_en: bool) -> str:
     return f"{month_name} {year_txt}"
 
 
+def _display_month_label(value, is_en: bool) -> str:
+    raw = str(value or "").strip()
+    if not raw or raw.lower() == "nan":
+        return ""
+    return _month_label_from_key(raw, is_en)
+
+
+def _payment_month_label_for_row(row, is_en: bool) -> str:
+    payment_key = str(row.get("payment_month_key") or "").strip()
+    if payment_key:
+        return _month_label_from_key(payment_key, is_en)
+
+    parsed_date = pd.to_datetime(row.get("date"), errors="coerce")
+    if pd.isna(parsed_date):
+        return ""
+    return _month_label_from_key(_month_key_from_date(parsed_date.to_pydatetime()), is_en)
+
+
 def _sort_month_keys(keys: list[str]) -> list[str]:
     def _key(mk: str):
-        if "-" not in mk:
+        parts = _month_key_to_parts(mk)
+        if not parts:
             return (9999, 99)
-        y, m = mk.split("-", 1)
-        try:
-            return (int(y), arabic_months.index(m) + 1 if m in arabic_months else 99)
-        except ValueError:
-            return (9999, 99)
+        return parts
 
     return sorted(keys, key=_key)
 
@@ -327,9 +394,61 @@ def _ensure_pending_month(item: dict, month_key: str) -> None:
         item["pending_entitlements"] = []
         pending = item["pending_entitlements"]
 
-    if month_key not in pending and item.get("last_paid_month") != month_key:
-        pending.append(month_key)
-        item["pending_entitlements"] = _sort_month_keys(pending)
+    pending = [str(mk) for mk in pending if isinstance(mk, str) and mk.strip()]
+    item["pending_entitlements"] = _sort_month_keys(pending)
+
+    last_paid_month = str(item.get("last_paid_month") or "").strip()
+    if last_paid_month and _month_key_to_parts(last_paid_month):
+        start_key = _shift_month_key(last_paid_month, 1)
+    elif pending:
+        start_key = _sort_month_keys(pending)[0]
+    else:
+        start_key = month_key
+
+    for entitlement_key in _month_keys_between(start_key, month_key) or [month_key]:
+        if entitlement_key not in item["pending_entitlements"] and last_paid_month != entitlement_key:
+            item["pending_entitlements"].append(entitlement_key)
+
+    item["pending_entitlements"] = _sort_month_keys(item["pending_entitlements"])
+
+
+def _safe_entitlement_date(month_key: str, due_day: int) -> date | None:
+    parts = _month_key_to_parts(month_key)
+    if not parts:
+        return None
+    year_value, month_value = parts
+    day_value = max(1, min(int(due_day or 1), calendar.monthrange(year_value, month_value)[1]))
+    return date(year_value, month_value, day_value)
+
+
+def _monthly_item_status_label(item: dict, pending: list[str], is_en: bool, today: date | None = None) -> str:
+    if not isinstance(pending, list):
+        pending = []
+    clean_pending = _sort_month_keys([str(mk) for mk in pending if isinstance(mk, str) and mk.strip()])
+    is_income = item.get("type") == "دخل"
+    if not clean_pending:
+        return "Received" if is_en and is_income else "Paid" if is_en else "مستلم" if is_income else "مدفوع"
+
+    today_value = today or date.today()
+    due_dates = [_safe_entitlement_date(mk, int(item.get("day", 1) or 1)) for mk in clean_pending]
+    has_passed_due = any(due_dt is not None and due_dt < today_value for due_dt in due_dates)
+    count_txt = f"{len(clean_pending)} {'month' if len(clean_pending) == 1 else 'months'}" if is_en else f"{len(clean_pending)} شهر"
+
+    if is_income:
+        state = "Not received yet" if has_passed_due and is_en else "Expected" if is_en else "لم يُستلم بعد" if has_passed_due else "متوقع"
+    else:
+        state = "Overdue" if has_passed_due and is_en else "Awaiting payment" if is_en else "متأخر" if has_passed_due else "بانتظار الدفع"
+    return f"{state}: {count_txt}"
+
+
+def _entitlement_options_for_item(item: dict, month_key: str) -> list[str]:
+    pending = item.get("pending_entitlements", [])
+    if not isinstance(pending, list):
+        pending = []
+    raw_options = [str(mk) for mk in pending if isinstance(mk, str) and mk.strip()]
+    raw_options.extend(_month_key_window(month_key, months_before=12, months_after=3))
+    raw_options.append(month_key)
+    return _sort_month_keys(list(dict.fromkeys(raw_options)))
 
 
 def _iter_transactions(transactions_by_month) -> list[dict]:
@@ -521,7 +640,7 @@ def render(month_key: str, month: str, year: int):
                 amount = st.number_input(t("المبلغ الافتراضي", "Default Amount"), min_value=0.0, step=1.0)
             with t2:
                 category = st.text_input(t("التصنيف", "Category"), value=t("أخرى", "Other"))
-                due_day = st.number_input(t("يوم الاستحقاق", "Due Day"), min_value=1, max_value=31, value=25, step=1)
+                due_day = st.number_input(t("يوم الاستحقاق/المتوقع", "Due/Expected Day"), min_value=1, max_value=31, value=25, step=1)
                 item_currency = st.selectbox(
                     t("العملة", "Currency"),
                     CURRENCY_OPTIONS,
@@ -650,12 +769,12 @@ def render(month_key: str, month: str, year: int):
     for item in active_items:
         _ensure_pending_month(item, month_key)
 
-    overdue_commitments_total = sum(
+    waiting_expenses_total = sum(
         float(item.get("amount", 0.0)) * len(item.get("pending_entitlements", []))
         for item in active_items
         if item.get("type") == "مصروف"
     )
-    delayed_incomes_total = sum(
+    expected_incomes_total = sum(
         float(item.get("amount", 0.0)) * len(item.get("pending_entitlements", []))
         for item in active_items
         if item.get("type") == "دخل"
@@ -663,9 +782,9 @@ def render(month_key: str, month: str, year: int):
 
     rc1, rc2 = st.columns([2, 2])
     with rc1:
-        st.metric(t("إجمالي الالتزامات المتأخرة", "Total Overdue Commitments"), f"{overdue_commitments_total:,.0f} {currency_view}")
+        st.metric(t("إجمالي المصاريف بانتظار الدفع", "Total Expenses Awaiting Payment"), f"{waiting_expenses_total:,.0f} {currency_view}")
     with rc2:
-        st.metric(t("إجمالي الدخل المتأخر", "Total Delayed Income"), f"{delayed_incomes_total:,.0f} {currency_view}")
+        st.metric(t("إجمالي الدخل المتوقع غير المستلم", "Total Expected Income Not Received"), f"{expected_incomes_total:,.0f} {currency_view}")
 
     if not active_items:
         st.info(
@@ -681,19 +800,20 @@ def render(month_key: str, month: str, year: int):
             if not pending and st.session_state.get(pay_form_key, False):
                 st.session_state[pay_form_key] = False
             is_income = item.get("type") == "دخل"
-            state_txt = (f"{t('معلّق', 'Pending')}: {len(pending)} {t('شهر', 'month')}" if pending else t("مكتمل", "Completed"))
+            state_txt = _monthly_item_status_label(item, pending, is_en)
             var_txt = t("متغير", "Variable") if item.get("is_variable", False) else t("ثابت", "Fixed")
             border = "#2563eb" if is_income else "#dc2626"
             direction = "ltr" if is_en else "rtl"
             align = "left" if is_en else "right"
             border_side = "border-left" if is_en else "border-right"
             item_currency = _currency_short_label(item.get("currency", currency), is_en)
+            day_label = t("يوم الاستلام المتوقع", "Expected receipt day") if is_income else t("يوم الاستحقاق", "Due day")
 
             st.markdown(
                 f"""
                 <div style="background:#fff; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
                     <strong>{item.get('name',t('بدون اسم','Untitled'))}</strong> — {state_txt}<br/>
-                    <span style="color:#6b7280;">{item.get('amount',0)} {item_currency} | {var_txt} | {t('يوم الاستحقاق', 'Due day')}: {item.get('day', 1)}</span>
+                    <span style="color:#6b7280;">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -706,12 +826,14 @@ def render(month_key: str, month: str, year: int):
                         st.session_state[pay_form_key] = not st.session_state.get(pay_form_key, False)
                         st.rerun()
                 else:
-                    st.button(t("مكتمل", "Completed"), key=f"tick_complete_{idx}", use_container_width=True, disabled=True)
+                    done_label = t("مستلم", "Received") if is_income else t("مدفوع", "Paid")
+                    st.button(done_label, key=f"tick_complete_{idx}", use_container_width=True, disabled=True)
             with c_open:
                 if pending:
-                    st.caption(f"{t('الأشهر غير المؤكدة', 'Unconfirmed months')}: {', '.join(pending)}")
+                    pending_labels = ", ".join(_month_label_from_key(mk, is_en) for mk in _sort_month_keys(pending))
+                    st.caption(f"{t('أشهر الاستحقاق غير المؤكدة', 'Unconfirmed entitlement months')}: {pending_labels}")
                 else:
-                    st.caption(t("لا توجد أشهر معلقة.", "No pending months."))
+                    st.caption(t("لا توجد أشهر استحقاق بانتظار التأكيد.", "No entitlement months waiting for confirmation."))
 
             if pending and st.session_state.get(pay_form_key, False):
                 with st.form(f"confirm_item_form_{idx}", clear_on_submit=False):
@@ -726,10 +848,22 @@ def render(month_key: str, month: str, year: int):
                             key=f"pay_amount_{idx}",
                         )
                     with f2:
-                        pay_date = st.date_input(t("تاريخ الحركة", "Transaction Date"), value=datetime.today(), key=f"pay_date_{idx}")
+                        pay_date = st.date_input(
+                            t("تاريخ الدفع/الاستلام الفعلي", "Actual Payment/Receipt Date"),
+                            value=datetime.today(),
+                            key=f"pay_date_{idx}",
+                        )
                     with f3:
-                        options = pending if pending else [month_key]
-                        entitlement_key = st.selectbox(t("شهر الاستحقاق", "Entitlement Month"), options, key=f"entitlement_{idx}")
+                        options = _entitlement_options_for_item(item, month_key)
+                        default_entitlement = _sort_month_keys(pending)[0] if pending else month_key
+                        entitlement_index = options.index(default_entitlement) if default_entitlement in options else 0
+                        entitlement_key = st.selectbox(
+                            t("شهر الاستحقاق", "Entitlement Month"),
+                            options,
+                            index=entitlement_index,
+                            format_func=lambda mk: _month_label_from_key(mk, is_en),
+                            key=f"entitlement_{idx}",
+                        )
 
                     update_template = st.checkbox(t("تحديث المبلغ الافتراضي دائمًا", "Update default amount permanently"), value=False, key=f"upd_tpl_{idx}")
                     pay_tax_code = ""
@@ -742,19 +876,22 @@ def render(month_key: str, month: str, year: int):
                             key=f"pay_tax_tag_{idx}",
                         )
                     pay_proof = st.file_uploader(
-                        t("إرفاق فاتورة/إثبات الدفع (اختياري)", "Attach Invoice/Payment Proof (Optional)"),
+                        t("إرفاق إثبات الدفع/الاستلام (اختياري)", "Attach Payment/Receipt Proof (Optional)"),
                         type=["png", "jpg", "jpeg", "pdf"],
                         key=f"pay_proof_{idx}_{int(st.session_state.get(f'pay_proof_nonce_{idx}', 0))}",
                     )
                     st.caption(
                         t(
-                            "يمكن إرفاق صورة كابچر أو PDF الدفع. بعد الحفظ سيظهر الإثبات مع المعاملة في السجل.",
-                            "Upload a payment screenshot or PDF. After saving, the proof appears with the transaction log entry.",
+                            "يمكن إرفاق صورة أو PDF. بعد الحفظ سيظهر الإثبات مع المعاملة في السجل.",
+                            "Upload an image or PDF. After saving, the proof appears with the transaction log entry.",
                         )
                     )
                     b1, b2 = st.columns(2)
                     with b1:
-                        confirm_btn = st.form_submit_button(t("تأكيد المعاملة", "Confirm Transaction"), use_container_width=True)
+                        confirm_btn = st.form_submit_button(
+                            t("تسجيل الاستلام", "Record Receipt") if is_income else t("تسجيل الدفع", "Record Payment"),
+                            use_container_width=True,
+                        )
                     with b2:
                         cancel_btn = st.form_submit_button(t("إلغاء", "Cancel"), use_container_width=True)
 
@@ -775,11 +912,12 @@ def render(month_key: str, month: str, year: int):
                             "amount": float(pay_amount),
                             "currency": item.get("currency", currency),
                             "category": item.get("category", t("أخرى", "Other")),
-                            "note": f"{t('تأكيد من الالتزامات الشهرية', 'Confirmed from monthly commitments')}: {item.get('name', '')}",
+                            "note": f"{t('استلام دخل شهري', 'Monthly income receipt') if is_income else t('دفع عنصر شهري', 'Monthly item payment')}: {item.get('name', '')}",
                             "payment_month_key": payment_month_key,
                             "entitlement_month_key": entitlement_key,
                             "source_template_id": _ensure_item_id(item),
                             "source_template_name": item.get("name", ""),
+                            "monthly_item_status": "received" if is_income else "paid",
                         }
                         if tx_payload["type"] == "مصروف" and pay_tax_code:
                             tx_payload["tax_tag_code"] = pay_tax_code
@@ -841,14 +979,14 @@ def render(month_key: str, month: str, year: int):
 
             t_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), key=f"account_tx_note_{form_nonce}")
             t_proof = st.file_uploader(
-                t("إرفاق فاتورة/إثبات الدفع (اختياري)", "Attach Invoice/Payment Proof (Optional)"),
+                t("إرفاق إثبات (اختياري)", "Attach Proof (Optional)"),
                 type=["png", "jpg", "jpeg", "pdf"],
                 key=f"account_tx_proof_{int(st.session_state.get('account_tx_proof_nonce', 0))}",
             )
             st.caption(
                 t(
-                    "اختياري: يمكن إرفاق صورة أو PDF لتنزيله لاحقًا من سجل المعاملات.",
-                    "Optional: upload an image or PDF so you can download it later from the transaction log.",
+                    "اختياري: يمكن إرفاق صورة أو PDF يظهر لاحقًا في سجل المعاملات.",
+                    "Optional: upload an image or PDF that appears later in the transaction log.",
                 )
             )
             default_currency_label = t("نفس العملة الافتراضية", "Use Default Currency")
@@ -871,6 +1009,7 @@ def render(month_key: str, month: str, year: int):
                     "currency": tx_currency,
                     "category": t_category,
                     "note": t_note,
+                    "payment_month_key": target_month_key,
                 }
                 if selected_tx_type == "مصروف" and selected_tax_code:
                     tx_payload["tax_tag_code"] = selected_tax_code
@@ -902,8 +1041,8 @@ def render(month_key: str, month: str, year: int):
         query = st.text_input(
             t("بحث", "Search"),
             placeholder=t(
-                "البحث بالتاريخ أو التصنيف أو الملاحظة أو الإثبات",
-                "Search by date, category, note, or proof",
+                "البحث بالتاريخ أو التصنيف أو الملاحظة أو الإثبات أو شهر الاستحقاق",
+                "Search by date, category, note, proof, or entitlement month",
             ),
             on_change=_close_templates_panel,
         )
@@ -935,7 +1074,9 @@ def render(month_key: str, month: str, year: int):
         return
 
     id_col = t("معرّف", "ID")
-    date_col = t("التاريخ", "Date")
+    date_col = t("تاريخ الحركة", "Movement Date")
+    payment_month_col = t("شهر التسجيل", "Recorded Month")
+    entitlement_month_col = t("شهر الاستحقاق", "Entitlement Month")
     type_col = t("النوع", "Type")
     category_col = t("التصنيف", "Category")
     amount_col = t("المبلغ", "Amount")
@@ -944,7 +1085,9 @@ def render(month_key: str, month: str, year: int):
     proof_col = t("إثبات", "Proof")
     delete_col = t("حذف", "Delete")
 
-    view_df = filtered_df[["tx_id", "date", "type", "category", "amount", "currency", "note"]].copy()
+    view_df = filtered_df[["tx_id", "date", "payment_month_key", "entitlement_month_key", "type", "category", "amount", "currency", "note"]].copy()
+    view_df["payment_month_key"] = view_df.apply(lambda row: _payment_month_label_for_row(row, is_en), axis=1)
+    view_df["entitlement_month_key"] = view_df["entitlement_month_key"].apply(lambda mk: _display_month_label(mk, is_en))
     if is_en and "type" in view_df.columns:
         view_df["type"] = view_df["type"].apply(lambda x: _tx_type_label(x, True))
     if is_en and "category" in view_df.columns:
@@ -961,6 +1104,8 @@ def render(month_key: str, month: str, year: int):
         columns={
             "tx_id": id_col,
             "date": date_col,
+            "payment_month_key": payment_month_col,
+            "entitlement_month_key": entitlement_month_col,
             "type": type_col,
             "category": category_col,
             "amount": amount_col,
@@ -975,7 +1120,7 @@ def render(month_key: str, month: str, year: int):
         view_df,
         use_container_width=True,
         hide_index=True,
-        disabled=[id_col, date_col, type_col, category_col, amount_col, currency_col, note_col, proof_col],
+        disabled=[id_col, date_col, payment_month_col, entitlement_month_col, type_col, category_col, amount_col, currency_col, note_col, proof_col],
         column_config={
             delete_col: st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
             id_col: st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
