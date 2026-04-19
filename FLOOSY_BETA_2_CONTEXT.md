@@ -21,6 +21,19 @@ For any new Codex/AI conversation:
 
 In short: every meaningful change to Floosy should leave a trace in this context file.
 
+### Context Capture Duty
+
+Codex must proactively update this file when important Floosy context appears, even if the user does not explicitly ask or forgets to mention it.
+
+- Add new context without deleting older notes.
+- Capture meaningful code changes, product decisions, bugs, fixes, real-life scenarios, user testing notes, workflow discoveries, UI/design decisions, and cloud/data/security decisions.
+- If a new bug appears, add it under `Bugs Log > Open / Needs Review`.
+- If a bug is fixed, move or copy it under `Bugs Log > Resolved Bugs`.
+- If a real-life scenario appears during testing, add it under the relevant `Things Still Needing Work` section.
+- If a plan changes, update `Next Work Plan`.
+- If the correct section is unclear, add a short dated note in the closest relevant section instead of leaving it only in chat memory.
+- Preserve the timeline. Do not remove history unless the user explicitly asks to create a cleaner Beta 3 context file.
+
 ## Timeline / Change History
 
 Use this section to show how Floosy evolved over time and how much work each phase took.
@@ -31,6 +44,10 @@ When adding future updates:
 - Add the commit hash if available.
 - Summarize the product change, not only the code change.
 - Keep older entries. Do not delete history unless creating a cleaner Beta 3 context file.
+
+### 2026-04-20
+
+- Added an explicit Context Capture Duty so future Codex/AI conversations proactively append important changes, scenarios, bugs, fixes, testing notes, and product decisions to this file without deleting prior history.
 
 ### 2026-04-19
 
