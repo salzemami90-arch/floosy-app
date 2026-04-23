@@ -57,11 +57,76 @@ def _render_cookie_script(value: str, max_age: int) -> None:
         (function() {{
           const name = {cookie_name};
           const value = encodeURIComponent({cookie_value});
-          const cookie = `${{name}}=${{value}}; path=/; max-age={cookie_max_age}; SameSite=Lax`;
-          document.cookie = cookie;
+          const maxAge = {cookie_max_age};
+          const expiry = maxAge === 0 ? "; expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
+
+          function safeHostname(win) {{
+            try {{
+              return String((win && win.location && win.location.hostname) || "").trim();
+            }} catch (error) {{
+              return "";
+            }}
+          }}
+
+          function safeProtocol(win) {{
+            try {{
+              return String((win && win.location && win.location.protocol) || "").trim().toLowerCase();
+            }} catch (error) {{
+              return "";
+            }}
+          }}
+
+          function writeCookie(targetDoc, cookieString) {{
+            if (!targetDoc) return;
+            try {{
+              targetDoc.cookie = cookieString;
+            }} catch (error) {{}}
+          }}
+
+          const parentWin = (() => {{
+            try {{
+              return window.parent && window.parent !== window ? window.parent : null;
+            }} catch (error) {{
+              return null;
+            }}
+          }})();
+
+          const hostnames = Array.from(new Set([
+            safeHostname(window),
+            safeHostname(parentWin),
+          ].filter(Boolean)));
+
+          const protocol = safeProtocol(parentWin) || safeProtocol(window);
+          const isHttps = protocol === "https:";
+          const baseAttrs = `path=/; max-age=${{maxAge}}${{expiry}}`;
+          const variants = [
+            `${{name}}=${{value}}; ${{baseAttrs}}; SameSite=Lax${{isHttps ? "; Secure" : ""}}`,
+          ];
+
+          if (isHttps) {{
+            variants.push(
+              `${{name}}=${{value}}; ${{baseAttrs}}; SameSite=None; Secure`,
+              `${{name}}=${{value}}; ${{baseAttrs}}; SameSite=None; Secure; Partitioned`,
+            );
+          }}
+
+          const targets = [document];
           try {{
-            window.parent.document.cookie = cookie;
+            if (parentWin && parentWin.document) {{
+              targets.push(parentWin.document);
+            }}
           }} catch (error) {{}}
+
+          for (const targetDoc of targets) {{
+            for (const variant of variants) {{
+              writeCookie(targetDoc, variant);
+              for (const hostname of hostnames) {{
+                if (hostname.includes(".")) {{
+                  writeCookie(targetDoc, `${{variant}}; domain=${{hostname}}`);
+                }}
+              }}
+            }}
+          }}
         }})();
         </script>
         """,

@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-19
+Last updated: 2026-04-24
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -51,6 +51,12 @@ When adding future updates:
 
 - Added an explicit Context Capture Duty so future Codex/AI conversations proactively append important changes, scenarios, bugs, fixes, testing notes, and product decisions to this file without deleting prior history.
 - Added an explicit to-do/backlog capture rule so ideas and requested changes that are not implemented immediately are preserved for later review.
+
+### 2026-04-24
+
+- Improved hosted Remember Sign-In reliability by strengthening how the browser refresh token cookie is written for Streamlit deployments.
+- Added targeted tests for cloud auth cookie encode/read/write behavior.
+- Clarified product behavior: shared hosted local persistence is intentionally non-durable, so real beta usage should rely on Cloud sync instead of hosted local storage.
 
 ### 2026-04-19
 
@@ -259,6 +265,7 @@ Language, currency, cloud sync, privacy, backup/restore, cloud account.
 - Arabic/English workflow text should not be mixed inside user flows.
 - Brand/logo text can be bilingual if intentional.
 - Do not touch `FLOOSY_PRICING_PLANS.md` if it is untracked unless explicitly requested.
+- On shared hosted Streamlit deployments, local persistence is intentionally non-durable. Real beta usage should rely on Cloud sync.
 
 ## 5. Decision Rules
 
@@ -391,6 +398,9 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 
 - Sign-in was lost after refresh.
   Fixed by Remember Sign-In using local refresh token and session refresh.
+
+- Hosted Remember Sign-In could still fail after refresh because browser cookie behavior differs on deployed Streamlit environments.
+  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts and covering the behavior with targeted tests.
 
 - Streamlit showed "Press Enter to apply/submit" over input fields.
   Fixed by hiding Streamlit input instructions.
