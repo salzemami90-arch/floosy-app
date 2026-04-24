@@ -5,6 +5,7 @@ from datetime import datetime
 import streamlit as st
 
 from config_floosy import (
+    _hosted_data_warning_state,
     ensure_month_keys,
     export_app_state_payload,
     get_month_selection,
@@ -195,6 +196,55 @@ def _sync_cloud_if_logged_in() -> None:
             st.session_state["settings"] = settings
 
 
+def _runtime_url_for_warning() -> str:
+    try:
+        context = getattr(st, "context", None)
+    except Exception:
+        context = None
+
+    if context is None:
+        return ""
+
+    try:
+        runtime_url = str(getattr(context, "url", "") or "")
+    except Exception:
+        runtime_url = ""
+
+    if runtime_url:
+        return runtime_url
+
+    try:
+        headers = getattr(context, "headers", {})
+        runtime_host = str(headers.get("host", "") or "")
+        if runtime_host:
+            return f"https://{runtime_host}"
+    except Exception:
+        return ""
+    return ""
+
+
+def _show_hosted_data_warning(t) -> None:
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    cloud_logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
+    cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
+    warning_state = _hosted_data_warning_state(_runtime_url_for_warning(), cloud_client.is_configured, cloud_logged_in)
+
+    if warning_state == "cloud_login_required":
+        st.warning(
+            t(
+                "تنبيه مهم: هذه النسخة المستضافة لا تحفظ بياناتك محليًا بشكل مضمون. قبل إدخال أي بيانات مهمة، سجلي دخول السحابة من الإعدادات > السحابة.",
+                "Important: this hosted beta does not keep local data reliably. Before entering important data, sign in to Cloud from Settings > Cloud.",
+            )
+        )
+    elif warning_state == "cloud_setup_required":
+        st.info(
+            t(
+                "هذه النسخة المستضافة لا تحفظ البيانات محليًا بشكل مضمون، وخدمة السحابة غير مفعلة بعد في بيئة التشغيل الحالية.",
+                "This hosted beta does not keep local data reliably, and Cloud is not configured yet in the current deployment environment.",
+            )
+        )
+
+
 def main():
     st.set_page_config(page_title="فلوسي | Floosy", layout="wide")
 
@@ -273,6 +323,7 @@ def main():
 
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
+    _show_hosted_data_warning(t)
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
 

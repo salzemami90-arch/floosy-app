@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from config_floosy import (
     _apply_browser_language_preference,
     _apply_browser_query_preferences,
+    _hosted_data_warning_state,
     _is_local_runtime_url,
     _is_shared_hosted_url,
     _local_persistence_enabled,
@@ -36,6 +37,30 @@ class RuntimeDetectionTests(unittest.TestCase):
     def test_local_persistence_can_be_enabled_explicitly(self):
         with patch.dict(os.environ, {"FLOOSY_ENABLE_LOCAL_PERSISTENCE": "1"}, clear=False):
             self.assertTrue(_local_persistence_enabled())
+
+    def test_hosted_warning_requires_cloud_login_when_configured(self):
+        self.assertEqual(
+            _hosted_data_warning_state("https://floosy-beta.streamlit.app", cloud_configured=True, cloud_logged_in=False),
+            "cloud_login_required",
+        )
+
+    def test_hosted_warning_requires_setup_when_cloud_not_configured(self):
+        self.assertEqual(
+            _hosted_data_warning_state("https://floosy-beta.streamlit.app", cloud_configured=False, cloud_logged_in=False),
+            "cloud_setup_required",
+        )
+
+    def test_hosted_warning_disappears_when_cloud_is_logged_in(self):
+        self.assertEqual(
+            _hosted_data_warning_state("https://floosy-beta.streamlit.app", cloud_configured=True, cloud_logged_in=True),
+            "",
+        )
+
+    def test_local_runtime_has_no_hosted_warning(self):
+        self.assertEqual(
+            _hosted_data_warning_state("http://localhost:8501", cloud_configured=False, cloud_logged_in=False),
+            "",
+        )
 
     def test_accept_language_prefers_english_when_browser_is_english(self):
         self.assertEqual(_preferred_language_from_accept_language("en-US,en;q=0.9,ar;q=0.8"), "English")

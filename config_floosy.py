@@ -511,6 +511,16 @@ def _is_local_runtime_url(url: str) -> bool:
     return host in {"localhost", "127.0.0.1", "0.0.0.0"}
 
 
+def _hosted_data_warning_state(runtime_url: str, cloud_configured: bool, cloud_logged_in: bool) -> str:
+    if not _is_shared_hosted_url(runtime_url):
+        return ""
+    if bool(cloud_configured) and bool(cloud_logged_in):
+        return ""
+    if bool(cloud_configured):
+        return "cloud_login_required"
+    return "cloud_setup_required"
+
+
 def _local_persistence_enabled() -> bool:
     explicit = str(os.getenv("FLOOSY_ENABLE_LOCAL_PERSISTENCE", "") or "").strip().lower()
     if explicit in {"1", "true", "yes", "on"}:

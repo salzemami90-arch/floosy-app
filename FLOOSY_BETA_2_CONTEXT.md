@@ -66,6 +66,8 @@ When adding future updates:
 - Clarified proof-storage direction from real use:
   - Salary slips, social security receipts, and similar payment evidence should primarily live with the related Account transaction / Monthly Item, not only as standalone Documents.
   - Camera scan should also be usable from Account as a proof-attachment entry path, not only from Documents.
+- Added a hosted-data safety warning so the shared Streamlit beta explicitly tells the user to sign in to Cloud before entering important data.
+- Added a clear Done / Partially Done / Still Open snapshot in this file so current progress is easier to track without rereading the whole history.
 
 ### 2026-04-24
 
@@ -128,6 +130,29 @@ Current working focus:
 - Account: keep testing Monthly Items with real cases like salary, social security, and delayed income.
 - Projects: keep validating that project transactions linked to the account deduct from My Account correctly.
 - Documents: organize company papers, proofs, government documents, renewals, contracts, and sensitive evidence.
+
+## Current Delivery Status
+
+### Done
+
+- Monthly Items now separate entitlement month from actual payment/receipt month.
+- Expected income language is no longer treated like an overdue expense.
+- My Account transactions support real editing after save.
+- Project movements funded from My Account deduct correctly from My Account.
+- Transaction proofs can be attached and downloaded from the related transaction flow.
+
+### Partially Done
+
+- Dashboard Smart Summary improved, but still needs calmer logic when history is thin or the month is just starting.
+- Documents workflow exists, but still needs better structure for company paper use.
+- Hosted Remember Sign-In was improved technically, but real Safari testing still shows it as unreliable on the deployed beta.
+
+### Still Open
+
+- Monthly Items still need real-life testing with salary/social security edge cases.
+- Monthly Items may still need an explicit entitlement due date field beyond entitlement month + actual payment date.
+- Universal Search is still a planned idea, not an implemented feature yet.
+- Camera capture / mobile scan is still a planned idea, not an implemented feature yet.
 
 Most important product rule:
 
