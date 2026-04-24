@@ -12,7 +12,12 @@ from config_floosy import (
     init_session_state,
     save_persistent_state,
 )
-from services.cloud_auth_cookie import clear_cloud_auth_cookie, read_cloud_auth_cookie, remember_cloud_auth
+from services.cloud_auth_cookie import (
+    bootstrap_cloud_auth_from_storage,
+    clear_cloud_auth_cookie,
+    read_cloud_auth_cookie,
+    remember_cloud_auth,
+)
 from services.supabase_sync import SupabaseSyncClient
 
 
@@ -195,6 +200,7 @@ def main():
 
     # تهيئة عامة (session_state + css إن كانت داخل config_floosy)
     init_session_state()
+    bootstrap_cloud_auth_from_storage()
     _restore_cloud_auth_from_cookie()
     _sync_cloud_auth_cookie_preference()
 

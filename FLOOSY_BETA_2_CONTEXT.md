@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-24
+Last updated: 2026-04-25
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -52,11 +52,16 @@ When adding future updates:
 - Added an explicit Context Capture Duty so future Codex/AI conversations proactively append important changes, scenarios, bugs, fixes, testing notes, and product decisions to this file without deleting prior history.
 - Added an explicit to-do/backlog capture rule so ideas and requested changes that are not implemented immediately are preserved for later review.
 
+### 2026-04-25
+
+- Added a localStorage bootstrap fallback for Remember Sign-In so a personal browser can restore the hosted auth token after refresh if the deployment loses the cookie.
+
 ### 2026-04-24
 
 - Improved hosted Remember Sign-In reliability by strengthening how the browser refresh token cookie is written for Streamlit deployments.
 - Added targeted tests for cloud auth cookie encode/read/write behavior.
 - Added a hosted cookie-header fallback so Remember Sign-In can still restore when the deployed runtime exposes the cookie in raw request headers instead of `st.context.cookies`.
+- Added a localStorage bootstrap fallback for personal-device Remember Sign-In: if the hosted cookie is missing after refresh, the browser can restore it from localStorage and reload once.
 - Clarified product behavior: shared hosted local persistence is intentionally non-durable, so real beta usage should rely on Cloud sync instead of hosted local storage.
 
 ### 2026-04-19
@@ -401,7 +406,7 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
   Fixed by Remember Sign-In using local refresh token and session refresh.
 
 - Hosted Remember Sign-In could still fail after refresh because browser cookie behavior differs on deployed Streamlit environments.
-  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts, adding a raw cookie-header fallback when reading the token, and covering the behavior with targeted tests.
+  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts, adding a raw cookie-header fallback when reading the token, adding a localStorage bootstrap fallback for personal browsers, and covering the behavior with targeted tests.
 
 - Streamlit showed "Press Enter to apply/submit" over input fields.
   Fixed by hiding Streamlit input instructions.

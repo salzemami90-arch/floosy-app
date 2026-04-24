@@ -1,6 +1,11 @@
 from types import SimpleNamespace
 
-from services.cloud_auth_cookie import clear_cloud_auth_cookie, read_cloud_auth_cookie, remember_cloud_auth
+from services.cloud_auth_cookie import (
+    bootstrap_cloud_auth_from_storage,
+    clear_cloud_auth_cookie,
+    read_cloud_auth_cookie,
+    remember_cloud_auth,
+)
 
 
 def test_remember_cloud_auth_renders_hosted_cookie_variants(monkeypatch):
@@ -19,6 +24,8 @@ def test_remember_cloud_auth_renders_hosted_cookie_variants(monkeypatch):
     assert "SameSite=Lax" in html
     assert "SameSite=None; Secure" in html
     assert "Partitioned" in html
+    assert "localStorage" in html
+    assert "floosy_cloud_auth_storage" in html
     assert "window.parent" in html
     assert "domain=${hostname}" in html
     assert captured["height"] == 0
@@ -99,3 +106,24 @@ def test_read_cloud_auth_cookie_falls_back_to_cookie_header(monkeypatch):
         "user_id": "user-123",
         "refresh_token": "refresh-token-xyz",
     }
+
+
+def test_bootstrap_cloud_auth_from_storage_renders_reload_bridge(monkeypatch):
+    captured = {}
+
+    def fake_html(html, height=0, width=0):
+        captured["html"] = html
+        captured["height"] = height
+        captured["width"] = width
+
+    monkeypatch.setattr("services.cloud_auth_cookie.components.html", fake_html)
+
+    bootstrap_cloud_auth_from_storage()
+
+    html = captured["html"]
+    assert "floosy_cloud_auth_storage" in html
+    assert "sessionStorage" in html
+    assert "location.reload" in html
+    assert "bootFlag" in html
+    assert captured["height"] == 0
+    assert captured["width"] == 0

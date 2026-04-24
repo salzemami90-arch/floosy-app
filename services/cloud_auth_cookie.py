@@ -10,6 +10,7 @@ import streamlit.components.v1 as components
 
 
 COOKIE_NAME = "floosy_cloud_auth"
+STORAGE_NAME = "floosy_cloud_auth_storage"
 COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 
@@ -75,6 +76,7 @@ def read_cloud_auth_cookie() -> dict:
 
 def _render_cookie_script(value: str, max_age: int) -> None:
     cookie_name = json.dumps(COOKIE_NAME)
+    storage_name = json.dumps(STORAGE_NAME)
     cookie_value = json.dumps(value)
     cookie_max_age = int(max_age)
     components.html(
@@ -107,6 +109,14 @@ def _render_cookie_script(value: str, max_age: int) -> None:
             try {{
               targetDoc.cookie = cookieString;
             }} catch (error) {{}}
+          }}
+
+          function getStorage(targetWin) {{
+            try {{
+              return targetWin && targetWin.localStorage ? targetWin.localStorage : null;
+            }} catch (error) {{
+              return null;
+            }}
           }}
 
           const parentWin = (() => {{
@@ -153,6 +163,21 @@ def _render_cookie_script(value: str, max_age: int) -> None:
               }}
             }}
           }}
+
+          const storages = Array.from(new Set([
+            getStorage(window),
+            getStorage(parentWin),
+          ].filter(Boolean)));
+
+          for (const storage of storages) {{
+            try {{
+              if ({cookie_max_age} > 0 && {cookie_value}) {{
+                storage.setItem({storage_name}, {cookie_value});
+              }} else {{
+                storage.removeItem({storage_name});
+              }}
+            }} catch (error) {{}}
+          }}
         }})();
         </script>
         """,
@@ -177,3 +202,190 @@ def remember_cloud_auth(email: str, user_id: str, refresh_token: str) -> None:
 
 def clear_cloud_auth_cookie() -> None:
     _render_cookie_script("", 0)
+
+
+def bootstrap_cloud_auth_from_storage() -> None:
+    cookie_name = json.dumps(COOKIE_NAME)
+    storage_name = json.dumps(STORAGE_NAME)
+    cookie_max_age = int(COOKIE_MAX_AGE_SECONDS)
+    components.html(
+        f"""
+        <script>
+        (function() {{
+          const cookieName = {cookie_name};
+          const storageName = {storage_name};
+          const maxAge = {cookie_max_age};
+          const bootFlag = `${{storageName}}_bootstrap_done`;
+
+          function safeParent() {{
+            try {{
+              return window.parent && window.parent !== window ? window.parent : null;
+            }} catch (error) {{
+              return null;
+            }}
+          }}
+
+          function getStorage(targetWin) {{
+            try {{
+              return targetWin && targetWin.localStorage ? targetWin.localStorage : null;
+            }} catch (error) {{
+              return null;
+            }}
+          }}
+
+          function getSessionStorage(targetWin) {{
+            try {{
+              return targetWin && targetWin.sessionStorage ? targetWin.sessionStorage : null;
+            }} catch (error) {{
+              return null;
+            }}
+          }}
+
+          function readCookie(targetDoc, name) {{
+            if (!targetDoc || !targetDoc.cookie) return "";
+            const prefix = `${{name}}=`;
+            const parts = String(targetDoc.cookie).split(";").map((part) => part.trim());
+            for (const part of parts) {{
+              if (part.startsWith(prefix)) {{
+                return part.slice(prefix.length);
+              }}
+            }}
+            return "";
+          }}
+
+          function writeCookie(targetDoc, cookieString) {{
+            if (!targetDoc) return;
+            try {{
+              targetDoc.cookie = cookieString;
+            }} catch (error) {{}}
+          }}
+
+          function safeHostname(targetWin) {{
+            try {{
+              return String((targetWin && targetWin.location && targetWin.location.hostname) || "").trim();
+            }} catch (error) {{
+              return "";
+            }}
+          }}
+
+          function safeProtocol(targetWin) {{
+            try {{
+              return String((targetWin && targetWin.location && targetWin.location.protocol) || "").trim().toLowerCase();
+            }} catch (error) {{
+              return "";
+            }}
+          }}
+
+          const parentWin = safeParent();
+          const storages = Array.from(new Set([
+            getStorage(window),
+            getStorage(parentWin),
+          ].filter(Boolean)));
+          const sessionStores = Array.from(new Set([
+            getSessionStorage(window),
+            getSessionStorage(parentWin),
+          ].filter(Boolean)));
+          const docs = Array.from(new Set([
+            document,
+            (() => {{
+              try {{
+                return parentWin && parentWin.document ? parentWin.document : null;
+              }} catch (error) {{
+                return null;
+              }}
+            }})(),
+          ].filter(Boolean)));
+
+          const cookieExists = docs.some((targetDoc) => !!readCookie(targetDoc, cookieName));
+          if (cookieExists) {{
+            for (const store of sessionStores) {{
+              try {{
+                store.removeItem(bootFlag);
+              }} catch (error) {{}}
+            }}
+            return;
+          }}
+
+          let storedValue = "";
+          for (const storage of storages) {{
+            try {{
+              storedValue = String(storage.getItem(storageName) || "").trim();
+            }} catch (error) {{
+              storedValue = "";
+            }}
+            if (storedValue) break;
+          }}
+
+          if (!storedValue) {{
+            for (const store of sessionStores) {{
+              try {{
+                store.removeItem(bootFlag);
+              }} catch (error) {{}}
+            }}
+            return;
+          }}
+
+          const alreadyBootstrapped = sessionStores.some((store) => {{
+            try {{
+              return store.getItem(bootFlag) === storedValue;
+            }} catch (error) {{
+              return false;
+            }}
+          }});
+          if (alreadyBootstrapped) {{
+            return;
+          }}
+
+          const protocol = safeProtocol(parentWin) || safeProtocol(window);
+          const isHttps = protocol === "https:";
+          const expiry = "";
+          const baseAttrs = `path=/; max-age=${{maxAge}}${{expiry}}`;
+          const variants = [
+            `${{cookieName}}=${{encodeURIComponent(storedValue)}}; ${{baseAttrs}}; SameSite=Lax${{isHttps ? "; Secure" : ""}}`,
+          ];
+
+          if (isHttps) {{
+            variants.push(
+              `${{cookieName}}=${{encodeURIComponent(storedValue)}}; ${{baseAttrs}}; SameSite=None; Secure`,
+              `${{cookieName}}=${{encodeURIComponent(storedValue)}}; ${{baseAttrs}}; SameSite=None; Secure; Partitioned`,
+            );
+          }}
+
+          const hostnames = Array.from(new Set([
+            safeHostname(window),
+            safeHostname(parentWin),
+          ].filter(Boolean)));
+
+          for (const targetDoc of docs) {{
+            for (const variant of variants) {{
+              writeCookie(targetDoc, variant);
+              for (const hostname of hostnames) {{
+                if (hostname.includes(".")) {{
+                  writeCookie(targetDoc, `${{variant}}; domain=${{hostname}}`);
+                }}
+              }}
+            }}
+          }}
+
+          for (const store of sessionStores) {{
+            try {{
+              store.setItem(bootFlag, storedValue);
+            }} catch (error) {{}}
+          }}
+
+          try {{
+            if (parentWin && parentWin.location) {{
+              parentWin.location.reload();
+              return;
+            }}
+          }} catch (error) {{}}
+
+          try {{
+            window.location.reload();
+          }} catch (error) {{}}
+        }})();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
