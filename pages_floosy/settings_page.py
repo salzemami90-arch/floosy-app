@@ -419,14 +419,6 @@ def render():
             )
         )
 
-        st.markdown("---")
-        st.info(
-            t(
-                "إعدادات الضريبة انتقلت إلى صفحة الفواتير والضرائب من زر الإعدادات هناك.",
-                "Tax settings were moved to the Invoices and Tax page using the settings button there.",
-            )
-        )
-
     with tab_privacy:
         st.subheader(t("الخصوصية والمزامنة", "Privacy and Sync"))
 
