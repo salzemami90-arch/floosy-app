@@ -63,6 +63,9 @@ When adding future updates:
 - Captured two new product ideas from real use:
   - Documents may need a camera capture/scan flow so a paper can be turned into a saved document directly from mobile camera.
   - Floosy may need a universal search layer so records added in Account or elsewhere can still be found quickly by search even if the user forgot where they filed them.
+- Clarified proof-storage direction from real use:
+  - Salary slips, social security receipts, and similar payment evidence should primarily live with the related Account transaction / Monthly Item, not only as standalone Documents.
+  - Camera scan should also be usable from Account as a proof-attachment entry path, not only from Documents.
 
 ### 2026-04-24
 
@@ -229,6 +232,7 @@ It should reflect reality:
 - What month the amount belongs to
 - When it was actually paid/received
 - Proof when available
+- Salary slips, social security screenshots, invoices, and payment proofs should ideally be attachable directly to the related transaction so the user can find them later from Account search.
 
 ### Monthly Items
 
@@ -255,6 +259,16 @@ Project-level tracking. Can optionally record the account effect when the projec
 ### Documents
 
 Company/admin proof center.
+
+Best for:
+
+- Long-lived company papers
+- Government documents
+- Licenses
+- Contracts
+- Renewals
+
+Not every proof must start here. Short-term/payment proof can begin inside Account and still remain searchable later.
 
 ### Financial Analyzer
 
@@ -590,6 +604,16 @@ Possible sources:
 Goal:
 
 - If the user searches for a known word, name, or clue, Floosy should surface the related result even if it was saved under a different section than expected.
+- Search should eventually help with salary slips, social security proof, employer/customer names, invoice references, and entitlement/payment month clues.
+
+### Camera Capture / تصوير أو سكان مباشر
+
+A future feature that lets the user scan or photograph a paper directly from mobile camera and save it into Floosy without a separate manual upload flow first.
+
+Preferred use:
+
+- As an attachment flow inside Account transactions and Monthly Items
+- Also usable from Documents for long-lived company papers
 
 ## 12. Collaboration Style
 
