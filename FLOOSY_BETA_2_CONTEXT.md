@@ -56,6 +56,7 @@ When adding future updates:
 
 - Improved hosted Remember Sign-In reliability by strengthening how the browser refresh token cookie is written for Streamlit deployments.
 - Added targeted tests for cloud auth cookie encode/read/write behavior.
+- Added a hosted cookie-header fallback so Remember Sign-In can still restore when the deployed runtime exposes the cookie in raw request headers instead of `st.context.cookies`.
 - Clarified product behavior: shared hosted local persistence is intentionally non-durable, so real beta usage should rely on Cloud sync instead of hosted local storage.
 
 ### 2026-04-19
@@ -400,7 +401,7 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
   Fixed by Remember Sign-In using local refresh token and session refresh.
 
 - Hosted Remember Sign-In could still fail after refresh because browser cookie behavior differs on deployed Streamlit environments.
-  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts and covering the behavior with targeted tests.
+  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts, adding a raw cookie-header fallback when reading the token, and covering the behavior with targeted tests.
 
 - Streamlit showed "Press Enter to apply/submit" over input fields.
   Fixed by hiding Streamlit input instructions.

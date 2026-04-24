@@ -74,3 +74,28 @@ def test_read_cloud_auth_cookie_returns_empty_when_missing_refresh_token(monkeyp
     monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
 
     assert read_cloud_auth_cookie() == {}
+
+
+def test_read_cloud_auth_cookie_falls_back_to_cookie_header(monkeypatch):
+    service = __import__("services.cloud_auth_cookie", fromlist=["dummy"])
+    encoded = service._encode_payload(
+        {
+            "email": "user@example.com",
+            "user_id": "user-123",
+            "refresh_token": "refresh-token-xyz",
+        }
+    )
+
+    fake_st = SimpleNamespace(
+        context=SimpleNamespace(
+            cookies={},
+            headers={"cookie": f"another=value; {service.COOKIE_NAME}={encoded}; theme=dark"},
+        )
+    )
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+
+    assert read_cloud_auth_cookie() == {
+        "email": "user@example.com",
+        "user_id": "user-123",
+        "refresh_token": "refresh-token-xyz",
+    }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+from http.cookies import SimpleCookie
 from urllib.parse import unquote
 
 import streamlit as st
@@ -31,11 +32,36 @@ def _decode_payload(raw_value: str) -> dict:
 
 
 def read_cloud_auth_cookie() -> dict:
+    raw_value = ""
     try:
         cookies = getattr(st.context, "cookies", {})
         raw_value = cookies.get(COOKIE_NAME, "") if cookies is not None else ""
     except Exception:
         raw_value = ""
+
+    if not raw_value:
+        try:
+            headers = getattr(st.context, "headers", {}) or {}
+        except Exception:
+            headers = {}
+
+        raw_cookie_header = ""
+        if hasattr(headers, "get"):
+            raw_cookie_header = str(headers.get("cookie") or headers.get("Cookie") or "").strip()
+        elif isinstance(headers, dict):
+            normalized_headers = {str(k).lower(): v for k, v in headers.items()}
+            raw_cookie_header = str(normalized_headers.get("cookie") or "").strip()
+
+        if raw_cookie_header:
+            parsed = SimpleCookie()
+            try:
+                parsed.load(raw_cookie_header)
+            except Exception:
+                parsed = SimpleCookie()
+            morsel = parsed.get(COOKIE_NAME)
+            if morsel is not None:
+                raw_value = morsel.value
+
     payload = _decode_payload(raw_value)
     refresh_token = str(payload.get("refresh_token") or "").strip()
     if not refresh_token:
