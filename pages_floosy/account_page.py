@@ -10,7 +10,7 @@ import streamlit as st
 
 from config_floosy import CURRENCY_OPTIONS, add_transaction, arabic_months, english_months, load_transactions
 from services.expense_tax_service import ExpenseTaxService
-from services.transaction_categories import category_label, localized_all_categories
+from services.transaction_categories import CATEGORY_EN_TO_AR, category_label, localized_all_categories
 
 
 TX_TYPE_AR_TO_EN = {"دخل": "Income", "مصروف": "Expense"}
@@ -211,6 +211,153 @@ def _proof_label(tx: dict, fallback: str = "") -> str:
     if not name or name.lower() == "nan":
         return fallback
     return name or fallback
+
+
+def _editor_date_to_iso(value) -> str:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return ""
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _canonical_tx_type(value: str) -> str:
+    clean = str(value or "").strip()
+    if clean in {"دخل", "Income"}:
+        return "دخل"
+    if clean in {"مصروف", "Expense"}:
+        return "مصروف"
+    return clean
+
+
+def _canonical_category(value: str, is_en: bool) -> str:
+    clean = str(value or "").strip()
+    if not is_en:
+        return clean
+    return CATEGORY_EN_TO_AR.get(clean, clean)
+
+
+def _currency_display_to_canonical_map(is_en: bool) -> dict[str, str]:
+    if not is_en:
+        return {opt: opt for opt in CURRENCY_OPTIONS}
+    return {_currency_option_label(opt, True): opt for opt in CURRENCY_OPTIONS}
+
+
+def _canonical_currency(value: str, is_en: bool) -> str:
+    clean = str(value or "").strip()
+    return _currency_display_to_canonical_map(is_en).get(clean, clean)
+
+
+def _localized_tax_label(code: str, tax_label_by_code: dict[str, str]) -> str:
+    clean = str(code or "").strip()
+    if not clean:
+        return ""
+    return tax_label_by_code.get(clean, clean)
+
+
+def _apply_transaction_edits(
+    session_state,
+    month_key: str,
+    original_rows: pd.DataFrame,
+    edited_rows: pd.DataFrame,
+    *,
+    is_en: bool,
+    default_expense_tax_code: str,
+    tax_label_by_code: dict[str, str],
+) -> dict:
+    if original_rows.empty or edited_rows.empty:
+        return {"updated": 0, "moved": 0, "moved_targets": [], "errors": []}
+
+    id_col = "ID" if is_en else "معرّف"
+    date_col = "Movement Date" if is_en else "تاريخ الحركة"
+    type_col = "Type" if is_en else "النوع"
+    category_col = "Category" if is_en else "التصنيف"
+    amount_col = "Amount" if is_en else "المبلغ"
+    currency_col = "Currency" if is_en else "العملة"
+    note_col = "Note" if is_en else "ملاحظة"
+    tax_col = "Tax Classification" if is_en else "التصنيف الضريبي"
+
+    transactions_by_month = session_state.setdefault("transactions", {})
+    current_month_transactions = transactions_by_month.setdefault(month_key, [])
+    edited_lookup = {}
+    label_to_tax_code = {label: code for code, label in tax_label_by_code.items()}
+
+    for _, edited_row in edited_rows.iterrows():
+        try:
+            edited_lookup[int(edited_row[id_col])] = edited_row
+        except Exception:
+            continue
+
+    errors = []
+    in_place_updates: dict[int, dict] = {}
+    move_updates: list[tuple[int, str, dict]] = []
+
+    for _, original_row in original_rows.iterrows():
+        tx_id = int(original_row["tx_id"])
+        edited_row = edited_lookup.get(tx_id)
+        if edited_row is None or not (0 <= tx_id < len(current_month_transactions)):
+            continue
+
+        date_iso = _editor_date_to_iso(edited_row.get(date_col))
+        if not date_iso:
+            errors.append(f"#{tx_id}")
+            continue
+
+        try:
+            amount_value = float(edited_row.get(amount_col) or 0)
+        except (TypeError, ValueError):
+            errors.append(f"#{tx_id}")
+            continue
+        if amount_value <= 0:
+            errors.append(f"#{tx_id}")
+            continue
+
+        current_tx = dict(current_month_transactions[tx_id])
+        updated_tx = dict(current_tx)
+        updated_tx["date"] = date_iso
+        updated_tx["type"] = _canonical_tx_type(edited_row.get(type_col))
+        updated_tx["category"] = _canonical_category(edited_row.get(category_col), is_en)
+        updated_tx["amount"] = amount_value
+        updated_tx["currency"] = _canonical_currency(edited_row.get(currency_col), is_en)
+        updated_tx["note"] = str(edited_row.get(note_col) or "").strip()
+
+        tax_value = str(edited_row.get(tax_col) or "").strip()
+        if updated_tx["type"] == "مصروف":
+            updated_tx["tax_tag_code"] = label_to_tax_code.get(tax_value, tax_value or default_expense_tax_code)
+        else:
+            updated_tx["tax_tag_code"] = ""
+
+        target_month_key = _month_key_from_date(pd.to_datetime(date_iso).to_pydatetime())
+        updated_tx["payment_month_key"] = target_month_key
+        updated_tx = ExpenseTaxService.normalize_transaction(session_state, updated_tx)
+
+        if updated_tx == current_tx and target_month_key == month_key:
+            continue
+
+        if target_month_key == month_key:
+            in_place_updates[tx_id] = updated_tx
+        else:
+            move_updates.append((tx_id, target_month_key, updated_tx))
+
+    if errors:
+        return {"updated": 0, "moved": 0, "moved_targets": [], "errors": errors}
+
+    for tx_id, updated_tx in in_place_updates.items():
+        if 0 <= tx_id < len(current_month_transactions):
+            current_month_transactions[tx_id] = updated_tx
+
+    moved_targets = []
+    for tx_id, target_month_key, updated_tx in sorted(move_updates, key=lambda item: item[0], reverse=True):
+        if 0 <= tx_id < len(current_month_transactions):
+            current_month_transactions.pop(tx_id)
+            transactions_by_month.setdefault(target_month_key, []).append(updated_tx)
+            moved_targets.append(target_month_key)
+
+    return {
+        "updated": len(in_place_updates) + len(move_updates),
+        "moved": len(move_updates),
+        "moved_targets": sorted(set(moved_targets)),
+        "errors": [],
+    }
 
 
 def _month_search_text(value) -> str:
@@ -1081,11 +1228,13 @@ def render(month_key: str, month: str, year: int):
     category_col = t("التصنيف", "Category")
     amount_col = t("المبلغ", "Amount")
     currency_col = t("العملة", "Currency")
+    tax_col = t("التصنيف الضريبي", "Tax Classification")
     note_col = t("ملاحظة", "Note")
     proof_col = t("إثبات", "Proof")
     delete_col = t("حذف", "Delete")
 
-    view_df = filtered_df[["tx_id", "date", "payment_month_key", "entitlement_month_key", "type", "category", "amount", "currency", "note"]].copy()
+    view_df = filtered_df[["tx_id", "date", "payment_month_key", "entitlement_month_key", "type", "category", "amount", "currency", "note", "tax_tag_code"]].copy()
+    view_df["date"] = pd.to_datetime(view_df["date"], errors="coerce")
     view_df["payment_month_key"] = view_df.apply(lambda row: _payment_month_label_for_row(row, is_en), axis=1)
     view_df["entitlement_month_key"] = view_df["entitlement_month_key"].apply(lambda mk: _display_month_label(mk, is_en))
     if is_en and "type" in view_df.columns:
@@ -1094,6 +1243,7 @@ def render(month_key: str, month: str, year: int):
         view_df["category"] = view_df["category"].apply(lambda x: _category_label(x, True))
     if is_en and "currency" in view_df.columns:
         view_df["currency"] = view_df["currency"].apply(lambda x: _currency_option_label(x, True))
+    view_df["tax_tag_code"] = view_df["tax_tag_code"].apply(lambda code: _localized_tax_label(code, tax_label_by_code))
     proof_lookup = {
         int(row["tx_id"]): _proof_label(row, t("مرفق", "Attached"))
         for _, row in filtered_df.iterrows()
@@ -1110,20 +1260,36 @@ def render(month_key: str, month: str, year: int):
             "category": category_col,
             "amount": amount_col,
             "currency": currency_col,
+            "tax_tag_code": tax_col,
             "note": note_col,
         },
         inplace=True,
     )
     view_df[delete_col] = False
+    st.caption(
+        t(
+            "يمكن تعديل تفاصيل المعاملة مباشرة ثم حفظ التعديلات. إذا تغير التاريخ إلى شهر آخر، ستنتقل الحركة تلقائيًا لذلك الشهر.",
+            "You can edit the transaction directly and save changes. If the date moves to another month, the transaction moves there automatically.",
+        )
+    )
+
+    currency_editor_options = [_currency_option_label(opt, is_en) for opt in CURRENCY_OPTIONS]
+    tax_editor_options = [""] + [tax_label_by_code[code] for code in tax_codes if code in tax_label_by_code]
 
     edited = st.data_editor(
         view_df,
         use_container_width=True,
         hide_index=True,
-        disabled=[id_col, date_col, payment_month_col, entitlement_month_col, type_col, category_col, amount_col, currency_col, note_col, proof_col],
+        disabled=[id_col, payment_month_col, entitlement_month_col, proof_col],
         column_config={
             delete_col: st.column_config.CheckboxColumn(t("حذف", "Delete"), help=t("تحديد المعاملات المراد حذفها", "Select transactions to delete")),
             id_col: st.column_config.NumberColumn(t("معرّف", "ID"), format="%d"),
+            date_col: st.column_config.DateColumn(t("تاريخ الحركة", "Movement Date"), format="YYYY-MM-DD"),
+            type_col: st.column_config.SelectboxColumn(t("النوع", "Type"), options=[t("مصروف", "Expense"), t("دخل", "Income")], required=True),
+            category_col: st.column_config.SelectboxColumn(t("التصنيف", "Category"), options=localized_all_categories(is_en), required=True),
+            amount_col: st.column_config.NumberColumn(t("المبلغ", "Amount"), min_value=0.0, step=1.0, required=True, format="%.2f"),
+            currency_col: st.column_config.SelectboxColumn(t("العملة", "Currency"), options=currency_editor_options, required=True),
+            tax_col: st.column_config.SelectboxColumn(t("التصنيف الضريبي", "Tax Classification"), options=tax_editor_options),
         },
         key="account_tx_editor",
         on_change=_close_templates_panel,
@@ -1152,8 +1318,46 @@ def render(month_key: str, month: str, year: int):
                     use_container_width=True,
                 )
 
+    action_save_col, action_delete_col = st.columns(2)
+    with action_save_col:
+        if st.button(t("حفظ التعديلات", "Save Edits"), type="primary", use_container_width=True):
+            result = _apply_transaction_edits(
+                st.session_state,
+                month_key,
+                filtered_df,
+                edited,
+                is_en=is_en,
+                default_expense_tax_code=default_expense_tax_code,
+                tax_label_by_code=tax_label_by_code,
+            )
+            if result["errors"]:
+                st.warning(
+                    t(
+                        f"تعذر حفظ بعض التعديلات. راجعي تاريخ الحركة أو المبلغ في: {', '.join(result['errors'])}",
+                        f"Some edits could not be saved. Check date or amount in: {', '.join(result['errors'])}",
+                    )
+                )
+            elif result["updated"] == 0:
+                st.info(t("لا توجد تعديلات جديدة للحفظ.", "No new edits to save."))
+            else:
+                st.session_state["account_templates_open"] = False
+                if result["moved"]:
+                    moved_labels = ", ".join(_month_label_from_key(mk, is_en) for mk in result["moved_targets"])
+                    st.session_state["account_save_notice"] = t(
+                        f"تم حفظ {result['updated']} تعديل. نُقلت {result['moved']} معاملة إلى {moved_labels} حسب التاريخ الجديد.",
+                        f"Saved {result['updated']} edit(s). {result['moved']} transaction(s) moved to {moved_labels} based on the new date.",
+                    )
+                else:
+                    st.session_state["account_save_notice"] = t(
+                        f"تم حفظ {result['updated']} تعديل على المعاملات.",
+                        f"Saved {result['updated']} transaction edit(s).",
+                    )
+                st.rerun()
+
     to_delete = edited[edited[delete_col]][id_col].tolist()
-    if st.button(t("حذف المحدد", "Delete Selected"), type="secondary", use_container_width=True):
+    with action_delete_col:
+        delete_clicked = st.button(t("حذف المحدد", "Delete Selected"), type="secondary", use_container_width=True)
+    if delete_clicked:
         if not to_delete:
             st.warning(t("يرجى اختيار معاملة واحدة على الأقل.", "Select at least one transaction."))
         else:

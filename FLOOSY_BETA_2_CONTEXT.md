@@ -58,6 +58,7 @@ When adding future updates:
 - Real-world Safari testing on the hosted beta still showed Remember Sign-In failing after refresh, so this remains an open hosted-browser issue rather than a confirmed fix.
 - Captured a product note from real usage: expected salary/income should not look "suspended" or "late" just because the entitlement day passed if nothing was received yet.
 - Captured a Monthly Items design note: the model may need an explicit entitlement day/date field in addition to entitlement month and actual payment date.
+- Added true editing support for My Account transactions after save, including moving the transaction to another month automatically if the edited date changes month.
 
 ### 2026-04-24
 
@@ -422,6 +423,9 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 
 - Local Playwright smoke test data appeared in local transactions.
   Identified as test data, cleaned locally, and local data backup files were ignored.
+
+- My Account transactions could not be edited after saving.
+  Fixed by enabling direct transaction editing in the Account table and saving changes back to the correct month.
 
 ### Open / Needs Review
 
