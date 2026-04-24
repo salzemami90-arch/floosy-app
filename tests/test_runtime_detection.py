@@ -14,10 +14,40 @@ from config_floosy import (
     _is_shared_hosted_url,
     _local_persistence_enabled,
     _preferred_language_from_accept_language,
+    get_month_selection,
 )
 
 
 class RuntimeDetectionTests(unittest.TestCase):
+    def test_settings_page_still_shows_selected_month_block(self):
+        class FakeSidebar:
+            def __init__(self):
+                self.captions = []
+
+            def markdown(self, *_args, **_kwargs):
+                return None
+
+            def subheader(self, *_args, **_kwargs):
+                return None
+
+            def caption(self, value, *_args, **_kwargs):
+                self.captions.append(value)
+                return None
+
+        fake_sidebar = FakeSidebar()
+        fake_st = SimpleNamespace(
+            session_state={"settings": {"language": "English"}},
+            sidebar=fake_sidebar,
+        )
+
+        with patch("config_floosy.st", fake_st):
+            month_key, month, year = get_month_selection("settings")
+
+        self.assertIsInstance(month_key, str)
+        self.assertIsInstance(month, str)
+        self.assertIsInstance(year, int)
+        self.assertEqual(len(fake_sidebar.captions), 1)
+
     def test_detects_streamlit_app_domain_as_shared_hosted(self):
         self.assertTrue(_is_shared_hosted_url("https://floosy-beta.streamlit.app"))
 
