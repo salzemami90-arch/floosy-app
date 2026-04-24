@@ -59,6 +59,7 @@ When adding future updates:
 - Captured a product note from real usage: expected salary/income should not look "suspended" or "late" just because the entitlement day passed if nothing was received yet.
 - Captured a Monthly Items design note: the model may need an explicit entitlement day/date field in addition to entitlement month and actual payment date.
 - Added true editing support for My Account transactions after save, including moving the transaction to another month automatically if the edited date changes month.
+- Real-world hosted testing confirmed that unsynced local transactions on the Streamlit beta can appear temporarily across visits, then disappear after app restart/reboot. This reinforces that hosted local persistence is not safe for real data and Cloud must be used for anything important.
 
 ### 2026-04-24
 
