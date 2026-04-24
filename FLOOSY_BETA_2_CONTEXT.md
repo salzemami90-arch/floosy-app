@@ -55,6 +55,7 @@ When adding future updates:
 ### 2026-04-25
 
 - Added a localStorage bootstrap fallback for Remember Sign-In so a personal browser can restore the hosted auth token after refresh if the deployment loses the cookie.
+- Real-world Safari testing on the hosted beta still showed Remember Sign-In failing after refresh, so this remains an open hosted-browser issue rather than a confirmed fix.
 
 ### 2026-04-24
 
@@ -405,9 +406,6 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 - Sign-in was lost after refresh.
   Fixed by Remember Sign-In using local refresh token and session refresh.
 
-- Hosted Remember Sign-In could still fail after refresh because browser cookie behavior differs on deployed Streamlit environments.
-  Fixed by writing safer cookie variants for hosted/secure/iframe-like browser contexts, adding a raw cookie-header fallback when reading the token, adding a localStorage bootstrap fallback for personal browsers, and covering the behavior with targeted tests.
-
 - Streamlit showed "Press Enter to apply/submit" over input fields.
   Fixed by hiding Streamlit input instructions.
 
@@ -426,6 +424,10 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 ### Open / Needs Review
 
 - Dashboard Smart Summary may over-warn when there is not enough history or when the month is just starting.
+
+- Hosted Safari Remember Sign-In still fails after refresh on `floosy-beta.streamlit.app` even after cookie, header, and localStorage fallback attempts.
+  Current status: unresolved on deployed Safari/browser behavior.
+  Practical workaround for now: sign in manually and rely on browser password autofill until auth persistence is redesigned or replaced.
 
 - Monthly Items need real-life testing with:
   - Social security February paid in March
