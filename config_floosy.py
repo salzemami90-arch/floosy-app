@@ -1131,7 +1131,7 @@ hr {
 def get_month_selection(page: str):
     """
     ترجع (month_key, month, year)
-    تستخدم الـ sidebar لاختيار الشهر/السنة أو عرضهما بشكل ثابت.
+    تستخدم الـ sidebar لاختيار الشهر/السنة، بينما بعض الصفحات تعرض الشهر الحالي فقط.
     """
     lang = st.session_state.get("settings", {}).get("language", "العربية")
     is_en = lang == "English"
@@ -1145,7 +1145,7 @@ def get_month_selection(page: str):
     current_month_idx = now.month - 1
 
     # للحساب / التوفير / مشروع صغير: نخلي المستخدم يختار
-    if page in ["account", "savings", "project", "tax"]:
+    if page in ["account", "savings", "project", "tax", "settings"]:
         year_options = list(range(2023, current_year + 3))
         year_default_index = year_options.index(current_year)
 
@@ -1154,7 +1154,7 @@ def get_month_selection(page: str):
         year = st.sidebar.selectbox(t("السنة", "Year"), year_options, index=year_default_index)
         month = arabic_months[english_months.index(month_selected)] if is_en else month_selected
     else:
-        # الداشبورد / المحلل / الإعدادات = عرض ثابت للشهر الحالي
+        # الداشبورد / المحلل = عرض ثابت للشهر الحالي
         month = arabic_months[current_month_idx]
         year = current_year
         month_caption = english_months[current_month_idx] if is_en else month
