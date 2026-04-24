@@ -60,6 +60,9 @@ When adding future updates:
 - Captured a Monthly Items design note: the model may need an explicit entitlement day/date field in addition to entitlement month and actual payment date.
 - Added true editing support for My Account transactions after save, including moving the transaction to another month automatically if the edited date changes month.
 - Real-world hosted testing confirmed that unsynced local transactions on the Streamlit beta can appear temporarily across visits, then disappear after app restart/reboot. This reinforces that hosted local persistence is not safe for real data and Cloud must be used for anything important.
+- Captured two new product ideas from real use:
+  - Documents may need a camera capture/scan flow so a paper can be turned into a saved document directly from mobile camera.
+  - Floosy may need a universal search layer so records added in Account or elsewhere can still be found quickly by search even if the user forgot where they filed them.
 
 ### 2026-04-24
 
@@ -527,6 +530,7 @@ Build a better company paper workflow:
 - Add categories
 - Attach proof
 - Possibly link documents to transactions later
+- Add mobile camera capture / scan so the user can create a document directly from camera without separate manual upload first
 
 ### Projects
 
@@ -569,6 +573,23 @@ A future feature that groups:
 - Proofs
 
 Useful for company/admin cases where the user needs to quickly answer: "Where is my proof?"
+
+### Universal Search / البحث الشامل
+
+A future feature that lets the user find important records even if they do not remember which section they saved them in.
+
+Possible sources:
+
+- Account transactions
+- Notes
+- Customer/client names
+- Proof labels
+- Document titles
+- Related months or entitlement months
+
+Goal:
+
+- If the user searches for a known word, name, or clue, Floosy should surface the related result even if it was saved under a different section than expected.
 
 ## 12. Collaboration Style
 
