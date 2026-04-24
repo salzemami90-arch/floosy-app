@@ -56,6 +56,8 @@ When adding future updates:
 
 - Added a localStorage bootstrap fallback for Remember Sign-In so a personal browser can restore the hosted auth token after refresh if the deployment loses the cookie.
 - Real-world Safari testing on the hosted beta still showed Remember Sign-In failing after refresh, so this remains an open hosted-browser issue rather than a confirmed fix.
+- Captured a product note from real usage: expected salary/income should not look "suspended" or "late" just because the entitlement day passed if nothing was received yet.
+- Captured a Monthly Items design note: the model may need an explicit entitlement day/date field in addition to entitlement month and actual payment date.
 
 ### 2026-04-24
 
@@ -488,6 +490,12 @@ Continue testing real workflows after entitlement tracking:
 - Delayed income
 - Rent
 - Unknown last-paid month
+- Expected income should not look overdue/suspended just because the due day passed if no receipt happened yet.
+- Monthly Items may need one more field for `entitlement day/date` so the UI can show:
+  - entitlement month
+  - due day/date
+  - actual payment/receipt date
+  - accounting month where the transaction was recorded
 
 - Scenario:
   Description: Social security for February was paid in March.
