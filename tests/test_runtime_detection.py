@@ -19,21 +19,16 @@ from config_floosy import (
 
 
 class RuntimeDetectionTests(unittest.TestCase):
-    def test_settings_page_uses_day_month_year_controls(self):
+    def test_settings_page_has_no_month_controls(self):
         class FakeSidebar:
             def __init__(self):
                 self.selectboxes = []
-                self.date_inputs = []
 
             def markdown(self, *_args, **_kwargs):
                 return None
 
             def subheader(self, *_args, **_kwargs):
                 return None
-
-            def date_input(self, label, value=None, *_args, **_kwargs):
-                self.date_inputs.append((label, value))
-                return value
 
             def selectbox(self, label, options, index=0, *_args, **_kwargs):
                 self.selectboxes.append((label, list(options), index))
@@ -48,11 +43,10 @@ class RuntimeDetectionTests(unittest.TestCase):
         with patch("config_floosy.st", fake_st):
             month_key, month, year = get_month_selection("settings")
 
-        self.assertIsInstance(month_key, str)
-        self.assertIsInstance(month, str)
-        self.assertIsInstance(year, int)
-        self.assertEqual(len(fake_sidebar.date_inputs), 1)
-        self.assertEqual(len(fake_sidebar.selectboxes), 2)
+        self.assertIsNone(month_key)
+        self.assertIsNone(month)
+        self.assertIsNone(year)
+        self.assertEqual(fake_sidebar.selectboxes, [])
 
     def test_detects_streamlit_app_domain_as_shared_hosted(self):
         self.assertTrue(_is_shared_hosted_url("https://floosy-beta.streamlit.app"))
