@@ -55,6 +55,7 @@ When adding future updates:
 ### 2026-04-25
 
 - Restored the Settings sidebar behavior to match the desktop backups exactly: Settings should not show Month/Year selectors or a Selected Month block.
+- Refined the Arabic sidebar CSS to be visually closer to the older backups by removing the forced fixed width and page padding, while keeping right-side open/close animation support.
 - Added a localStorage bootstrap fallback for Remember Sign-In so a personal browser can restore the hosted auth token after refresh if the deployment loses the cookie.
 - Real-world Safari testing on the hosted beta still showed Remember Sign-In failing after refresh, so this remains an open hosted-browser issue rather than a confirmed fix.
 - Captured a product note from real usage: expected salary/income should not look "suspended" or "late" just because the entitlement day passed if nothing was received yet.

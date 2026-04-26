@@ -339,38 +339,18 @@ def _apply_language_direction_theme() -> None:
     if not is_en:
         sidebar_side_css = """
         section[data-testid="stSidebar"],
+        [data-testid="stSidebar"],
         .stSidebar {
-            position: fixed !important;
-            top: 0 !important;
-            bottom: 0 !important;
             left: auto !important;
             right: 0 !important;
-            width: 16rem !important;
-            min-width: 16rem !important;
-            max-width: 16rem !important;
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
-            z-index: 1000 !important;
-            overflow: hidden !important;
             transition: transform 0.22s ease !important;
-        }
-
-        section[data-testid="stSidebar"] > div:first-child,
-        .stSidebar > div:first-child {
-            width: 16rem !important;
-            min-width: 16rem !important;
-            max-width: 16rem !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="true"],
         .stSidebar[aria-expanded="true"] {
             transform: translateX(0) !important;
-        }
-
-        .stMain {
-            padding-right: 16rem !important;
-            box-sizing: border-box !important;
-            transition: padding-right 0.22s ease !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="false"],
@@ -379,47 +359,12 @@ def _apply_language_direction_theme() -> None:
             border-left: none !important;
         }
 
-        section[data-testid="stSidebar"][aria-expanded="false"] + .stMain,
-        .stSidebar[aria-expanded="false"] + .stMain {
-            padding-right: 0 !important;
-        }
-
         [data-testid="collapsedControl"],
         [data-testid="stSidebarCollapsedControl"],
         button[title="Open sidebar"],
         button[aria-label="Open sidebar"] {
             left: auto !important;
             right: 0.75rem !important;
-        }
-
-        @media (max-width: 768px) {
-            section[data-testid="stSidebar"],
-            .stSidebar {
-                width: 13rem !important;
-                min-width: 13rem !important;
-                max-width: 13rem !important;
-            }
-
-            section[data-testid="stSidebar"] > div:first-child,
-            .stSidebar > div:first-child {
-                width: 13rem !important;
-                min-width: 13rem !important;
-                max-width: 13rem !important;
-            }
-
-            .stMain,
-            section[data-testid="stSidebar"][aria-expanded="false"] + .stMain,
-            .stSidebar[aria-expanded="false"] + .stMain {
-                padding-right: 0 !important;
-            }
-
-            [data-testid="collapsedControl"],
-            [data-testid="stSidebarCollapsedControl"],
-            button[title="Open sidebar"],
-            button[aria-label="Open sidebar"] {
-                left: auto !important;
-                right: 0.75rem !important;
-            }
         }
         """
 
