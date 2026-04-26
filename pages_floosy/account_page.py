@@ -568,6 +568,38 @@ def _safe_entitlement_date(month_key: str, due_day: int) -> date | None:
     return date(year_value, month_value, day_value)
 
 
+def _parse_iso_date(raw_value) -> date | None:
+    if isinstance(raw_value, datetime):
+        return raw_value.date()
+    if isinstance(raw_value, date):
+        return raw_value
+    raw_text = str(raw_value or "").strip()
+    if not raw_text:
+        return None
+    try:
+        return datetime.strptime(raw_text, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _latest_confirmed_tx_for_item(item: dict, transactions_by_month) -> dict | None:
+    latest_row = None
+    latest_key = None
+    for tx in _iter_transactions(transactions_by_month):
+        if not _monthly_transaction_matches_item(tx, item):
+            continue
+        tx_date = _parse_iso_date(tx.get("date"))
+        if tx_date is None:
+            continue
+        entitlement_key = str(tx.get("entitlement_month_key") or "").strip()
+        entitlement_parts = _month_key_to_parts(entitlement_key) or (0, 0)
+        candidate_key = (tx_date, entitlement_parts[0], entitlement_parts[1])
+        if latest_key is None or candidate_key > latest_key:
+            latest_key = candidate_key
+            latest_row = tx
+    return latest_row
+
+
 def _monthly_item_status_label(item: dict, pending: list[str], is_en: bool, today: date | None = None) -> str:
     if not isinstance(pending, list):
         pending = []
@@ -666,6 +698,8 @@ def _sync_monthly_item_after_transaction_delete(deleted_tx: dict, recurring_item
                 item["pending_entitlements"] = _sort_month_keys(pending)
                 changed = True
 
+        latest_confirmed_tx = _latest_confirmed_tx_for_item(item, transactions_by_month)
+
         if remaining_confirmed_keys:
             latest_paid = _sort_month_keys(remaining_confirmed_keys)[-1]
             if item.get("last_paid_month") != latest_paid:
@@ -673,6 +707,11 @@ def _sync_monthly_item_after_transaction_delete(deleted_tx: dict, recurring_item
                 changed = True
         elif item.get("last_paid_month") == entitlement_key:
             item["last_paid_month"] = ""
+            changed = True
+
+        latest_paid_date = str(latest_confirmed_tx.get("date") or "").strip() if latest_confirmed_tx else ""
+        if str(item.get("last_paid_date") or "").strip() != latest_paid_date:
+            item["last_paid_date"] = latest_paid_date
             changed = True
 
     return changed
@@ -814,6 +853,7 @@ def render(month_key: str, month: str, year: int):
                             "active": True,
                             "is_variable": bool(is_variable),
                             "last_paid_month": "",
+                            "last_paid_date": "",
                             "pending_entitlements": [],
                         }
                     )
@@ -955,12 +995,37 @@ def render(month_key: str, month: str, year: int):
             border_side = "border-left" if is_en else "border-right"
             item_currency = _currency_short_label(item.get("currency", currency), is_en)
             day_label = t("يوم الاستلام المتوقع", "Expected receipt day") if is_income else t("يوم الاستحقاق", "Due day")
+            oldest_pending_key = _sort_month_keys(pending)[0] if pending else ""
+            oldest_pending_label = _month_label_from_key(oldest_pending_key, is_en) if oldest_pending_key else ""
+            oldest_due_date = _safe_entitlement_date(oldest_pending_key, int(item.get("day", 1) or 1)) if oldest_pending_key else None
+            oldest_due_label = oldest_due_date.strftime("%Y-%m-%d") if oldest_due_date else ""
+            latest_confirmed_tx = _latest_confirmed_tx_for_item(item, st.session_state.get("transactions", {}))
+            latest_paid_month_key = str(item.get("last_paid_month") or "").strip()
+            latest_paid_month_label = _month_label_from_key(latest_paid_month_key, is_en) if latest_paid_month_key else ""
+            latest_paid_date_value = str(item.get("last_paid_date") or "").strip()
+            if not latest_paid_date_value and latest_confirmed_tx:
+                latest_paid_date_value = str(latest_confirmed_tx.get("date") or "").strip()
+            latest_paid_date_label = _parse_iso_date(latest_paid_date_value).strftime("%Y-%m-%d") if _parse_iso_date(latest_paid_date_value) else ""
+            due_summary = ""
+            if oldest_pending_label or oldest_due_label:
+                due_summary = (
+                    f"{t('أقدم شهر استحقاق', 'Oldest entitlement month')}: {oldest_pending_label} | "
+                    f"{t('تاريخ الاستحقاق', 'Entitlement date')}: {oldest_due_label}"
+                )
+            payment_summary = ""
+            if latest_paid_date_label or latest_paid_month_label:
+                payment_summary = (
+                    f"{t('آخر دفع/استلام', 'Last payment/receipt')}: {latest_paid_date_label or '-'} | "
+                    f"{t('شهر الاستحقاق المؤكد', 'Confirmed entitlement month')}: {latest_paid_month_label or '-'}"
+                )
 
             st.markdown(
                 f"""
                 <div style="background:#fff; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
                     <strong>{item.get('name',t('بدون اسم','Untitled'))}</strong> — {state_txt}<br/>
                     <span style="color:#6b7280;">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
+                    {f'<br/><span style="color:#6b7280;">{due_summary}</span>' if due_summary else ''}
+                    {f'<br/><span style="color:#6b7280;">{payment_summary}</span>' if payment_summary else ''}
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1073,6 +1138,7 @@ def render(month_key: str, month: str, year: int):
                         if entitlement_key in item.get("pending_entitlements", []):
                             item["pending_entitlements"].remove(entitlement_key)
                         item["last_paid_month"] = entitlement_key
+                        item["last_paid_date"] = pay_date.strftime("%Y-%m-%d")
                         if update_template:
                             item["amount"] = float(pay_amount)
                         st.session_state[pay_form_key] = False

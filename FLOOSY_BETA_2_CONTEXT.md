@@ -55,6 +55,11 @@ When adding future updates:
 ### 2026-04-26
 
 - Unified the sidebar period controls across all pages so the user always sees and can navigate by day, month, and year from one place instead of losing track between sections.
+- Monthly Items cards now show clearer real-life tracking data:
+  - oldest pending entitlement month
+  - calculated entitlement date from the due day
+  - last confirmed payment/receipt date
+  - confirmed entitlement month tied to that payment/receipt
 
 ### 2026-04-25
 
