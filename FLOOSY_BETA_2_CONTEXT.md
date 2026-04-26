@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-25
+Last updated: 2026-04-26
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -51,6 +51,10 @@ When adding future updates:
 
 - Added an explicit Context Capture Duty so future Codex/AI conversations proactively append important changes, scenarios, bugs, fixes, testing notes, and product decisions to this file without deleting prior history.
 - Added an explicit to-do/backlog capture rule so ideas and requested changes that are not implemented immediately are preserved for later review.
+
+### 2026-04-26
+
+- Unified the sidebar period controls across all pages so the user always sees and can navigate by day, month, and year from one place instead of losing track between sections.
 
 ### 2026-04-25
 

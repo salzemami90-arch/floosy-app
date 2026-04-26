@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import os
 import json
 import base64
@@ -1073,40 +1073,67 @@ hr {
     st.session_state.setdefault("_cloud_last_snapshot", "")
     st.session_state.setdefault("_cloud_last_pull_user", "")
 
+def _normalize_sidebar_reference_date(raw_value, fallback: date) -> date:
+    if isinstance(raw_value, datetime):
+        return raw_value.date()
+    if isinstance(raw_value, date):
+        return raw_value
+    if isinstance(raw_value, str):
+        try:
+            return datetime.strptime(raw_value.strip(), "%Y-%m-%d").date()
+        except Exception:
+            return fallback
+    return fallback
+
+
+def _last_day_of_month(year_value: int, month_value: int) -> int:
+    if month_value == 12:
+        next_month = datetime(year_value + 1, 1, 1)
+    else:
+        next_month = datetime(year_value, month_value + 1, 1)
+    return (next_month - timedelta(days=1)).day
+
+
 def get_month_selection(page: str):
     """
     ترجع (month_key, month, year)
-    تستخدم الـ sidebar لاختيار الشهر/السنة، ما عدا الإعدادات.
+    تستخدم الـ sidebar كتنقل موحد لليوم/الشهر/السنة في كل الصفحات.
     """
     lang = st.session_state.get("settings", {}).get("language", "العربية")
     is_en = lang == "English"
     t = (lambda ar, en: en if is_en else ar)
 
-    if page == "settings":
-        return None, None, None
-
     st.sidebar.markdown("---")
-    st.sidebar.subheader(t("الشهر المعروض", "Selected Month"))
+    st.sidebar.subheader(t("التاريخ المعروض", "Selected Date"))
 
-    now = datetime.now()
-    current_year = now.year
-    current_month_idx = now.month - 1
+    today_value = datetime.now().date()
+    reference_date = _normalize_sidebar_reference_date(st.session_state.get("_sidebar_reference_date"), today_value)
+    selected_day = st.sidebar.date_input(t("اليوم", "Day"), value=reference_date, key="sidebar_reference_day")
+    if isinstance(selected_day, tuple):
+        selected_day = selected_day[0] if selected_day else reference_date
+    reference_date = _normalize_sidebar_reference_date(selected_day, reference_date)
 
-    # للحساب / التوفير / مشروع صغير: نخلي المستخدم يختار
-    if page in ["account", "savings", "project", "tax"]:
-        year_options = list(range(2023, current_year + 3))
-        year_default_index = year_options.index(current_year)
+    year_options = list(range(2023, today_value.year + 3))
+    year_default_index = year_options.index(reference_date.year) if reference_date.year in year_options else year_options.index(today_value.year)
 
-        month_options = english_months if is_en else arabic_months
-        month_selected = st.sidebar.selectbox(t("الشهر", "Month"), month_options, index=current_month_idx)
-        year = st.sidebar.selectbox(t("السنة", "Year"), year_options, index=year_default_index)
-        month = arabic_months[english_months.index(month_selected)] if is_en else month_selected
-    else:
-        # الداشبورد / المحلل = الشهر الحالي
-        month = arabic_months[current_month_idx]
-        year = current_year
-        month_caption = english_months[current_month_idx] if is_en else month
-        st.sidebar.caption(f"{month_caption} {year}")
+    month_options = english_months if is_en else arabic_months
+    month_selected = st.sidebar.selectbox(
+        t("الشهر", "Month"),
+        month_options,
+        index=reference_date.month - 1,
+        key="sidebar_month_select",
+    )
+    year = st.sidebar.selectbox(
+        t("السنة", "Year"),
+        year_options,
+        index=year_default_index,
+        key="sidebar_year_select",
+    )
+    month_num = english_months.index(month_selected) + 1 if is_en else arabic_months.index(month_selected) + 1
+    resolved_day = min(reference_date.day, _last_day_of_month(year, month_num))
+    resolved_date = date(year, month_num, resolved_day)
+    st.session_state["_sidebar_reference_date"] = resolved_date.isoformat()
+    month = arabic_months[month_num - 1]
 
     month_key = f"{year}-{month}"
     return month_key, month, year
