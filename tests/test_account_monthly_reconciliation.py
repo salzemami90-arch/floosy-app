@@ -123,6 +123,7 @@ def test_overdue_income_visual_state_uses_warning_palette():
 
     assert visual["border"] == "#d97706"
     assert visual["background"] == "#fff7ed"
+    assert visual["title"] == "#9a3412"
 
 
 def test_expense_monthly_status_marks_passed_due_as_overdue():

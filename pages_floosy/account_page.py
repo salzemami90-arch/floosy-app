@@ -655,6 +655,8 @@ def _monthly_item_visual_state(item: dict, pending: list[str], today: date | Non
             "border": "#d97706",
             "background": "#fff7ed",
             "meta": "#b45309",
+            "title": "#9a3412",
+            "state": "#9a3412",
         }
     if is_income:
         return {
@@ -663,6 +665,8 @@ def _monthly_item_visual_state(item: dict, pending: list[str], today: date | Non
             "border": "#2563eb",
             "background": "#ffffff",
             "meta": "#6b7280",
+            "title": "#0f172a",
+            "state": "#0f172a",
         }
     if has_passed_due:
         return {
@@ -671,6 +675,8 @@ def _monthly_item_visual_state(item: dict, pending: list[str], today: date | Non
             "border": "#dc2626",
             "background": "#fef2f2",
             "meta": "#b91c1c",
+            "title": "#991b1b",
+            "state": "#991b1b",
         }
     return {
         "is_income": False,
@@ -678,6 +684,8 @@ def _monthly_item_visual_state(item: dict, pending: list[str], today: date | Non
         "border": "#dc2626",
         "background": "#ffffff",
         "meta": "#6b7280",
+        "title": "#0f172a",
+        "state": "#0f172a",
     }
 
 
@@ -1072,6 +1080,8 @@ def render(month_key: str, month: str, year: int):
             border = str(visual_state["border"])
             card_background = str(visual_state["background"])
             meta_color = str(visual_state["meta"])
+            title_color = str(visual_state["title"])
+            state_color = str(visual_state["state"])
             direction = "ltr" if is_en else "rtl"
             align = "left" if is_en else "right"
             border_side = "border-left" if is_en else "border-right"
@@ -1104,7 +1114,7 @@ def render(month_key: str, month: str, year: int):
             st.markdown(
                 f"""
                 <div style="background:{card_background}; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
-                    <strong>{item.get('name',t('بدون اسم','Untitled'))}</strong> — {state_txt}<br/>
+                    <strong style="color:{title_color};">{item.get('name',t('بدون اسم','Untitled'))}</strong> — <span style="color:{state_color}; font-weight:700;">{state_txt}</span><br/>
                     <span style="color:{meta_color};">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
                     {f'<br/><span style="color:{meta_color};">{due_summary}</span>' if due_summary else ''}
                     {f'<br/><span style="color:{meta_color};">{payment_summary}</span>' if payment_summary else ''}
