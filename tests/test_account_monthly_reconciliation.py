@@ -1,6 +1,7 @@
 from datetime import date
 
 from pages_floosy.account_page import (
+    _entitlement_date_label,
     _ensure_pending_month,
     _entitlement_options_for_item,
     _latest_confirmed_tx_for_item,
@@ -122,6 +123,13 @@ def test_entitlement_options_include_prior_month_for_late_income_receipt():
 
     assert "2026-فبراير" in options
     assert "2026-أبريل" in options
+
+
+def test_entitlement_date_label_shows_month_and_clamped_date():
+    label = _entitlement_date_label("2026-فبراير", 31, is_en=False)
+
+    assert "فبراير 2026" in label
+    assert "2026-02-28" in label
 
 
 def test_latest_confirmed_transaction_prefers_actual_latest_date():

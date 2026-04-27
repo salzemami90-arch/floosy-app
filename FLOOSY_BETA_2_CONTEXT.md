@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-26
+Last updated: 2026-04-27
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -46,6 +46,13 @@ When adding future updates:
 - Add the commit hash if available.
 - Summarize the product change, not only the code change.
 - Keep older entries. Do not delete history unless creating a cleaner Beta 3 context file.
+
+### 2026-04-27
+
+- Monthly Items management/confirmation UI is clearer now:
+  - the add form shows a current-month entitlement example from the chosen due/expected day
+  - the saved-items editor shows a current-month example plus last payment/receipt timing
+  - the confirm payment/receipt form now shows entitlement date, actual payment/receipt date, and the month where the transaction will be recorded
 
 ### 2026-04-20
 
@@ -157,6 +164,7 @@ Current working focus:
 - Dashboard Smart Summary improved, but still needs calmer logic when history is thin or the month is just starting.
 - Documents workflow exists, but still needs better structure for company paper use.
 - Hosted Remember Sign-In was improved technically, but real Safari testing still shows it as unreliable on the deployed beta.
+- Monthly Items timing is clearer in the UI now, but may still need a fully separate entitlement due-date field if real-life testing shows the preview approach is not enough.
 
 ### Still Open
 

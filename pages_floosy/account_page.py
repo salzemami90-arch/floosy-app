@@ -568,6 +568,13 @@ def _safe_entitlement_date(month_key: str, due_day: int) -> date | None:
     return date(year_value, month_value, day_value)
 
 
+def _entitlement_date_label(month_key: str, due_day: int, is_en: bool) -> str:
+    due_dt = _safe_entitlement_date(month_key, due_day)
+    if due_dt is None:
+        return ""
+    return f"{_month_label_from_key(month_key, is_en)} • {due_dt.strftime('%Y-%m-%d')}"
+
+
 def _parse_iso_date(raw_value) -> date | None:
     if isinstance(raw_value, datetime):
         return raw_value.date()
@@ -834,6 +841,11 @@ def render(month_key: str, month: str, year: int):
                     format_func=lambda opt: _currency_option_label(opt, is_en),
                 )
 
+            st.caption(
+                f"{t('مثال الاستحقاق الحالي', 'Current entitlement example')}: "
+                f"{_entitlement_date_label(month_key, int(due_day or 1), is_en)}"
+            )
+
             is_variable = st.checkbox(t("مبلغ متغير", "Variable Amount"), value=False)
             add_btn = st.form_submit_button(t("إضافة عنصر جديد", "Add New Item"), use_container_width=True)
 
@@ -916,6 +928,19 @@ def render(month_key: str, month: str, year: int):
                 new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
             with e8:
                 new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{i}")
+
+            current_example_label = _entitlement_date_label(month_key, int(new_day or 1), is_en)
+            last_confirmed_month_label = _month_label_from_key(str(item.get("last_paid_month") or "").strip(), is_en) if str(item.get("last_paid_month") or "").strip() else ""
+            last_paid_date_text = str(item.get("last_paid_date") or "").strip() or "-"
+            timeline_bits = [
+                f"{t('مثال الشهر الحالي', 'Current month example')}: {current_example_label or '-'}",
+                f"{t('آخر تاريخ دفع/استلام', 'Last payment/receipt date')}: {last_paid_date_text}",
+            ]
+            if last_confirmed_month_label:
+                timeline_bits.append(
+                    f"{t('آخر شهر استحقاق مؤكد', 'Last confirmed entitlement month')}: {last_confirmed_month_label}"
+                )
+            st.caption(" | ".join(timeline_bits))
 
             a1, a2 = st.columns(2)
             with a1:
@@ -1087,6 +1112,19 @@ def render(month_key: str, month: str, year: int):
                             format_func=lambda code: tax_label_by_code.get(code, code),
                             key=f"pay_tax_tag_{idx}",
                         )
+                    actual_payment_month_label = _month_label_from_key(
+                        _month_key_from_date(datetime.combine(pay_date, datetime.min.time())),
+                        is_en,
+                    )
+                    st.caption(
+                        " | ".join(
+                            [
+                                f"{t('تاريخ الاستحقاق', 'Entitlement date')}: {_entitlement_date_label(entitlement_key, int(item.get('day', 1) or 1), is_en) or '-'}",
+                                f"{t('تاريخ الدفع/الاستلام الفعلي', 'Actual payment/receipt date')}: {pay_date.strftime('%Y-%m-%d')}",
+                                f"{t('شهر تسجيل الحركة', 'Recorded payment month')}: {actual_payment_month_label}",
+                            ]
+                        )
+                    )
                     pay_proof = st.file_uploader(
                         t("إرفاق إثبات الدفع/الاستلام (اختياري)", "Attach Payment/Receipt Proof (Optional)"),
                         type=["png", "jpg", "jpeg", "pdf"],
