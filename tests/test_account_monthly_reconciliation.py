@@ -7,6 +7,7 @@ from pages_floosy.account_page import (
     _latest_confirmed_tx_for_item,
     _monthly_item_has_passed_due,
     _monthly_item_status_label,
+    _monthly_item_visual_state,
     _sync_monthly_item_after_transaction_delete,
 )
 
@@ -109,6 +110,19 @@ def test_income_monthly_due_detection_turns_true_after_expected_day():
     }
 
     assert _monthly_item_has_passed_due(item, ["2026-فبراير"], today=date(2026, 4, 19)) is True
+
+
+def test_overdue_income_visual_state_uses_warning_palette():
+    item = {
+        "name": "راتب شرق",
+        "type": "دخل",
+        "day": 15,
+    }
+
+    visual = _monthly_item_visual_state(item, ["2026-فبراير"], today=date(2026, 4, 19))
+
+    assert visual["border"] == "#d97706"
+    assert visual["background"] == "#fff7ed"
 
 
 def test_expense_monthly_status_marks_passed_due_as_overdue():

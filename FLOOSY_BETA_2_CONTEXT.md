@@ -54,7 +54,7 @@ When adding future updates:
   - the saved-items editor shows a current-month example plus last payment/receipt timing
   - the confirm payment/receipt form now shows entitlement date, actual payment/receipt date, and the month where the transaction will be recorded
 - Fixed a small RTL readability issue in Monthly Items so ISO-style dates render in a stable left-to-right order inside Arabic UI text.
-- Expected income that passes its expected day without being received now switches from the normal income-blue state to a warning color instead of looking unchanged.
+- Expected income that passes its expected day without being received now switches from the normal income-blue state to a warning palette instead of looking unchanged.
 
 ### 2026-04-20
 

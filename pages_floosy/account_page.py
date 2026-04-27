@@ -644,6 +644,43 @@ def _monthly_item_has_passed_due(item: dict, pending: list[str], today: date | N
     return any(due_dt is not None and due_dt < today_value for due_dt in due_dates)
 
 
+def _monthly_item_visual_state(item: dict, pending: list[str], today: date | None = None) -> dict[str, str | bool]:
+    is_income = item.get("type") == "دخل"
+    has_passed_due = _monthly_item_has_passed_due(item, pending, today=today)
+
+    if is_income and has_passed_due:
+        return {
+            "is_income": True,
+            "has_passed_due": True,
+            "border": "#d97706",
+            "background": "#fff7ed",
+            "meta": "#b45309",
+        }
+    if is_income:
+        return {
+            "is_income": True,
+            "has_passed_due": False,
+            "border": "#2563eb",
+            "background": "#ffffff",
+            "meta": "#6b7280",
+        }
+    if has_passed_due:
+        return {
+            "is_income": False,
+            "has_passed_due": True,
+            "border": "#dc2626",
+            "background": "#fef2f2",
+            "meta": "#b91c1c",
+        }
+    return {
+        "is_income": False,
+        "has_passed_due": False,
+        "border": "#dc2626",
+        "background": "#ffffff",
+        "meta": "#6b7280",
+    }
+
+
 def _entitlement_options_for_item(item: dict, month_key: str) -> list[str]:
     pending = item.get("pending_entitlements", [])
     if not isinstance(pending, list):
@@ -1028,14 +1065,13 @@ def render(month_key: str, month: str, year: int):
             pay_form_key = f"open_pay_form_{idx}"
             if not pending and st.session_state.get(pay_form_key, False):
                 st.session_state[pay_form_key] = False
-            is_income = item.get("type") == "دخل"
-            has_passed_due = _monthly_item_has_passed_due(item, pending)
+            visual_state = _monthly_item_visual_state(item, pending)
+            is_income = bool(visual_state["is_income"])
             state_txt = _monthly_item_status_label(item, pending, is_en)
             var_txt = t("متغير", "Variable") if item.get("is_variable", False) else t("ثابت", "Fixed")
-            if is_income:
-                border = "#d97706" if has_passed_due else "#2563eb"
-            else:
-                border = "#dc2626"
+            border = str(visual_state["border"])
+            card_background = str(visual_state["background"])
+            meta_color = str(visual_state["meta"])
             direction = "ltr" if is_en else "rtl"
             align = "left" if is_en else "right"
             border_side = "border-left" if is_en else "border-right"
@@ -1067,11 +1103,11 @@ def render(month_key: str, month: str, year: int):
 
             st.markdown(
                 f"""
-                <div style="background:#fff; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
+                <div style="background:{card_background}; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
                     <strong>{item.get('name',t('بدون اسم','Untitled'))}</strong> — {state_txt}<br/>
-                    <span style="color:#6b7280;">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
-                    {f'<br/><span style="color:#6b7280;">{due_summary}</span>' if due_summary else ''}
-                    {f'<br/><span style="color:#6b7280;">{payment_summary}</span>' if payment_summary else ''}
+                    <span style="color:{meta_color};">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
+                    {f'<br/><span style="color:{meta_color};">{due_summary}</span>' if due_summary else ''}
+                    {f'<br/><span style="color:{meta_color};">{payment_summary}</span>' if payment_summary else ''}
                 </div>
                 """,
                 unsafe_allow_html=True,
