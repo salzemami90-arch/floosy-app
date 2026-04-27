@@ -568,11 +568,18 @@ def _safe_entitlement_date(month_key: str, due_day: int) -> date | None:
     return date(year_value, month_value, day_value)
 
 
+def _ltr_token(value: str) -> str:
+    clean_value = str(value or "").strip()
+    if not clean_value:
+        return ""
+    return f"\u200e{clean_value}\u200e"
+
+
 def _entitlement_date_label(month_key: str, due_day: int, is_en: bool) -> str:
     due_dt = _safe_entitlement_date(month_key, due_day)
     if due_dt is None:
         return ""
-    return f"{_month_label_from_key(month_key, is_en)} • {due_dt.strftime('%Y-%m-%d')}"
+    return f"{_month_label_from_key(month_key, is_en)} • {_ltr_token(due_dt.strftime('%Y-%m-%d'))}"
 
 
 def _parse_iso_date(raw_value) -> date | None:
@@ -615,9 +622,7 @@ def _monthly_item_status_label(item: dict, pending: list[str], is_en: bool, toda
     if not clean_pending:
         return "Received" if is_en and is_income else "Paid" if is_en else "مستلم" if is_income else "مدفوع"
 
-    today_value = today or date.today()
-    due_dates = [_safe_entitlement_date(mk, int(item.get("day", 1) or 1)) for mk in clean_pending]
-    has_passed_due = any(due_dt is not None and due_dt < today_value for due_dt in due_dates)
+    has_passed_due = _monthly_item_has_passed_due(item, clean_pending, today=today)
     count_txt = f"{len(clean_pending)} {'month' if len(clean_pending) == 1 else 'months'}" if is_en else f"{len(clean_pending)} شهر"
 
     if is_income:
@@ -625,6 +630,18 @@ def _monthly_item_status_label(item: dict, pending: list[str], is_en: bool, toda
     else:
         state = "Overdue" if has_passed_due and is_en else "Awaiting payment" if is_en else "متأخر" if has_passed_due else "بانتظار الدفع"
     return f"{state}: {count_txt}"
+
+
+def _monthly_item_has_passed_due(item: dict, pending: list[str], today: date | None = None) -> bool:
+    if not isinstance(pending, list):
+        pending = []
+    clean_pending = _sort_month_keys([str(mk) for mk in pending if isinstance(mk, str) and mk.strip()])
+    if not clean_pending:
+        return False
+
+    today_value = today or date.today()
+    due_dates = [_safe_entitlement_date(mk, int(item.get("day", 1) or 1)) for mk in clean_pending]
+    return any(due_dt is not None and due_dt < today_value for due_dt in due_dates)
 
 
 def _entitlement_options_for_item(item: dict, month_key: str) -> list[str]:
@@ -1012,9 +1029,13 @@ def render(month_key: str, month: str, year: int):
             if not pending and st.session_state.get(pay_form_key, False):
                 st.session_state[pay_form_key] = False
             is_income = item.get("type") == "دخل"
+            has_passed_due = _monthly_item_has_passed_due(item, pending)
             state_txt = _monthly_item_status_label(item, pending, is_en)
             var_txt = t("متغير", "Variable") if item.get("is_variable", False) else t("ثابت", "Fixed")
-            border = "#2563eb" if is_income else "#dc2626"
+            if is_income:
+                border = "#d97706" if has_passed_due else "#2563eb"
+            else:
+                border = "#dc2626"
             direction = "ltr" if is_en else "rtl"
             align = "left" if is_en else "right"
             border_side = "border-left" if is_en else "border-right"
@@ -1023,14 +1044,14 @@ def render(month_key: str, month: str, year: int):
             oldest_pending_key = _sort_month_keys(pending)[0] if pending else ""
             oldest_pending_label = _month_label_from_key(oldest_pending_key, is_en) if oldest_pending_key else ""
             oldest_due_date = _safe_entitlement_date(oldest_pending_key, int(item.get("day", 1) or 1)) if oldest_pending_key else None
-            oldest_due_label = oldest_due_date.strftime("%Y-%m-%d") if oldest_due_date else ""
+            oldest_due_label = _ltr_token(oldest_due_date.strftime("%Y-%m-%d")) if oldest_due_date else ""
             latest_confirmed_tx = _latest_confirmed_tx_for_item(item, st.session_state.get("transactions", {}))
             latest_paid_month_key = str(item.get("last_paid_month") or "").strip()
             latest_paid_month_label = _month_label_from_key(latest_paid_month_key, is_en) if latest_paid_month_key else ""
             latest_paid_date_value = str(item.get("last_paid_date") or "").strip()
             if not latest_paid_date_value and latest_confirmed_tx:
                 latest_paid_date_value = str(latest_confirmed_tx.get("date") or "").strip()
-            latest_paid_date_label = _parse_iso_date(latest_paid_date_value).strftime("%Y-%m-%d") if _parse_iso_date(latest_paid_date_value) else ""
+            latest_paid_date_label = _ltr_token(_parse_iso_date(latest_paid_date_value).strftime("%Y-%m-%d")) if _parse_iso_date(latest_paid_date_value) else ""
             due_summary = ""
             if oldest_pending_label or oldest_due_label:
                 due_summary = (
@@ -1120,7 +1141,7 @@ def render(month_key: str, month: str, year: int):
                         " | ".join(
                             [
                                 f"{t('تاريخ الاستحقاق', 'Entitlement date')}: {_entitlement_date_label(entitlement_key, int(item.get('day', 1) or 1), is_en) or '-'}",
-                                f"{t('تاريخ الدفع/الاستلام الفعلي', 'Actual payment/receipt date')}: {pay_date.strftime('%Y-%m-%d')}",
+                                f"{t('تاريخ الدفع/الاستلام الفعلي', 'Actual payment/receipt date')}: {_ltr_token(pay_date.strftime('%Y-%m-%d'))}",
                                 f"{t('شهر تسجيل الحركة', 'Recorded payment month')}: {actual_payment_month_label}",
                             ]
                         )
