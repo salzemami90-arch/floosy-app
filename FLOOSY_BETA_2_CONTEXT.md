@@ -87,6 +87,10 @@ When adding future updates:
   - `init_session_state()` now clears the one-time restore guard when `cloud_auth` is missing a real access token
   - remembered sign-in also clears that restore guard just before the post-login reload
   - this targets the localhost case where a reused Streamlit session could keep the restore flag `True` and silently skip the actual restore attempt on refresh
+- Fixed the localhost first sign-in flow with Remember Sign-In enabled:
+  - localhost no longer forces a browser reload immediately after successful sign-in
+  - instead, it saves the remembered auth locally and uses a normal Streamlit rerun
+  - the hosted beta still keeps the browser reload path, while localhost avoids dropping back to the sign-in form right after the first successful login
 
 ### 2026-04-20
 

@@ -6,6 +6,7 @@ import streamlit as st
 from config_floosy import (
     CURRENCY_OPTIONS,
     PLAN_DEFINITIONS,
+    _local_persistence_enabled,
     export_app_state_payload,
     get_logo_bytes,
     get_plan_info,
@@ -1050,7 +1051,14 @@ def render():
 
                                 if remember_login:
                                     st.session_state["_cloud_cookie_restore_checked"] = False
-                                    remember_cloud_auth(clean_email, user_id, refresh_token, reload_after_write=True)
-                                    st.stop()
+                                    reload_after_write = not bool(_local_persistence_enabled())
+                                    remember_cloud_auth(
+                                        clean_email,
+                                        user_id,
+                                        refresh_token,
+                                        reload_after_write=reload_after_write,
+                                    )
+                                    if reload_after_write:
+                                        st.stop()
 
                                 st.rerun()
