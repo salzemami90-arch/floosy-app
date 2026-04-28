@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -55,6 +55,15 @@ When adding future updates:
   - the confirm payment/receipt form now shows entitlement date, actual payment/receipt date, and the month where the transaction will be recorded
 - Fixed a small RTL readability issue in Monthly Items so ISO-style dates render in a stable left-to-right order inside Arabic UI text.
 - Expected income that passes its expected day without being received now switches from the normal income-blue state to a warning palette instead of looking unchanged.
+
+### 2026-04-28
+
+- Hardened local-vs-cloud safety during Cloud sign-in and refresh restore:
+  - Floosy no longer auto-imports cloud data over meaningful local data when the two copies differ.
+  - If cloud data is different, local data stays on the device and auto-sync is paused until the user explicitly chooses `Load My Data` or `Save My Data`.
+  - If no cloud copy exists yet, local data stays on the device and auto-upload remains paused until the user explicitly chooses `Save My Data`.
+  - If cloud loading fails during sign-in/restore, local data stays on the device and auto-sync remains paused instead of risking an accidental overwrite.
+- Added explicit in-app cloud notices so the user can understand when Floosy is keeping local data, waiting for manual save, or asking for a manual cloud load.
 
 ### 2026-04-20
 
@@ -174,6 +183,7 @@ Current working focus:
 - Monthly Items may still need an explicit entitlement due date field beyond entitlement month + actual payment date.
 - Universal Search is still a planned idea, not an implemented feature yet.
 - Camera capture / mobile scan is still a planned idea, not an implemented feature yet.
+- Cloud first-login behavior now preserves local data safely, but still needs real-world testing across localhost vs hosted beta to confirm the user experience feels clear and not confusing.
 
 Most important product rule:
 

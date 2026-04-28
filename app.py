@@ -19,6 +19,14 @@ from services.cloud_auth_cookie import (
     read_cloud_auth_cookie,
     remember_cloud_auth,
 )
+from services.cloud_sync_guard import (
+    clear_cloud_sync_guard,
+    cloud_sync_ready_for_user,
+    mark_cloud_sync_ready,
+    payload_snapshot,
+    pause_cloud_auto_sync,
+    should_keep_local_data_before_auto_import,
+)
 from services.supabase_sync import SupabaseSyncClient
 
 
@@ -54,6 +62,7 @@ def _clear_scoped_finance_state() -> None:
     st.session_state["_persist_last_snapshot"] = ""
     st.session_state["_cloud_last_snapshot"] = ""
     st.session_state["_cloud_last_pull_user"] = ""
+    clear_cloud_sync_guard(st.session_state)
 
 
 def _set_cloud_snapshot_now(user_id: str = "") -> None:
@@ -111,20 +120,36 @@ def _restore_cloud_auth_from_cookie() -> None:
         st.session_state.settings["cloud_sync_enabled"] = True
     remember_cloud_auth(email, user_id, new_refresh_token)
 
+    local_payload = export_app_state_payload()
     pull = client.fetch_user_data(user_id, access_token)
-    if pull.get("ok") and pull.get("data") is not None:
-        import_app_state_payload(pull.get("data"))
+    remote_payload = pull.get("data") if isinstance(pull.get("data"), dict) else None
+
+    if pull.get("ok") and remote_payload is not None:
+        if should_keep_local_data_before_auto_import(local_payload, remote_payload):
+            st.session_state["_cloud_last_snapshot"] = payload_snapshot(remote_payload)
+            st.session_state["_cloud_last_pull_user"] = user_id
+            pause_cloud_auto_sync(st.session_state, user_id, reason="local_cloud_conflict_after_cookie_restore")
+            save_persistent_state()
+            return
+
+        import_app_state_payload(remote_payload)
         _set_scope_owner(user_id, email)
         _set_cloud_auth(True, email=email, user_id=user_id, access_token=access_token, refresh_token=new_refresh_token)
         _set_cloud_snapshot_now(user_id)
+        mark_cloud_sync_ready(st.session_state, user_id)
         if isinstance(st.session_state.get("settings"), dict):
             st.session_state.settings["cloud_sync_enabled"] = True
             st.session_state.settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
         save_persistent_state()
     elif pull.get("ok") and pull.get("data") is None:
-        _set_cloud_snapshot_now(user_id)
+        st.session_state["_cloud_last_snapshot"] = ""
+        st.session_state["_cloud_last_pull_user"] = user_id
+        pause_cloud_auto_sync(st.session_state, user_id, reason="cloud_empty_after_cookie_restore")
+        save_persistent_state()
     else:
         _set_cloud_snapshot_now(user_id)
+        pause_cloud_auto_sync(st.session_state, user_id, reason="pull_failed_after_cookie_restore")
+        save_persistent_state()
 
 
 def _sync_cloud_auth_cookie_preference() -> None:
@@ -162,6 +187,9 @@ def _sync_cloud_if_logged_in() -> None:
     if not user_id or not access_token:
         return
 
+    if not cloud_sync_ready_for_user(st.session_state, user_id):
+        return
+
     app_scope = st.session_state.get("app_scope", {})
     owner_user_id = ""
     if isinstance(app_scope, dict):
@@ -191,6 +219,7 @@ def _sync_cloud_if_logged_in() -> None:
     if push.get("ok"):
         st.session_state["_cloud_last_snapshot"] = snapshot
         st.session_state["_cloud_last_pull_user"] = user_id
+        mark_cloud_sync_ready(st.session_state, user_id)
         if isinstance(settings, dict):
             settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
             st.session_state["settings"] = settings
