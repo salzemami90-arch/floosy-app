@@ -88,6 +88,30 @@ def _render_cookie_script(value: str, max_age: int) -> None:
           const maxAge = {cookie_max_age};
           const expiry = maxAge === 0 ? "; expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
 
+          function collectWindows() {{
+            const wins = [];
+            let current = window;
+            while (current) {{
+              if (!wins.includes(current)) {{
+                wins.push(current);
+              }}
+              let nextWin = null;
+              try {{
+                nextWin = current.parent && current.parent !== current ? current.parent : null;
+              }} catch (error) {{
+                nextWin = null;
+              }}
+              if (!nextWin) break;
+              current = nextWin;
+            }}
+            try {{
+              if (window.top && !wins.includes(window.top)) {{
+                wins.push(window.top);
+              }}
+            }} catch (error) {{}}
+            return wins;
+          }}
+
           function safeHostname(win) {{
             try {{
               return String((win && win.location && win.location.hostname) || "").trim();
@@ -119,20 +143,10 @@ def _render_cookie_script(value: str, max_age: int) -> None:
             }}
           }}
 
-          const parentWin = (() => {{
-            try {{
-              return window.parent && window.parent !== window ? window.parent : null;
-            }} catch (error) {{
-              return null;
-            }}
-          }})();
+          const wins = collectWindows();
+          const hostnames = Array.from(new Set(wins.map((win) => safeHostname(win)).filter(Boolean)));
 
-          const hostnames = Array.from(new Set([
-            safeHostname(window),
-            safeHostname(parentWin),
-          ].filter(Boolean)));
-
-          const protocol = safeProtocol(parentWin) || safeProtocol(window);
+          const protocol = wins.map((win) => safeProtocol(win)).find(Boolean) || safeProtocol(window);
           const isHttps = protocol === "https:";
           const baseAttrs = `path=/; max-age=${{maxAge}}${{expiry}}`;
           const variants = [
@@ -146,12 +160,13 @@ def _render_cookie_script(value: str, max_age: int) -> None:
             );
           }}
 
-          const targets = [document];
-          try {{
-            if (parentWin && parentWin.document) {{
-              targets.push(parentWin.document);
+          const targets = Array.from(new Set(wins.map((win) => {{
+            try {{
+              return win && win.document ? win.document : null;
+            }} catch (error) {{
+              return null;
             }}
-          }} catch (error) {{}}
+          }}).filter(Boolean)));
 
           for (const targetDoc of targets) {{
             for (const variant of variants) {{
@@ -164,10 +179,7 @@ def _render_cookie_script(value: str, max_age: int) -> None:
             }}
           }}
 
-          const storages = Array.from(new Set([
-            getStorage(window),
-            getStorage(parentWin),
-          ].filter(Boolean)));
+          const storages = Array.from(new Set(wins.map((win) => getStorage(win)).filter(Boolean)));
 
           for (const storage of storages) {{
             try {{
@@ -217,12 +229,28 @@ def bootstrap_cloud_auth_from_storage() -> None:
           const maxAge = {cookie_max_age};
           const bootFlag = `${{storageName}}_bootstrap_done`;
 
-          function safeParent() {{
-            try {{
-              return window.parent && window.parent !== window ? window.parent : null;
-            }} catch (error) {{
-              return null;
+          function collectWindows() {{
+            const wins = [];
+            let current = window;
+            while (current) {{
+              if (!wins.includes(current)) {{
+                wins.push(current);
+              }}
+              let nextWin = null;
+              try {{
+                nextWin = current.parent && current.parent !== current ? current.parent : null;
+              }} catch (error) {{
+                nextWin = null;
+              }}
+              if (!nextWin) break;
+              current = nextWin;
             }}
+            try {{
+              if (window.top && !wins.includes(window.top)) {{
+                wins.push(window.top);
+              }}
+            }} catch (error) {{}}
+            return wins;
           }}
 
           function getStorage(targetWin) {{
@@ -275,26 +303,16 @@ def bootstrap_cloud_auth_from_storage() -> None:
               return "";
             }}
           }}
-
-          const parentWin = safeParent();
-          const storages = Array.from(new Set([
-            getStorage(window),
-            getStorage(parentWin),
-          ].filter(Boolean)));
-          const sessionStores = Array.from(new Set([
-            getSessionStorage(window),
-            getSessionStorage(parentWin),
-          ].filter(Boolean)));
-          const docs = Array.from(new Set([
-            document,
-            (() => {{
-              try {{
-                return parentWin && parentWin.document ? parentWin.document : null;
-              }} catch (error) {{
-                return null;
-              }}
-            }})(),
-          ].filter(Boolean)));
+          const wins = collectWindows();
+          const storages = Array.from(new Set(wins.map((win) => getStorage(win)).filter(Boolean)));
+          const sessionStores = Array.from(new Set(wins.map((win) => getSessionStorage(win)).filter(Boolean)));
+          const docs = Array.from(new Set(wins.map((win) => {{
+            try {{
+              return win && win.document ? win.document : null;
+            }} catch (error) {{
+              return null;
+            }}
+          }}).filter(Boolean)));
 
           const cookieExists = docs.some((targetDoc) => !!readCookie(targetDoc, cookieName));
           if (cookieExists) {{
@@ -336,7 +354,7 @@ def bootstrap_cloud_auth_from_storage() -> None:
             return;
           }}
 
-          const protocol = safeProtocol(parentWin) || safeProtocol(window);
+          const protocol = wins.map((win) => safeProtocol(win)).find(Boolean) || safeProtocol(window);
           const isHttps = protocol === "https:";
           const expiry = "";
           const baseAttrs = `path=/; max-age=${{maxAge}}${{expiry}}`;
@@ -351,10 +369,7 @@ def bootstrap_cloud_auth_from_storage() -> None:
             );
           }}
 
-          const hostnames = Array.from(new Set([
-            safeHostname(window),
-            safeHostname(parentWin),
-          ].filter(Boolean)));
+          const hostnames = Array.from(new Set(wins.map((win) => safeHostname(win)).filter(Boolean)));
 
           for (const targetDoc of docs) {{
             for (const variant of variants) {{
@@ -373,12 +388,15 @@ def bootstrap_cloud_auth_from_storage() -> None:
             }} catch (error) {{}}
           }}
 
-          try {{
-            if (parentWin && parentWin.location) {{
-              parentWin.location.reload();
-              return;
-            }}
-          }} catch (error) {{}}
+          const reloadTargets = wins.slice().reverse();
+          for (const targetWin of reloadTargets) {{
+            try {{
+              if (targetWin && targetWin.location) {{
+                targetWin.location.replace(String(targetWin.location.href || ""));
+                return;
+              }}
+            }} catch (error) {{}}
+          }}
 
           try {{
             window.location.reload();

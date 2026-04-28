@@ -26,7 +26,9 @@ def test_remember_cloud_auth_renders_hosted_cookie_variants(monkeypatch):
     assert "Partitioned" in html
     assert "localStorage" in html
     assert "floosy_cloud_auth_storage" in html
-    assert "window.parent" in html
+    assert "window.top" in html
+    assert "collectWindows" in html
+    assert "current.parent && current.parent !== current" in html
     assert "domain=${hostname}" in html
     assert captured["height"] == 0
     assert captured["width"] == 0
@@ -123,7 +125,9 @@ def test_bootstrap_cloud_auth_from_storage_renders_reload_bridge(monkeypatch):
     html = captured["html"]
     assert "floosy_cloud_auth_storage" in html
     assert "sessionStorage" in html
-    assert "location.reload" in html
+    assert "location.replace" in html
     assert "bootFlag" in html
+    assert "collectWindows" in html
+    assert "window.top" in html
     assert captured["height"] == 0
     assert captured["width"] == 0

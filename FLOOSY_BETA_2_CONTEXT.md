@@ -64,6 +64,8 @@ When adding future updates:
   - If no cloud copy exists yet, local data stays on the device and auto-upload remains paused until the user explicitly chooses `Save My Data`.
   - If cloud loading fails during sign-in/restore, local data stays on the device and auto-sync remains paused instead of risking an accidental overwrite.
 - Added explicit in-app cloud notices so the user can understand when Floosy is keeping local data, waiting for manual save, or asking for a manual cloud load.
+- Broadened hosted Remember Sign-In recovery logic so cookie/localStorage bootstrap now tries all accessible frame/window contexts, not only the immediate parent frame.
+- Added regression coverage for the wider hosted frame-chain cookie/bootstrap behavior before more Safari testing on the deployed beta.
 
 ### 2026-04-20
 
@@ -507,6 +509,7 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 
 - Hosted Safari Remember Sign-In still fails after refresh on `floosy-beta.streamlit.app` even after cookie, header, and localStorage fallback attempts.
   Current status: unresolved on deployed Safari/browser behavior.
+  Latest engineering attempt: frame-chain cookie/localStorage bootstrap was widened on 2026-04-28 and still needs real deployed Safari verification.
   Practical workaround for now: sign in manually and rely on browser password autofill until auth persistence is redesigned or replaced.
 
 - Monthly Items need real-life testing with:
