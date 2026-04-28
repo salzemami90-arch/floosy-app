@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from http.cookies import SimpleCookie
+from pathlib import Path
 from urllib.parse import unquote
 
 import streamlit as st
@@ -12,6 +13,11 @@ import streamlit.components.v1 as components
 COOKIE_NAME = "floosy_cloud_auth"
 STORAGE_NAME = "floosy_cloud_auth_storage"
 COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+_BROWSER_STORAGE_PENDING = "__PENDING__"
+_BROWSER_STORAGE_BRIDGE = components.declare_component(
+    "cloud_auth_browser_bridge",
+    path=str(Path(__file__).resolve().parent.parent / "components" / "cloud_auth_browser_bridge"),
+)
 
 
 def _encode_payload(payload: dict) -> str:
@@ -30,6 +36,19 @@ def _decode_payload(raw_value: str) -> dict:
     except Exception:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _extract_auth_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+    refresh_token = str(payload.get("refresh_token") or "").strip()
+    if not refresh_token:
+        return {}
+    return {
+        "email": str(payload.get("email") or "").strip(),
+        "user_id": str(payload.get("user_id") or "").strip(),
+        "refresh_token": refresh_token,
+    }
 
 
 def read_cloud_auth_cookie() -> dict:
@@ -63,15 +82,27 @@ def read_cloud_auth_cookie() -> dict:
             if morsel is not None:
                 raw_value = morsel.value
 
-    payload = _decode_payload(raw_value)
-    refresh_token = str(payload.get("refresh_token") or "").strip()
-    if not refresh_token:
-        return {}
-    return {
-        "email": str(payload.get("email") or "").strip(),
-        "user_id": str(payload.get("user_id") or "").strip(),
-        "refresh_token": refresh_token,
-    }
+    return _extract_auth_payload(_decode_payload(raw_value))
+
+
+def sync_cloud_auth_browser_storage(payload: dict | None = None, *, clear: bool = False) -> tuple[dict, bool]:
+    encoded_value = ""
+    if not clear and isinstance(payload, dict):
+        normalized_payload = _extract_auth_payload(payload)
+        if normalized_payload:
+            encoded_value = _encode_payload(normalized_payload)
+
+    raw_value = _BROWSER_STORAGE_BRIDGE(
+        storageName=STORAGE_NAME,
+        value=encoded_value,
+        action="clear" if clear else "sync",
+        default=_BROWSER_STORAGE_PENDING,
+        key="cloud_auth_browser_bridge",
+    )
+    if raw_value == _BROWSER_STORAGE_PENDING:
+        return {}, False
+
+    return _extract_auth_payload(_decode_payload(str(raw_value or ""))), True
 
 
 def _render_cookie_script(value: str, max_age: int) -> None:

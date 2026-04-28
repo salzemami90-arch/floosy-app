@@ -5,6 +5,7 @@ from services.cloud_auth_cookie import (
     clear_cloud_auth_cookie,
     read_cloud_auth_cookie,
     remember_cloud_auth,
+    sync_cloud_auth_browser_storage,
 )
 
 
@@ -131,3 +132,68 @@ def test_bootstrap_cloud_auth_from_storage_renders_reload_bridge(monkeypatch):
     assert "window.top" in html
     assert captured["height"] == 0
     assert captured["width"] == 0
+
+
+def test_sync_cloud_auth_browser_storage_returns_pending_until_frontend_replies(monkeypatch):
+    monkeypatch.setattr(
+        "services.cloud_auth_cookie._BROWSER_STORAGE_BRIDGE",
+        lambda **kwargs: "__PENDING__",
+    )
+
+    payload, ready = sync_cloud_auth_browser_storage()
+
+    assert payload == {}
+    assert ready is False
+
+
+def test_sync_cloud_auth_browser_storage_decodes_returned_payload(monkeypatch):
+    service = __import__("services.cloud_auth_cookie", fromlist=["dummy"])
+    encoded = service._encode_payload(
+        {
+            "email": "user@example.com",
+            "user_id": "user-123",
+            "refresh_token": "refresh-token-xyz",
+        }
+    )
+
+    captured = {}
+
+    def fake_component(**kwargs):
+        captured.update(kwargs)
+        return encoded
+
+    monkeypatch.setattr("services.cloud_auth_cookie._BROWSER_STORAGE_BRIDGE", fake_component)
+
+    payload, ready = sync_cloud_auth_browser_storage(
+        {
+            "email": "user@example.com",
+            "user_id": "user-123",
+            "refresh_token": "refresh-token-xyz",
+        }
+    )
+
+    assert ready is True
+    assert payload == {
+        "email": "user@example.com",
+        "user_id": "user-123",
+        "refresh_token": "refresh-token-xyz",
+    }
+    assert captured["action"] == "sync"
+    assert captured["storageName"] == "floosy_cloud_auth_storage"
+
+
+def test_sync_cloud_auth_browser_storage_can_clear_saved_value(monkeypatch):
+    captured = {}
+
+    def fake_component(**kwargs):
+        captured.update(kwargs)
+        return ""
+
+    monkeypatch.setattr("services.cloud_auth_cookie._BROWSER_STORAGE_BRIDGE", fake_component)
+
+    payload, ready = sync_cloud_auth_browser_storage(clear=True)
+
+    assert ready is True
+    assert payload == {}
+    assert captured["action"] == "clear"
+    assert captured["value"] == ""

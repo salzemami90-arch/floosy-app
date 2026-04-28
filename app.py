@@ -18,6 +18,7 @@ from services.cloud_auth_cookie import (
     clear_cloud_auth_cookie,
     read_cloud_auth_cookie,
     remember_cloud_auth,
+    sync_cloud_auth_browser_storage,
 )
 from services.cloud_sync_guard import (
     clear_cloud_sync_guard,
@@ -74,27 +75,58 @@ def _set_cloud_snapshot_now(user_id: str = "") -> None:
     st.session_state["_cloud_last_pull_user"] = str(user_id or "")
 
 
-def _restore_cloud_auth_from_cookie() -> None:
+def _sync_cloud_auth_browser_bridge() -> tuple[dict, bool]:
+    clear_requested = bool(st.session_state.pop("_cloud_browser_storage_clear_requested", False))
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    remember_login = st.session_state.get("_cloud_remember_login")
+
+    payload = None
+    if (
+        not clear_requested
+        and isinstance(cloud_auth, dict)
+        and cloud_auth.get("logged_in")
+        and cloud_auth.get("refresh_token")
+        and remember_login is not False
+    ):
+        payload = {
+            "email": str(cloud_auth.get("email") or ""),
+            "user_id": str(cloud_auth.get("user_id") or ""),
+            "refresh_token": str(cloud_auth.get("refresh_token") or ""),
+        }
+
+    return sync_cloud_auth_browser_storage(payload, clear=clear_requested)
+
+
+def _restore_cloud_auth_from_cookie(browser_storage_auth: dict | None = None, browser_storage_ready: bool = True) -> None:
     if st.session_state.get("_cloud_cookie_restore_checked", False):
         return
-    st.session_state["_cloud_cookie_restore_checked"] = True
 
     cloud_auth = st.session_state.get("cloud_auth", {})
     if isinstance(cloud_auth, dict) and cloud_auth.get("logged_in") and cloud_auth.get("access_token"):
+        st.session_state["_cloud_cookie_restore_checked"] = True
         return
 
     remembered_auth = read_cloud_auth_cookie()
+    if not remembered_auth:
+        if not browser_storage_ready:
+            return
+        remembered_auth = browser_storage_auth or {}
+
     refresh_token = str(remembered_auth.get("refresh_token") or "").strip()
     if not refresh_token:
+        st.session_state["_cloud_cookie_restore_checked"] = True
         return
 
     client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
     if not client.is_configured:
+        st.session_state["_cloud_cookie_restore_checked"] = True
         return
 
+    st.session_state["_cloud_cookie_restore_checked"] = True
     refreshed = client.refresh_session(refresh_token)
     if not refreshed.get("ok"):
         clear_cloud_auth_cookie()
+        st.session_state["_cloud_browser_storage_clear_requested"] = True
         return
 
     access_token = str(refreshed.get("access_token") or "")
@@ -105,6 +137,7 @@ def _restore_cloud_auth_from_cookie() -> None:
 
     if not access_token or not user_id:
         clear_cloud_auth_cookie()
+        st.session_state["_cloud_browser_storage_clear_requested"] = True
         return
 
     previous_owner = ""
@@ -279,8 +312,9 @@ def main():
 
     # تهيئة عامة (session_state + css إن كانت داخل config_floosy)
     init_session_state()
+    browser_storage_auth, browser_storage_ready = _sync_cloud_auth_browser_bridge()
     bootstrap_cloud_auth_from_storage()
-    _restore_cloud_auth_from_cookie()
+    _restore_cloud_auth_from_cookie(browser_storage_auth, browser_storage_ready)
     _sync_cloud_auth_cookie_preference()
 
     # تحميل الصفحات بشكل آمن

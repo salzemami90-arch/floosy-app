@@ -592,6 +592,7 @@ def render():
                     _set_cloud_auth(False)
                     st.session_state["_cloud_remember_login"] = False
                     clear_cloud_auth_cookie()
+                    st.session_state["_cloud_browser_storage_clear_requested"] = True
                     st.session_state["_cloud_last_pull_user"] = ""
                     st.success(t("تم تسجيل الخروج.", "Signed out."))
                     st.rerun()
@@ -680,6 +681,7 @@ def render():
                     _set_cloud_auth(False)
                     st.session_state["_cloud_remember_login"] = False
                     clear_cloud_auth_cookie()
+                    st.session_state["_cloud_browser_storage_clear_requested"] = True
                     st.session_state["_cloud_last_pull_user"] = ""
                     clear_cloud_sync_guard(st.session_state)
                     st.success(t("تم تسجيل الخروج.", "Signed out."))
@@ -754,6 +756,7 @@ def render():
                         _set_cloud_auth(False)
                         st.session_state["_cloud_remember_login"] = False
                         clear_cloud_auth_cookie()
+                        st.session_state["_cloud_browser_storage_clear_requested"] = True
                         _set_scope_owner("", "")
                         st.session_state["_cloud_last_snapshot"] = ""
                         st.session_state["_cloud_last_pull_user"] = ""
@@ -903,6 +906,7 @@ def render():
                                     remember_cloud_auth(clean_email, user_id, refresh_token)
                                 else:
                                     clear_cloud_auth_cookie()
+                                    st.session_state["_cloud_browser_storage_clear_requested"] = True
                                 _set_scope_owner(user_id, clean_email)
 
                                 local_payload = export_app_state_payload()
