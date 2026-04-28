@@ -76,6 +76,7 @@ When adding future updates:
   - on local runs, Floosy now keeps the remembered cloud refresh token in a separate local-only auth store on the same device
   - this protects localhost refresh persistence even if browser cookie/localStorage restoration is flaky
   - the fallback is local-only and separate from exported/cloud-synced app data
+  - local detection now also respects Floosy's own local-persistence signal, so the localhost fallback still writes even if the browser URL is temporarily blank
 
 ### 2026-04-20
 

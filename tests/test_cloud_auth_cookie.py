@@ -146,6 +146,26 @@ def test_read_cloud_auth_cookie_falls_back_to_local_backup_on_localhost(monkeypa
     }
 
 
+def test_remember_cloud_auth_uses_config_local_persistence_signal(monkeypatch):
+    fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url=""))
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+
+    captured = {}
+
+    def fake_save(path, payload):
+        captured["path"] = path
+        captured["payload"] = payload
+        return True
+
+    monkeypatch.setattr("services.cloud_auth_cookie.save_sqlite_payload", fake_save)
+    monkeypatch.setattr("services.cloud_auth_cookie.components.html", lambda html, height=0, width=0: None)
+    monkeypatch.setattr("config_floosy._local_persistence_enabled", lambda: True)
+
+    remember_cloud_auth("user@example.com", "user-123", "refresh-token-xyz")
+
+    assert captured["payload"]["refresh_token"] == "refresh-token-xyz"
+
+
 def test_bootstrap_cloud_auth_from_storage_renders_reload_bridge(monkeypatch):
     captured = {}
 

@@ -87,6 +87,14 @@ def _runtime_url() -> str:
 
 
 def _is_local_runtime() -> bool:
+    try:
+        from config_floosy import _local_persistence_enabled  # lazy import to avoid startup cycles
+
+        if bool(_local_persistence_enabled()):
+            return True
+    except Exception:
+        pass
+
     runtime_url = _runtime_url().strip().lower()
     return "://localhost" in runtime_url or "://127.0.0.1" in runtime_url or "://0.0.0.0" in runtime_url
 
