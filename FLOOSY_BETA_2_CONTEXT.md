@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-28
+Last updated: 2026-04-29
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -77,6 +77,16 @@ When adding future updates:
   - this protects localhost refresh persistence even if browser cookie/localStorage restoration is flaky
   - the fallback is local-only and separate from exported/cloud-synced app data
   - local detection now also respects Floosy's own local-persistence signal, so the localhost fallback still writes even if the browser URL is temporarily blank
+
+### 2026-04-29
+
+- Continued narrowing the Cloud Remember Sign-In difference between hosted beta and localhost:
+  - hosted beta was restoring the remembered session correctly
+  - localhost was still returning to the sign-in form after refresh even though the remembered auth fallback file was already being written
+- Fixed the localhost restore flow so the cloud-auth restore check is reopened whenever the session is not truly logged in:
+  - `init_session_state()` now clears the one-time restore guard when `cloud_auth` is missing a real access token
+  - remembered sign-in also clears that restore guard just before the post-login reload
+  - this targets the localhost case where a reused Streamlit session could keep the restore flag `True` and silently skip the actual restore attempt on refresh
 
 ### 2026-04-20
 

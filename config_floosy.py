@@ -1088,6 +1088,8 @@ hr {
     st.session_state["cloud_auth"].setdefault("user_id", "")
     st.session_state["cloud_auth"].setdefault("access_token", "")
     st.session_state["cloud_auth"].setdefault("refresh_token", "")
+    if not bool(st.session_state["cloud_auth"].get("logged_in")) or not str(st.session_state["cloud_auth"].get("access_token") or "").strip():
+        st.session_state["_cloud_cookie_restore_checked"] = False
     st.session_state.setdefault("_cloud_last_snapshot", "")
     st.session_state.setdefault("_cloud_last_pull_user", "")
 

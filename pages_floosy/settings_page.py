@@ -1049,6 +1049,7 @@ def render():
                                     st.caption(post_login_caption)
 
                                 if remember_login:
+                                    st.session_state["_cloud_cookie_restore_checked"] = False
                                     remember_cloud_auth(clean_email, user_id, refresh_token, reload_after_write=True)
                                     st.stop()
 
