@@ -780,8 +780,26 @@ div[data-testid="stForm"] {
 .stForm [data-testid="stFormSubmitButton"] button {
     background: linear-gradient(135deg, var(--brand-1), var(--brand-2)) !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     border: 0 !important;
     box-shadow: 0 10px 24px rgba(15, 95, 140, 0.18) !important;
+}
+
+.stButton button[kind="primary"] {
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-2)) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: 0 !important;
+    box-shadow: 0 10px 24px rgba(15, 95, 140, 0.18) !important;
+}
+
+.stForm [data-testid="stFormSubmitButton"] button:disabled,
+.stButton button[kind="primary"]:disabled {
+    color: rgba(255, 255, 255, 0.96) !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.96) !important;
+    opacity: 1 !important;
+    filter: saturate(0.78) brightness(0.96) !important;
+    cursor: not-allowed !important;
 }
 
 .stButton button:hover,
