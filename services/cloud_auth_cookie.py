@@ -105,7 +105,7 @@ def sync_cloud_auth_browser_storage(payload: dict | None = None, *, clear: bool 
     return _extract_auth_payload(_decode_payload(str(raw_value or ""))), True
 
 
-def _render_cookie_script(value: str, max_age: int) -> None:
+def _render_cookie_script(value: str, max_age: int, *, reload_after_write: bool = False) -> None:
     cookie_name = json.dumps(COOKIE_NAME)
     storage_name = json.dumps(STORAGE_NAME)
     cookie_value = json.dumps(value)
@@ -118,6 +118,7 @@ def _render_cookie_script(value: str, max_age: int) -> None:
           const value = encodeURIComponent({cookie_value});
           const maxAge = {cookie_max_age};
           const expiry = maxAge === 0 ? "; expires=Thu, 01 Jan 1970 00:00:00 GMT" : "";
+          const shouldReloadAfterWrite = {"true" if reload_after_write else "false"};
 
           function collectWindows() {{
             const wins = [];
@@ -221,6 +222,18 @@ def _render_cookie_script(value: str, max_age: int) -> None:
               }}
             }} catch (error) {{}}
           }}
+
+          if (shouldReloadAfterWrite) {{
+            window.setTimeout(() => {{
+              try {{
+                window.location.replace(String(window.location.href || ""));
+                return;
+              }} catch (error) {{}}
+              try {{
+                window.location.reload();
+              }} catch (error) {{}}
+            }}, 40);
+          }}
         }})();
         </script>
         """,
@@ -229,7 +242,7 @@ def _render_cookie_script(value: str, max_age: int) -> None:
     )
 
 
-def remember_cloud_auth(email: str, user_id: str, refresh_token: str) -> None:
+def remember_cloud_auth(email: str, user_id: str, refresh_token: str, *, reload_after_write: bool = False) -> None:
     clean_refresh_token = str(refresh_token or "").strip()
     if not clean_refresh_token:
         return
@@ -240,7 +253,7 @@ def remember_cloud_auth(email: str, user_id: str, refresh_token: str) -> None:
             "refresh_token": clean_refresh_token,
         }
     )
-    _render_cookie_script(value, COOKIE_MAX_AGE_SECONDS)
+    _render_cookie_script(value, COOKIE_MAX_AGE_SECONDS, reload_after_write=reload_after_write)
 
 
 def clear_cloud_auth_cookie() -> None:

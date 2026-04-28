@@ -969,9 +969,7 @@ def render():
                                     refresh_token=refresh_token,
                                 )
                                 st.session_state["_cloud_remember_login"] = bool(remember_login)
-                                if remember_login:
-                                    remember_cloud_auth(clean_email, user_id, refresh_token)
-                                else:
+                                if not remember_login:
                                     clear_cloud_auth_cookie()
                                     st.session_state["_cloud_browser_storage_clear_requested"] = True
                                 _set_scope_owner(user_id, clean_email)
@@ -979,6 +977,9 @@ def render():
                                 local_payload = export_app_state_payload()
                                 pull = client.fetch_user_data(user_id, access_token)
                                 remote_payload = pull.get("data") if isinstance(pull.get("data"), dict) else None
+                                post_login_message = ""
+                                post_login_caption = ""
+                                post_login_message_type = "info"
                                 if pull.get("ok") and remote_payload is not None:
                                     if should_keep_local_data_before_auto_import(local_payload, remote_payload):
                                         pause_cloud_auto_sync(
@@ -989,22 +990,22 @@ def render():
                                         st.session_state["_cloud_last_snapshot"] = payload_snapshot(remote_payload)
                                         st.session_state["_cloud_last_pull_user"] = user_id
                                         save_persistent_state()
-                                        st.warning(
-                                            t(
-                                                "تم تسجيل الدخول، لكن وجدنا بيانات محلية مختلفة عن نسخة السحابة. أبقينا بيانات هذا الجهاز كما هي. استخدم تحميل بياناتي إذا أردت استبدالها بنسخة السحابة، أو حفظ بياناتي إذا أردت رفع الحالية.",
-                                                "Signed in, but we found local data that differs from the cloud copy. This device kept its current local data. Use Load My Data to replace it with the cloud copy, or Save My Data to upload the current local data.",
-                                            )
+                                        post_login_message_type = "warning"
+                                        post_login_message = t(
+                                            "تم تسجيل الدخول، لكن وجدنا بيانات محلية مختلفة عن نسخة السحابة. أبقينا بيانات هذا الجهاز كما هي. استخدم تحميل بياناتي إذا أردت استبدالها بنسخة السحابة، أو حفظ بياناتي إذا أردت رفع الحالية.",
+                                            "Signed in, but we found local data that differs from the cloud copy. This device kept its current local data. Use Load My Data to replace it with the cloud copy, or Save My Data to upload the current local data.",
                                         )
-                                        st.rerun()
+                                    else:
+                                        import_app_state_payload(remote_payload)
+                                        _set_scope_owner(user_id, clean_email)
+                                        st.session_state["_cloud_last_pull_user"] = user_id
+                                        mark_cloud_sync_ready(st.session_state, user_id)
+                                        _mark_cloud_sync_now()
+                                        _sync_snapshot_from_state()
+                                        save_persistent_state()
+                                        post_login_message_type = "success"
+                                        post_login_message = t("تم تسجيل الدخول وتحميل بياناتك.", "Signed in and data loaded.")
 
-                                    import_app_state_payload(remote_payload)
-                                    _set_scope_owner(user_id, clean_email)
-                                    st.session_state["_cloud_last_pull_user"] = user_id
-                                    mark_cloud_sync_ready(st.session_state, user_id)
-                                    _mark_cloud_sync_now()
-                                    _sync_snapshot_from_state()
-                                    save_persistent_state()
-                                    st.success(t("تم تسجيل الدخول وتحميل بياناتك.", "Signed in and data loaded."))
                                 elif pull.get("ok") and pull.get("data") is None:
                                     _set_scope_owner(user_id, clean_email)
                                     st.session_state["_cloud_last_pull_user"] = user_id
@@ -1015,13 +1016,15 @@ def render():
                                         reason="cloud_empty_after_sign_in",
                                     )
                                     save_persistent_state()
-                                    st.info(
-                                        t(
-                                            "تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حاليًا، وبيانات هذا الجهاز بقيت كما هي.",
-                                            "Signed in. No cloud data exists yet, and this device kept its current local data.",
-                                        )
+                                    post_login_message_type = "info"
+                                    post_login_message = t(
+                                        "تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حاليًا، وبيانات هذا الجهاز بقيت كما هي.",
+                                        "Signed in. No cloud data exists yet, and this device kept its current local data.",
                                     )
-                                    st.caption(t("إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر حفظ بياناتي.", "If you want to create a new cloud copy, use Save My Data."))
+                                    post_login_caption = t(
+                                        "إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر حفظ بياناتي.",
+                                        "If you want to create a new cloud copy, use Save My Data.",
+                                    )
                                 else:
                                     pause_cloud_auto_sync(
                                         st.session_state,
@@ -1029,6 +1032,24 @@ def render():
                                         reason="pull_failed_after_sign_in",
                                     )
                                     save_persistent_state()
-                                    st.warning(t("تم تسجيل الدخول، لكن تعذر تحميل البيانات السحابية الآن. أبقينا بيانات هذا الجهاز كما هي.", "Signed in, but failed to load cloud data now. This device kept its current local data."))
+                                    post_login_message_type = "warning"
+                                    post_login_message = t(
+                                        "تم تسجيل الدخول، لكن تعذر تحميل البيانات السحابية الآن. أبقينا بيانات هذا الجهاز كما هي.",
+                                        "Signed in, but failed to load cloud data now. This device kept its current local data.",
+                                    )
+
+                                if post_login_message:
+                                    if post_login_message_type == "success":
+                                        st.success(post_login_message)
+                                    elif post_login_message_type == "warning":
+                                        st.warning(post_login_message)
+                                    else:
+                                        st.info(post_login_message)
+                                if post_login_caption:
+                                    st.caption(post_login_caption)
+
+                                if remember_login:
+                                    remember_cloud_auth(clean_email, user_id, refresh_token, reload_after_write=True)
+                                    st.stop()
 
                                 st.rerun()

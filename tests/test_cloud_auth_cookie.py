@@ -35,6 +35,22 @@ def test_remember_cloud_auth_renders_hosted_cookie_variants(monkeypatch):
     assert captured["width"] == 0
 
 
+def test_remember_cloud_auth_can_request_reload_after_write(monkeypatch):
+    captured = {}
+
+    def fake_html(html, height=0, width=0):
+        captured["html"] = html
+
+    monkeypatch.setattr("services.cloud_auth_cookie.components.html", fake_html)
+
+    remember_cloud_auth("user@example.com", "user-123", "refresh-token-xyz", reload_after_write=True)
+
+    html = captured["html"]
+    assert 'const shouldReloadAfterWrite = true;' in html
+    assert "window.location.replace" in html
+    assert "window.location.reload" in html
+
+
 def test_clear_cloud_auth_cookie_uses_zero_max_age(monkeypatch):
     captured = {}
 
