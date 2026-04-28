@@ -99,8 +99,23 @@ def _is_local_runtime() -> bool:
     return "://localhost" in runtime_url or "://127.0.0.1" in runtime_url or "://0.0.0.0" in runtime_url
 
 
+def _local_auth_backup_exists() -> bool:
+    return Path(LOCAL_AUTH_SQLITE_FILE).exists()
+
+
 def _read_local_auth_backup() -> dict:
-    if not _is_local_runtime():
+    try:
+        context = getattr(st, "context", None)
+    except Exception:
+        context = None
+
+    has_runtime_url_attr = bool(context is not None and hasattr(context, "url"))
+    runtime_url = _runtime_url().strip().lower()
+    allow_local_backup = _is_local_runtime()
+    if not allow_local_backup and has_runtime_url_attr and not runtime_url and _local_auth_backup_exists():
+        allow_local_backup = True
+
+    if not allow_local_backup:
         return {}
     payload = load_sqlite_payload(LOCAL_AUTH_SQLITE_FILE)
     return _extract_auth_payload(payload if isinstance(payload, dict) else {})

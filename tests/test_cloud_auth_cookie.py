@@ -146,6 +146,26 @@ def test_read_cloud_auth_cookie_falls_back_to_local_backup_on_localhost(monkeypa
     }
 
 
+def test_read_cloud_auth_cookie_uses_local_backup_when_runtime_url_is_blank(monkeypatch):
+    fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url=""))
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+    monkeypatch.setattr("services.cloud_auth_cookie.Path.exists", lambda self: str(self).endswith("floosy_cloud_auth.sqlite3"))
+    monkeypatch.setattr(
+        "services.cloud_auth_cookie.load_sqlite_payload",
+        lambda path: {
+            "email": "user@example.com",
+            "user_id": "user-123",
+            "refresh_token": "refresh-token-xyz",
+        },
+    )
+
+    assert read_cloud_auth_cookie() == {
+        "email": "user@example.com",
+        "user_id": "user-123",
+        "refresh_token": "refresh-token-xyz",
+    }
+
+
 def test_remember_cloud_auth_uses_config_local_persistence_signal(monkeypatch):
     fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url=""))
     monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)

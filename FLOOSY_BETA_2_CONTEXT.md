@@ -91,6 +91,13 @@ When adding future updates:
   - localhost no longer forces a browser reload immediately after successful sign-in
   - instead, it saves the remembered auth locally and uses a normal Streamlit rerun
   - the hosted beta still keeps the browser reload path, while localhost avoids dropping back to the sign-in form right after the first successful login
+- Refined the Documents page colors so renewal status is easier to read at a glance:
+  - added soft status summary cards for expired / renew soon / valid
+  - colored the status column inside the document table itself
+  - kept the underlying document logic unchanged
+- Added one more localhost auth-restore fallback:
+  - if the runtime URL is still blank during early app startup, Floosy now still trusts the local remembered-auth backup file when it already exists
+  - this targets the specific localhost case where refresh returned the sign-in form with remembered email/password filled, while the hosted beta was restoring correctly
 
 ### 2026-04-20
 
