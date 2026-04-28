@@ -927,11 +927,17 @@ hr {
                 width: 100%;
             }
 
-            /* Input fields text direction */
+            /* Input fields text direction (text only — keep numbers LTR) */
             .main .stTextInput input,
-            .main .stTextArea textarea,
-            .main .stNumberInput input {
+            .main .stTextArea textarea {
                 direction: rtl;
+                text-align: right;
+            }
+
+            /* Number inputs: keep digits LTR to avoid cursor/typing issues,
+               but right-align so they sit on the RTL side. */
+            .main .stNumberInput input {
+                direction: ltr;
                 text-align: right;
             }
 
@@ -970,11 +976,6 @@ hr {
             .main div[data-testid="stAlert"] {
                 direction: rtl;
                 text-align: right;
-            }
-
-            /* Tabs: right-to-left order */
-            .main div[data-testid="stTabs"] [role="tablist"] {
-                direction: rtl;
             }
 
             /* Form labels and content */
@@ -1043,10 +1044,11 @@ hr {
                 direction: rtl;
             }
 
-            /* Data editor / table */
+            /* Data editor / table: keep LTR so column order matches the
+               underlying DataFrame; only the surrounding layout is RTL. */
             .main div[data-testid="stDataFrame"],
             .main div[data-testid="stDataEditor"] {
-                direction: rtl;
+                direction: ltr;
             }
             </style>
             """,
