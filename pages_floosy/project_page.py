@@ -271,6 +271,7 @@ def render(month_key: str, month: str, year: int):
         div[class*="st-key-project_card_"] button {
             background: linear-gradient(135deg, #0f5f8c, #12956b) !important;
             color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
             border: 0 !important;
             border-radius: 14px !important;
             min-height: 94px !important;
@@ -280,6 +281,13 @@ def render(month_key: str, month: str, year: int):
             line-height: 1.4 !important;
             text-align: right !important;
             padding: 10px 12px !important;
+        }
+        div[class*="st-key-project_card_"] button *,
+        div[class*="st-key-project_card_"] button p,
+        div[class*="st-key-project_card_"] button span,
+        div[class*="st-key-project_card_"] button div {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
         </style>
         """,
