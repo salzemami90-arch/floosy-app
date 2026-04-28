@@ -85,6 +85,66 @@ def _mark_cloud_sync_now() -> None:
     st.session_state["settings"] = settings
 
 
+def _render_storage_location_status(t, cloud_sync_enabled: bool, cloud_configured: bool, cloud_logged_in: bool, last_sync_label: str) -> None:
+    if not cloud_sync_enabled:
+        bg = "#fff7ed"
+        border = "#f59e0b"
+        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
+        detail = t(
+            "أي شيء تضيفينه الآن يبقى محليًا على هذا الجهاز فقط، ولن يذهب إلى السحابة إلا بعد تفعيلها.",
+            "Anything you add now stays locally on this device only and will not go to the cloud until cloud sync is enabled.",
+        )
+    elif not cloud_configured:
+        bg = "#fff7ed"
+        border = "#f97316"
+        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
+        detail = t(
+            "السحابة مفعلة بالواجهة، لكن الربط غير مكتمل بعد. بياناتك الحالية تبقى على هذا الجهاز فقط.",
+            "Cloud is enabled in the UI, but the connection is not configured yet. Your current data stays on this device only.",
+        )
+    elif not cloud_logged_in:
+        bg = "#eff6ff"
+        border = "#2563eb"
+        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
+        detail = t(
+            "السحابة جاهزة، لكنك لستِ مسجلة الدخول الآن. بياناتك الحالية تبقى على هذا الجهاز حتى تسجلي الدخول ثم تحفظينها للسحابة.",
+            "Cloud is ready, but you are not signed in right now. Your current data stays on this device until you sign in and save it to the cloud.",
+        )
+    elif last_sync_label == t("لم تتم مزامنة بعد", "No sync yet"):
+        bg = "#fffbeb"
+        border = "#f59e0b"
+        title = t("الحفظ الحالي: على الجهاز، ولم تُنشأ نسخة سحابية بعد", "Current save location: On this device, no cloud copy yet")
+        detail = t(
+            "أنتِ مسجلة الدخول، لكن لم تتم مزامنة ناجحة بعد. إذا كانت البيانات الحالية هي الصح، اضغطي حفظ بياناتي لإنشاء نسخة سحابية.",
+            "You are signed in, but no successful sync has happened yet. If the current data is the correct copy, press Save My Data to create a cloud copy.",
+        )
+    else:
+        bg = "#ecfdf5"
+        border = "#10b981"
+        title = t("الحفظ الحالي: هذا الجهاز + السحابة", "Current save location: This device + cloud")
+        detail = t(
+            f"بياناتك الحالية محفوظة على هذا الجهاز، وآخر مزامنة سحابية كانت: {last_sync_label}.",
+            f"Your current data is saved on this device, and the last cloud sync was: {last_sync_label}.",
+        )
+
+    st.markdown(
+        f"""
+        <div style="
+            background:{bg};
+            border:1px solid {border};
+            border-right:6px solid {border};
+            border-radius:12px;
+            padding:12px 14px;
+            margin:6px 0 14px 0;
+        ">
+            <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">{title}</div>
+            <div style="color:#475569;font-size:0.93rem;line-height:1.55;">{detail}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _build_backup_file() -> tuple[str, bytes]:
     backup_payload = export_app_state_payload()
     backup_now = datetime.now()
@@ -230,7 +290,7 @@ def render():
         except Exception:
             last_sync_label = last_sync_raw
     else:
-        last_sync_label = t("غير متوفر", "Not available")
+        last_sync_label = t("لم تتم مزامنة بعد", "No sync yet")
 
     backup_name_top, backup_bytes_top = _build_backup_file()
     cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
@@ -465,6 +525,13 @@ def render():
 
     with tab_privacy:
         st.subheader(t("الخصوصية والمزامنة", "Privacy and Sync"))
+        _render_storage_location_status(
+            t,
+            cloud_sync_enabled=cloud_sync_enabled,
+            cloud_configured=cloud_client.is_configured,
+            cloud_logged_in=cloud_logged_in,
+            last_sync_label=last_sync_label,
+        )
 
         cloud_sync_enabled = st.checkbox(
             t("تفعيل المزامنة السحابية (اختياري)", "Enable Cloud Sync (Optional)"),
