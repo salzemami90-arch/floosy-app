@@ -14,6 +14,62 @@ def render():
 
     st.title(t("مستنداتي", "Documents"))
     st.caption(t("إدارة المستندات وتنبيهات التجديد", "Document management and renewal reminders"))
+    st.markdown(
+        """
+        <style>
+        .flossy-doc-summary {
+            border-radius: 16px;
+            padding: 14px 16px;
+            min-height: 108px;
+            border: 1px solid transparent;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .flossy-doc-summary__label {
+            font-size: 0.88rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .flossy-doc-summary__value {
+            font-size: 1.45rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .flossy-doc-summary__meta {
+            font-size: 0.84rem;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .flossy-doc-summary--expired {
+            background: linear-gradient(180deg, #fff4f2 0%, #fffaf9 100%);
+            border-color: #fecaca;
+        }
+        .flossy-doc-summary--expired .flossy-doc-summary__label,
+        .flossy-doc-summary--expired .flossy-doc-summary__value {
+            color: #b42318;
+        }
+        .flossy-doc-summary--soon {
+            background: linear-gradient(180deg, #fffbeb 0%, #fffdf5 100%);
+            border-color: #fde68a;
+        }
+        .flossy-doc-summary--soon .flossy-doc-summary__label,
+        .flossy-doc-summary--soon .flossy-doc-summary__value {
+            color: #b45309;
+        }
+        .flossy-doc-summary--valid {
+            background: linear-gradient(180deg, #ecfdf5 0%, #f8fffb 100%);
+            border-color: #bbf7d0;
+        }
+        .flossy-doc-summary--valid .flossy-doc-summary__label,
+        .flossy-doc-summary--valid .flossy-doc-summary__value {
+            color: #047857;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # =============================
     # Storage (DON'T reset on rerun)
@@ -224,6 +280,58 @@ def render():
     # Sort by end date
     df = df.sort_values(by=["end_date"], ascending=True, na_position="last")
 
+    expired_label = t("منتهي", "Expired")
+    soon_label = t("قريب ينتهي", "Expiring Soon")
+    valid_label = t("ساري", "Valid")
+
+    expired_count = int((df[status_col] == expired_label).sum())
+    soon_count = int((df[status_col] == soon_label).sum())
+    valid_count = int((df[status_col] == valid_label).sum())
+
+    fee_series = pd.to_numeric(df.get("fee"), errors="coerce").fillna(0.0)
+    expired_fee_total = float(fee_series[df[status_col] == expired_label].sum())
+    soon_fee_total = float(fee_series[df[status_col] == soon_label].sum())
+    valid_fee_total = float(fee_series[df[status_col] == valid_label].sum())
+
+    summary_specs = [
+        {
+            "modifier": "expired",
+            "label": t("منتهية", "Expired"),
+            "count": expired_count,
+            "fee": expired_fee_total,
+        },
+        {
+            "modifier": "soon",
+            "label": t("قريبة للتجديد", "Renew Soon"),
+            "count": soon_count,
+            "fee": soon_fee_total,
+        },
+        {
+            "modifier": "valid",
+            "label": t("سارية", "Valid"),
+            "count": valid_count,
+            "fee": valid_fee_total,
+        },
+    ]
+
+    summary_cols = st.columns(3)
+    for col, spec in zip(summary_cols, summary_specs):
+        count_unit = t("مستند", "document") if spec["count"] == 1 else t("مستندات", "documents")
+        col.markdown(
+            f"""
+            <div class="flossy-doc-summary flossy-doc-summary--{spec["modifier"]}">
+                <div>
+                    <div class="flossy-doc-summary__label">{spec["label"]}</div>
+                    <div class="flossy-doc-summary__value">{spec["count"]}</div>
+                </div>
+                <div class="flossy-doc-summary__meta">
+                    {spec["count"]} {count_unit} • {spec["fee"]:,.0f} {currency_view}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     view = df[[
         "name",
         "issue_date",
@@ -247,7 +355,30 @@ def render():
         }
     )
 
-    st.dataframe(view, use_container_width=True, hide_index=True)
+    date_columns = [t("تاريخ الإصدار", "Issue Date"), t("تاريخ الانتهاء", "End Date")]
+    fee_column = t(f"الرسوم ({currency_view})", f"Fee ({currency_view})")
+    status_display_col = t("الحالة", "Status")
+
+    view_display = view.copy()
+    for date_column in date_columns:
+        if date_column in view_display.columns:
+            view_display[date_column] = pd.to_datetime(view_display[date_column], errors="coerce").dt.strftime("%Y-%m-%d").fillna("-")
+    if fee_column in view_display.columns:
+        view_display[fee_column] = pd.to_numeric(view_display[fee_column], errors="coerce").fillna(0.0).map(
+            lambda value: f"{value:,.2f}"
+        )
+
+    def _status_style(value: str) -> str:
+        if value == expired_label:
+            return "background-color: #fff1f2; color: #b42318; font-weight: 800;"
+        if value == soon_label:
+            return "background-color: #fffbeb; color: #b45309; font-weight: 800;"
+        if value == valid_label:
+            return "background-color: #ecfdf5; color: #047857; font-weight: 800;"
+        return "background-color: #f8fafc; color: #475569; font-weight: 700;"
+
+    styled_view = view_display.style.applymap(_status_style, subset=[status_display_col])
+    st.dataframe(styled_view, use_container_width=True, hide_index=True)
 
     st.markdown(f"#### {t('إجراءات المستند', 'Document Actions')}")
     selectable_indices = df.index.tolist()
