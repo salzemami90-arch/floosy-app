@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import unquote
 
 import streamlit as st
 import streamlit.components.v1 as components
+from services.local_store import delete_sqlite_payload, load_sqlite_payload, save_sqlite_payload
 
 
 COOKIE_NAME = "floosy_cloud_auth"
 STORAGE_NAME = "floosy_cloud_auth_storage"
 COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+LOCAL_AUTH_SQLITE_FILE = os.path.join("data", "floosy_cloud_auth.sqlite3")
 _BROWSER_STORAGE_PENDING = "__PENDING__"
 _BROWSER_STORAGE_BRIDGE = components.declare_component(
     "cloud_auth_browser_bridge",
@@ -51,6 +54,65 @@ def _extract_auth_payload(payload: dict) -> dict:
     }
 
 
+def _runtime_url() -> str:
+    try:
+        context = getattr(st, "context", None)
+    except Exception:
+        context = None
+
+    if context is None:
+        return ""
+
+    try:
+        runtime_url = str(getattr(context, "url", "") or "")
+    except Exception:
+        runtime_url = ""
+
+    if runtime_url:
+        return runtime_url
+
+    try:
+        headers = getattr(context, "headers", {}) or {}
+    except Exception:
+        headers = {}
+
+    if hasattr(headers, "get"):
+        host = str(headers.get("host") or headers.get("Host") or "").strip()
+    elif isinstance(headers, dict):
+        host = str(headers.get("host") or headers.get("Host") or "").strip()
+    else:
+        host = ""
+
+    return f"http://{host}" if host else ""
+
+
+def _is_local_runtime() -> bool:
+    runtime_url = _runtime_url().strip().lower()
+    return "://localhost" in runtime_url or "://127.0.0.1" in runtime_url or "://0.0.0.0" in runtime_url
+
+
+def _read_local_auth_backup() -> dict:
+    if not _is_local_runtime():
+        return {}
+    payload = load_sqlite_payload(LOCAL_AUTH_SQLITE_FILE)
+    return _extract_auth_payload(payload if isinstance(payload, dict) else {})
+
+
+def _write_local_auth_backup(payload: dict) -> None:
+    if not _is_local_runtime():
+        return
+    normalized = _extract_auth_payload(payload)
+    if not normalized:
+        return
+    save_sqlite_payload(LOCAL_AUTH_SQLITE_FILE, normalized)
+
+
+def _clear_local_auth_backup() -> None:
+    if not _is_local_runtime():
+        return
+    delete_sqlite_payload(LOCAL_AUTH_SQLITE_FILE)
+
+
 def read_cloud_auth_cookie() -> dict:
     raw_value = ""
     try:
@@ -82,7 +144,10 @@ def read_cloud_auth_cookie() -> dict:
             if morsel is not None:
                 raw_value = morsel.value
 
-    return _extract_auth_payload(_decode_payload(raw_value))
+    payload = _extract_auth_payload(_decode_payload(raw_value))
+    if payload:
+        return payload
+    return _read_local_auth_backup()
 
 
 def sync_cloud_auth_browser_storage(payload: dict | None = None, *, clear: bool = False) -> tuple[dict, bool]:
@@ -246,17 +311,18 @@ def remember_cloud_auth(email: str, user_id: str, refresh_token: str, *, reload_
     clean_refresh_token = str(refresh_token or "").strip()
     if not clean_refresh_token:
         return
-    value = _encode_payload(
-        {
-            "email": str(email or "").strip(),
-            "user_id": str(user_id or "").strip(),
-            "refresh_token": clean_refresh_token,
-        }
-    )
+    payload = {
+        "email": str(email or "").strip(),
+        "user_id": str(user_id or "").strip(),
+        "refresh_token": clean_refresh_token,
+    }
+    _write_local_auth_backup(payload)
+    value = _encode_payload(payload)
     _render_cookie_script(value, COOKIE_MAX_AGE_SECONDS, reload_after_write=reload_after_write)
 
 
 def clear_cloud_auth_cookie() -> None:
+    _clear_local_auth_backup()
     _render_cookie_script("", 0)
 
 

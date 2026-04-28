@@ -127,6 +127,25 @@ def test_read_cloud_auth_cookie_falls_back_to_cookie_header(monkeypatch):
     }
 
 
+def test_read_cloud_auth_cookie_falls_back_to_local_backup_on_localhost(monkeypatch):
+    fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url="http://localhost:8501"))
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+    monkeypatch.setattr(
+        "services.cloud_auth_cookie.load_sqlite_payload",
+        lambda path: {
+            "email": "user@example.com",
+            "user_id": "user-123",
+            "refresh_token": "refresh-token-xyz",
+        },
+    )
+
+    assert read_cloud_auth_cookie() == {
+        "email": "user@example.com",
+        "user_id": "user-123",
+        "refresh_token": "refresh-token-xyz",
+    }
+
+
 def test_bootstrap_cloud_auth_from_storage_renders_reload_bridge(monkeypatch):
     captured = {}
 
@@ -213,3 +232,40 @@ def test_sync_cloud_auth_browser_storage_can_clear_saved_value(monkeypatch):
     assert payload == {}
     assert captured["action"] == "clear"
     assert captured["value"] == ""
+
+
+def test_remember_cloud_auth_writes_local_backup_on_localhost(monkeypatch):
+    fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url="http://localhost:8501"))
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+
+    captured = {}
+
+    def fake_save(path, payload):
+        captured["path"] = path
+        captured["payload"] = payload
+        return True
+
+    monkeypatch.setattr("services.cloud_auth_cookie.save_sqlite_payload", fake_save)
+    monkeypatch.setattr("services.cloud_auth_cookie.components.html", lambda html, height=0, width=0: None)
+
+    remember_cloud_auth("user@example.com", "user-123", "refresh-token-xyz")
+
+    assert captured["payload"] == {
+        "email": "user@example.com",
+        "user_id": "user-123",
+        "refresh_token": "refresh-token-xyz",
+    }
+
+
+def test_clear_cloud_auth_cookie_clears_local_backup_on_localhost(monkeypatch):
+    fake_st = SimpleNamespace(context=SimpleNamespace(cookies={}, headers={}, url="http://localhost:8501"))
+    monkeypatch.setattr("services.cloud_auth_cookie.st", fake_st)
+
+    captured = {}
+
+    monkeypatch.setattr("services.cloud_auth_cookie.delete_sqlite_payload", lambda path: captured.setdefault("path", path))
+    monkeypatch.setattr("services.cloud_auth_cookie.components.html", lambda html, height=0, width=0: None)
+
+    clear_cloud_auth_cookie()
+
+    assert captured["path"].endswith("floosy_cloud_auth.sqlite3")

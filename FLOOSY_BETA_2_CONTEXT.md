@@ -72,6 +72,10 @@ When adding future updates:
   - after a remembered sign-in succeeds, Floosy now writes the browser auth token first and then reloads the page
   - this avoids losing the remembered refresh token because of an immediate server-side rerun before the browser had a chance to store it
   - verified by automated regression tests, but still needs final real-device/user confirmation before the open bug can be considered fully closed
+- Added a localhost-only remembered-auth fallback:
+  - on local runs, Floosy now keeps the remembered cloud refresh token in a separate local-only auth store on the same device
+  - this protects localhost refresh persistence even if browser cookie/localStorage restoration is flaky
+  - the fallback is local-only and separate from exported/cloud-synced app data
 
 ### 2026-04-20
 
@@ -519,6 +523,7 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
   - widened frame-chain cookie/localStorage bootstrap
   - added a dedicated browser-storage bridge fallback
   - changed remembered sign-in success flow to persist browser auth first, then reload instead of depending on an immediate rerun
+  - added a localhost-only remembered-auth fallback so local development can persist sign-in separately from hosted browser behavior
   Both still need real deployed Safari verification.
   Practical workaround for now: sign in manually and rely on browser password autofill until auth persistence is redesigned or replaced.
 
