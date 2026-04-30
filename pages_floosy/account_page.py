@@ -10,7 +10,7 @@ import streamlit as st
 
 from config_floosy import CURRENCY_OPTIONS, add_transaction, arabic_months, english_months, load_transactions
 from services.expense_tax_service import ExpenseTaxService
-from services.transaction_categories import CATEGORY_EN_TO_AR, category_label, localized_all_categories
+from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, category_label, localized_all_categories
 
 
 TX_TYPE_AR_TO_EN = {"دخل": "Income", "مصروف": "Expense"}
@@ -112,6 +112,60 @@ def _render_account_summary_styles() -> None:
     )
 
 
+def _render_monthly_items_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .floosy-monthly-item-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 11px 12px;
+            margin-bottom: 8px;
+            background: #ffffff;
+        }
+        .floosy-monthly-item-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 3px;
+        }
+        .floosy-monthly-item-name {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .floosy-monthly-item-amount {
+            font-weight: 800;
+            font-size: 0.98rem;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+        .floosy-monthly-item-state {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        .floosy-monthly-item-meta {
+            color: #64748b;
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+        .floosy-monthly-item-empty {
+            border: 1px dashed #d4dee8;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fcfdff;
+            color: #475569;
+            font-size: 0.92rem;
+            margin: 6px 0 8px 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _metric_value_html(value: str) -> str:
     clean_value = str(value or "").strip()
     if " " not in clean_value:
@@ -204,6 +258,12 @@ def _proof_bytes(tx: dict) -> bytes:
 
 def _has_proof(tx: dict) -> bool:
     return bool(_proof_bytes(tx))
+
+
+def _row_has_proof(row) -> bool:
+    proof_name = str(row.get("proof_name") or "").strip() if hasattr(row, "get") else ""
+    proof_data = row.get("proof_bytes") if hasattr(row, "get") else None
+    return bool(proof_name) or bool(_proof_bytes({"proof_bytes": proof_data}))
 
 
 def _proof_label(tx: dict, fallback: str = "") -> str:
@@ -392,6 +452,7 @@ def _build_filtered_df(
     query: str,
     type_filter: str,
     category_filter: str,
+    proof_filter: str = "الكل",
     newest_first: bool = True,
 ) -> pd.DataFrame:
     if not tx_list:
@@ -400,10 +461,12 @@ def _build_filtered_df(
     df = pd.DataFrame(tx_list).copy()
     df["tx_id"] = df.index
     df["date_dt"] = pd.to_datetime(df["date"], errors="coerce")
-    for optional_col in ["note", "proof_name", "payment_month_key", "entitlement_month_key"]:
+    for optional_col in ["note", "proof_name", "payment_month_key", "entitlement_month_key", "source_template_name"]:
         if optional_col not in df.columns:
             df[optional_col] = ""
         df[optional_col] = df[optional_col].fillna("")
+    if "proof_bytes" not in df.columns:
+        df["proof_bytes"] = None
 
     # same behavior as existing summary: focus on selected currency
     df = df[df["currency"] == currency].copy()
@@ -414,7 +477,19 @@ def _build_filtered_df(
         df = df[df["type"] == type_filter]
 
     if category_filter != "الكل":
-        df = df[df["category"] == category_filter]
+        category_matches = {
+            str(category_filter or "").strip(),
+            CATEGORY_EN_TO_AR.get(str(category_filter or "").strip(), str(category_filter or "").strip()),
+            CATEGORY_AR_TO_EN.get(str(category_filter or "").strip(), str(category_filter or "").strip()),
+        }
+        df = df[df["category"].astype(str).isin(category_matches)]
+
+    if proof_filter != "الكل":
+        proof_mask = df.apply(_row_has_proof, axis=1)
+        if proof_filter == "مع إثبات":
+            df = df[proof_mask]
+        elif proof_filter == "بدون إثبات":
+            df = df[~proof_mask]
 
     q = query.strip().lower()
     if q:
@@ -428,6 +503,7 @@ def _build_filtered_df(
             | df["note"].astype(str).str.lower().str.contains(q, na=False)
             | df["date"].astype(str).str.lower().str.contains(q, na=False)
             | df["proof_name"].astype(str).str.lower().str.contains(q, na=False)
+            | df["source_template_name"].astype(str).str.lower().str.contains(q, na=False)
             | month_search.astype(str).str.lower().str.contains(q, na=False)
         ]
 
@@ -1060,12 +1136,16 @@ def render(month_key: str, month: str, year: int):
     with rc2:
         st.metric(t("إجمالي الدخل المتوقع غير المستلم", "Total Expected Income Not Received"), f"{expected_incomes_total:,.0f} {currency_view}")
 
+    _render_monthly_items_styles()
+
     if not active_items:
-        st.info(
-            t(
-                "لا توجد عناصر نشطة حاليًا. يمكن إضافة العناصر من زر إدارة العناصر الشهرية بالأعلى.",
-                "No active items right now. Items can be added from the Manage Monthly Items button above.",
-            )
+        st.markdown(
+            f"""
+            <div class="floosy-monthly-item-empty" style="direction:{'ltr' if is_en else 'rtl'};text-align:{'left' if is_en else 'right'};">
+                {t("لا توجد عناصر شهرية بعد. ابدأ بإضافة أول عنصر من إدارة العناصر الشهرية.", "No monthly items yet. Start by adding your first item from Manage Monthly Items.")}
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     else:
         for idx, item in enumerate(active_items):
@@ -1110,14 +1190,19 @@ def render(month_key: str, month: str, year: int):
                     f"{t('آخر دفع/استلام', 'Last payment/receipt')}: {latest_paid_date_label or '-'} | "
                     f"{t('شهر الاستحقاق المؤكد', 'Confirmed entitlement month')}: {latest_paid_month_label or '-'}"
                 )
+            amount_text = f"{float(item.get('amount', 0.0)):,.0f} {item_currency}"
 
             st.markdown(
                 f"""
-                <div style="background:{card_background}; border:1px solid #e5e7eb; {border_side}:6px solid {border}; border-radius:10px; padding:10px; margin-bottom:6px; direction:{direction}; text-align:{align};">
-                    <strong style="color:{title_color};">{item.get('name',t('بدون اسم','Untitled'))}</strong> — <span style="color:{state_color}; font-weight:700;">{state_txt}</span><br/>
-                    <span style="color:{meta_color};">{item.get('amount',0)} {item_currency} | {var_txt} | {day_label}: {item.get('day', 1)}</span>
-                    {f'<br/><span style="color:{meta_color};">{due_summary}</span>' if due_summary else ''}
-                    {f'<br/><span style="color:{meta_color};">{payment_summary}</span>' if payment_summary else ''}
+                <div class="floosy-monthly-item-card" style="background:{card_background}; {border_side}:6px solid {border}; direction:{direction}; text-align:{align};">
+                    <div class="floosy-monthly-item-head">
+                        <div class="floosy-monthly-item-name" style="color:{title_color};">{item.get('name',t('بدون اسم','Untitled'))}</div>
+                        <div class="floosy-monthly-item-amount">{amount_text}</div>
+                    </div>
+                    <div class="floosy-monthly-item-state" style="color:{state_color};">{state_txt}</div>
+                    <div class="floosy-monthly-item-meta" style="color:{meta_color};">{var_txt} | {day_label}: {item.get('day', 1)}</div>
+                    {f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:3px;">{due_summary}</div>' if due_summary else ''}
+                    {f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:2px;">{payment_summary}</div>' if payment_summary else ''}
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -1354,13 +1439,13 @@ def render(month_key: str, month: str, year: int):
         t("الأحدث أولاً", "Newest First"),
         t("الأقدم أولاً", "Oldest First"),
     ]
-    f1, f2, f3, f4 = st.columns([2, 1, 1, 1])
+    f1, f2, f3, f4, f5 = st.columns([2.2, 1, 1, 1, 1])
     with f1:
         query = st.text_input(
             t("بحث", "Search"),
             placeholder=t(
-                "البحث بالتاريخ أو التصنيف أو الملاحظة أو الإثبات أو شهر الاستحقاق",
-                "Search by date, category, note, proof, or entitlement month",
+                "ابحث في الحساب بالتاريخ أو التصنيف أو الملاحظة أو الإثبات أو شهر الاستحقاق",
+                "Search inside account by date, category, note, proof, or entitlement month",
             ),
             on_change=_close_templates_panel,
         )
@@ -1373,8 +1458,13 @@ def render(month_key: str, month: str, year: int):
         type_filter = "الكل" if type_filter_lbl == t("الكل", "All") else ("مصروف" if type_filter_lbl == t("مصروف", "Expense") else "دخل")
     with f3:
         categories = [t("الكل", "All")]
+        canonical_categories = localized_all_categories(False)
+        categories.extend(canonical_categories)
         if not df_all.empty and "category" in df_all.columns:
-            categories.extend(sorted(df_all["category"].dropna().astype(str).unique().tolist()))
+            existing_categories = sorted(df_all["category"].dropna().astype(str).unique().tolist())
+            for existing_category in existing_categories:
+                if existing_category not in categories:
+                    categories.append(existing_category)
         category_filter_lbl = st.selectbox(
             t("التصنيف", "Category"),
             categories,
@@ -1383,12 +1473,44 @@ def render(month_key: str, month: str, year: int):
         )
         category_filter = "الكل" if category_filter_lbl == t("الكل", "All") else category_filter_lbl
     with f4:
+        proof_filter_lbl = st.selectbox(
+            t("الإثبات", "Proof"),
+            [t("الكل", "All"), t("مع إثبات", "With Proof"), t("بدون إثبات", "Without Proof")],
+            on_change=_close_templates_panel,
+        )
+        if proof_filter_lbl == t("مع إثبات", "With Proof"):
+            proof_filter = "مع إثبات"
+        elif proof_filter_lbl == t("بدون إثبات", "Without Proof"):
+            proof_filter = "بدون إثبات"
+        else:
+            proof_filter = "الكل"
+    with f5:
         sort_order_lbl = st.selectbox(t("الترتيب", "Order"), order_options, on_change=_close_templates_panel)
         newest_first = sort_order_lbl == t("الأحدث أولاً", "Newest First")
 
-    filtered_df = _build_filtered_df(tx_list, currency, query, type_filter, category_filter, newest_first=newest_first)
+    filtered_df = _build_filtered_df(
+        tx_list,
+        currency,
+        query,
+        type_filter,
+        category_filter,
+        proof_filter=proof_filter,
+        newest_first=newest_first,
+    )
+    currency_scope_count = sum(1 for tx in tx_list if str(tx.get("currency") or "") == currency)
+    st.caption(
+        t(
+            f"بحث الحساب يعمل داخل هذا القسم فقط. النتائج: {len(filtered_df)} من {currency_scope_count} معاملة.",
+            f"Account search works only inside this section. Results: {len(filtered_df)} of {currency_scope_count} transactions.",
+        )
+    )
     if filtered_df.empty:
-        st.info(t("لا توجد معاملات مطابقة للفلاتر الحالية.", "No transactions match current filters."))
+        st.info(
+            t(
+                "لا توجد معاملات مطابقة للبحث أو الفلاتر الحالية.",
+                "No transactions match the current search or filters.",
+            )
+        )
         return
 
     id_col = t("معرّف", "ID")

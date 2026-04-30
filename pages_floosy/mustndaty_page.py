@@ -332,7 +332,53 @@ def render():
             unsafe_allow_html=True,
         )
 
-    view = df[[
+    st.markdown("")
+    search_col, status_filter_col = st.columns([2, 1])
+    all_label = t("الكل", "All")
+    with search_col:
+        docs_search = st.text_input(
+            t("بحث المستندات", "Search Documents"),
+            placeholder=t(
+                "ابحث باسم المستند أو المرفق أو التاريخ",
+                "Search by document name, attachment, or date",
+            ),
+            key="mustndaty_search",
+        ).strip()
+    with status_filter_col:
+        selected_status = st.selectbox(
+            t("تصفية الحالة", "Filter Status"),
+            options=[all_label, expired_label, soon_label, valid_label],
+            key="mustndaty_status_filter",
+        )
+
+    filtered_df = df.copy()
+    if selected_status != all_label:
+        filtered_df = filtered_df[filtered_df[status_col] == selected_status]
+
+    if docs_search:
+        search_query = docs_search.lower()
+        issue_text = filtered_df["issue_date"].dt.strftime("%Y-%m-%d").fillna("")
+        end_text = filtered_df["end_date"].dt.strftime("%Y-%m-%d").fillna("")
+        attachment_text = filtered_df.get("attachment_name", pd.Series(index=filtered_df.index, dtype="object")).fillna("").astype(str)
+        name_text = filtered_df.get("name", pd.Series(index=filtered_df.index, dtype="object")).fillna("").astype(str)
+        status_text = filtered_df[status_col].fillna("").astype(str)
+        search_mask = (
+            name_text.str.lower().str.contains(search_query, na=False)
+            | attachment_text.str.lower().str.contains(search_query, na=False)
+            | issue_text.str.lower().str.contains(search_query, na=False)
+            | end_text.str.lower().str.contains(search_query, na=False)
+            | status_text.str.lower().str.contains(search_query, na=False)
+        )
+        filtered_df = filtered_df[search_mask]
+
+    st.caption(
+        t(
+            f"النتائج: {len(filtered_df)} من {len(df)} مستند",
+            f"Results: {len(filtered_df)} of {len(df)} documents",
+        )
+    )
+
+    view = filtered_df[[
         "name",
         "issue_date",
         "end_date",
@@ -380,11 +426,20 @@ def render():
     styled_view = view_display.style.applymap(_status_style, subset=[status_display_col])
     st.dataframe(styled_view, use_container_width=True, hide_index=True)
 
+    if filtered_df.empty:
+        st.info(
+            t(
+                "لا توجد مستندات مطابقة للبحث أو الفلتر الحالي.",
+                "No documents match the current search or filter.",
+            )
+        )
+        return
+
     st.markdown(f"#### {t('إجراءات المستند', 'Document Actions')}")
-    selectable_indices = df.index.tolist()
+    selectable_indices = filtered_df.index.tolist()
 
     def _document_option_label(idx: int) -> str:
-        row = df.loc[idx]
+        row = filtered_df.loc[idx]
         doc_name = str(row.get("name") or t("مستند بدون اسم", "Untitled Document"))
         end_value = row.get("end_date")
         end_label = end_value.strftime("%Y-%m-%d") if not pd.isna(end_value) else "-"

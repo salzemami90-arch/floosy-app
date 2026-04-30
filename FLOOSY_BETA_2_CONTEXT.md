@@ -95,6 +95,14 @@ When adding future updates:
   - added soft status summary cards for expired / renew soon / valid
   - colored the status column inside the document table itself
   - kept the underlying document logic unchanged
+- Added a dedicated Documents-only search and status filter:
+  - search works inside Documents only
+  - it can match document name, attachment name, date, or status
+  - document actions now follow the filtered result set instead of the full unfiltered list
+- Clarified a product rule for search and proof workflow:
+  - Floosy should keep Account search and Documents search as two separate searches.
+  - Documents should not be designed around salary/social-security-specific flows.
+  - Salary/social security handling stays inside Account / Monthly Items, while Documents focuses on company papers and standalone admin files.
 - Added one more localhost auth-restore fallback:
   - if the runtime URL is still blank during early app startup, Floosy now still trusts the local remembered-auth backup file when it already exists
   - this targets the specific localhost case where refresh returned the sign-in form with remembered email/password filled, while the hosted beta was restoring correctly
@@ -384,6 +392,8 @@ Language, currency, cloud sync, privacy, backup/restore, cloud account.
 - Brand/logo text can be bilingual if intentional.
 - Do not touch `FLOOSY_PRICING_PLANS.md` if it is untracked unless explicitly requested.
 - On shared hosted Streamlit deployments, local persistence is intentionally non-durable. Real beta usage should rely on Cloud sync.
+- Keep Account search and Documents search separate; do not merge them into one cross-section search by default.
+- Documents should stay focused on company/admin papers, not be modeled around salary or social-security workflows.
 
 ## 5. Decision Rules
 
@@ -635,12 +645,12 @@ Continue testing real workflows after entitlement tracking:
 Build a better company paper workflow:
 
 - Upload company papers
-- Search quickly
+- Search quickly inside Documents only
 - Add renewal dates
 - Add categories
 - Attach proof
-- Possibly link documents to transactions later
 - Add mobile camera capture / scan so the user can create a document directly from camera without separate manual upload first
+- Do not design Documents around salary slips or social security receipts; those belong to Account / Monthly Items flow and its own search
 
 ### Projects
 
@@ -684,23 +694,14 @@ A future feature that groups:
 
 Useful for company/admin cases where the user needs to quickly answer: "Where is my proof?"
 
-### Universal Search / البحث الشامل
+### Search Strategy / استراتيجية البحث
 
-A future feature that lets the user find important records even if they do not remember which section they saved them in.
+Preferred direction now:
 
-Possible sources:
-
-- Account transactions
-- Notes
-- Customer/client names
-- Proof labels
-- Document titles
-- Related months or entitlement months
-
-Goal:
-
-- If the user searches for a known word, name, or clue, Floosy should surface the related result even if it was saved under a different section than expected.
-- Search should eventually help with salary slips, social security proof, employer/customer names, invoice references, and entitlement/payment month clues.
+- Keep a dedicated search inside Account for transactions, Monthly Items, proofs, names, and payment clues related to money activity.
+- Account category filtering should show the full canonical category list, not only categories already used in the currently visible month.
+- Keep a separate search inside Documents for company papers, document titles, renewal files, and admin records.
+- Do not merge both searches into one universal cross-section search by default.
 
 ### Camera Capture / تصوير أو سكان مباشر
 
