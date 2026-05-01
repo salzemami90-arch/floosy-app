@@ -406,6 +406,13 @@ def main():
     )
     selected_key = page_keys[page_values.index(selected_label)]
 
+    # In app-shell / deep-link flows, the query param is the source of truth.
+    # The hidden Streamlit sidebar radio can otherwise keep an older cached
+    # selection and bounce mobile navigation back to the dashboard.
+    if requested_page in page_labels and selected_key != requested_page:
+        selected_key = requested_page
+        st.session_state[sidebar_radio_key] = page_labels[requested_page]
+
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
     try:
