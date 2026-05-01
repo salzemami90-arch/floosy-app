@@ -375,13 +375,35 @@ def main():
         "Settings": "settings",
     }
     st.session_state.current_page = legacy_map.get(st.session_state.current_page, st.session_state.current_page)
+
+    requested_page = ""
+    try:
+        requested_page = str(st.query_params.get("page", "") or "").strip()
+    except Exception:
+        requested_page = ""
+    requested_page = legacy_map.get(requested_page, requested_page)
+    if requested_page in page_labels:
+        st.session_state.current_page = requested_page
+
     if st.session_state.current_page not in page_labels:
         st.session_state.current_page = "home"
 
     page_keys = list(page_labels.keys())
     page_values = [page_labels[k] for k in page_keys]
     default_index = page_keys.index(st.session_state.current_page)
-    selected_label = st.sidebar.radio(t("القسم", "Section"), page_values, index=default_index)
+    sidebar_radio_key = "sidebar_section"
+
+    if requested_page in page_labels:
+        st.session_state[sidebar_radio_key] = page_labels[requested_page]
+    elif st.session_state.get(sidebar_radio_key) not in page_values:
+        st.session_state[sidebar_radio_key] = page_values[default_index]
+
+    selected_label = st.sidebar.radio(
+        t("القسم", "Section"),
+        page_values,
+        index=default_index,
+        key=sidebar_radio_key,
+    )
     selected_key = page_keys[page_values.index(selected_label)]
 
     # تحديث الصفحة الحالية
