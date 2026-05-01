@@ -274,11 +274,16 @@ def sync_browser_preferences_state(
         lang_code = "en"
 
     try:
+        current_page = str(st.query_params.get("page", "") or "").strip()
         st.query_params["f_w"] = "1" if welcome_done else "0"
         if lang_code:
             st.query_params["f_lang"] = lang_code
         elif "f_lang" in st.query_params:
             del st.query_params["f_lang"]
+        if current_page:
+            st.query_params["page"] = current_page
+        elif "page" in st.query_params:
+            del st.query_params["page"]
     except Exception:
         return
 

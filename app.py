@@ -408,6 +408,15 @@ def main():
 
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
+    try:
+        current_query_page = str(st.query_params.get("page", "") or "").strip()
+    except Exception:
+        current_query_page = ""
+    if current_query_page != selected_key:
+        try:
+            st.query_params["page"] = selected_key
+        except Exception:
+            pass
     _show_hosted_data_warning(t)
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
