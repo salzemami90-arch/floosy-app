@@ -335,6 +335,28 @@ def main():
     lang = st.session_state.settings.get("language", "العربية")
     is_en = lang == "English"
     t = (lambda ar, en: en if is_en else ar)
+    lang_code = "en" if is_en else "ar"
+    lang_dir = "ltr" if is_en else "rtl"
+
+    st.markdown(
+        f"""
+        <script>
+        (function() {{
+          const html = document.documentElement;
+          const body = document.body;
+          if (html) {{
+            html.lang = "{lang_code}";
+            html.dir = "{lang_dir}";
+          }}
+          if (body) {{
+            body.setAttribute("data-floosy-language", "{lang_code}");
+            body.setAttribute("dir", "{lang_dir}");
+          }}
+        }})();
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.sidebar.title(t("فلوسي", "Floosy"))
 
