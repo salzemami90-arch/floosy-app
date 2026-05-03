@@ -354,6 +354,14 @@ def main():
             body.setAttribute("dir", "{lang_dir}");
           }}
           window.__floosyShellLanguage = "{lang_code}";
+          try {{
+            window.webkit?.messageHandlers?.floosyBridge?.postMessage({{
+              type: "language",
+              language: "{lang_code}",
+              dir: "{lang_dir}",
+              source: "page-script",
+            }});
+          }} catch (error) {{}}
           window.dispatchEvent(new CustomEvent("floosy-language-change", {{
             detail: {{
               language: "{lang_code}",
