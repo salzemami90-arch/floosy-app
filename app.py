@@ -347,11 +347,19 @@ def main():
           if (html) {{
             html.lang = "{lang_code}";
             html.dir = "{lang_dir}";
+            html.setAttribute("data-floosy-language", "{lang_code}");
           }}
           if (body) {{
             body.setAttribute("data-floosy-language", "{lang_code}");
             body.setAttribute("dir", "{lang_dir}");
           }}
+          window.__floosyShellLanguage = "{lang_code}";
+          window.dispatchEvent(new CustomEvent("floosy-language-change", {{
+            detail: {{
+              language: "{lang_code}",
+              dir: "{lang_dir}",
+            }},
+          }}));
         }})();
         </script>
         """,
@@ -404,8 +412,12 @@ def main():
     except Exception:
         requested_page = ""
     requested_page = legacy_map.get(requested_page, requested_page)
-    if requested_page in page_labels:
+    last_applied_query_page = str(st.session_state.get("_last_applied_query_page", "") or "").strip()
+    should_apply_requested_page = requested_page in page_labels and requested_page != last_applied_query_page
+
+    if should_apply_requested_page:
         st.session_state.current_page = requested_page
+        st.session_state["_last_applied_query_page"] = requested_page
 
     if st.session_state.current_page not in page_labels:
         st.session_state.current_page = "home"
@@ -415,7 +427,7 @@ def main():
     default_index = page_keys.index(st.session_state.current_page)
     sidebar_radio_key = "sidebar_section"
 
-    if requested_page in page_labels:
+    if should_apply_requested_page:
         st.session_state[sidebar_radio_key] = page_labels[requested_page]
     elif st.session_state.get(sidebar_radio_key) not in page_values:
         st.session_state[sidebar_radio_key] = page_values[default_index]
@@ -428,10 +440,9 @@ def main():
     )
     selected_key = page_keys[page_values.index(selected_label)]
 
-    # In app-shell / deep-link flows, the query param is the source of truth.
-    # The hidden Streamlit sidebar radio can otherwise keep an older cached
-    # selection and bounce mobile navigation back to the dashboard.
-    if requested_page in page_labels and selected_key != requested_page:
+    # Apply a new query-param page once when it changes, then let the
+    # active sidebar selection continue normally on later reruns.
+    if should_apply_requested_page and selected_key != requested_page:
         selected_key = requested_page
         st.session_state[sidebar_radio_key] = page_labels[requested_page]
 
@@ -446,6 +457,7 @@ def main():
             st.query_params["page"] = selected_key
         except Exception:
             pass
+    st.session_state["_last_applied_query_page"] = selected_key
     _show_hosted_data_warning(t)
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)

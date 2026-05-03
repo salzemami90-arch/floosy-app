@@ -275,11 +275,16 @@ def sync_browser_preferences_state(
 
     try:
         current_page = str(st.query_params.get("page", "") or "").strip()
+        current_shell = str(st.query_params.get("f_shell", "") or "").strip()
         st.query_params["f_w"] = "1" if welcome_done else "0"
         if lang_code:
             st.query_params["f_lang"] = lang_code
         elif "f_lang" in st.query_params:
             del st.query_params["f_lang"]
+        if current_shell:
+            st.query_params["f_shell"] = current_shell
+        elif "f_shell" in st.query_params:
+            del st.query_params["f_shell"]
         if current_page:
             st.query_params["page"] = current_page
         elif "page" in st.query_params:
