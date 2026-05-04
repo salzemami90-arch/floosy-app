@@ -199,7 +199,7 @@ When adding future updates:
   - the iPhone shell now applies this branding directly in the startup/loading card and the native drawer header
   - the iPhone shell app display name under the home-screen icon is now also set to `GoushFi`
   - visible hosted/web app branding has now also started switching from `Floosy / فلوسي` to `GoushFi` in the main page title, dashboard header, sidebar title, and Settings heading
-  - the old Floosy image logo is no longer used in the dashboard header; it is replaced by a temporary `G` badge using the app theme colors until the final logo/icon is designed
+  - the old Floosy image logo is no longer used in the dashboard header; it is replaced by a temporary simple `G` lettermark using the app theme colors until the final logo/icon is designed
   - the current logo can remain temporary for now
   - logo, splash, and icon polish can happen later without blocking engineering progress
 

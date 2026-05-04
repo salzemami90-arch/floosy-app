@@ -249,17 +249,15 @@ def render(month_key: str, month: str, year: int):
     header_tagline = t("امسك زمام فلوسك بذكاء", "Smart money, in your hands")
     logo_html = """
     <div style="
-        width:78px;
-        height:78px;
-        border-radius:18px;
-        background: linear-gradient(135deg, #0f5f8c 0%, #12956b 100%);
         display:flex;
         align-items:center;
         justify-content:center;
         color:#ffffff;
-        font-size:2.4rem;
-        font-weight:800;
-        box-shadow:0 10px 24px rgba(15,95,140,0.22);
+        font-size:3rem;
+        font-weight:900;
+        line-height:1;
+        letter-spacing:-0.05em;
+        text-shadow:0 6px 16px rgba(10, 23, 42, 0.18);
     ">G</div>
     """
 
