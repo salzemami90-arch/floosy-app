@@ -1,11 +1,10 @@
-import base64
 import html
 from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
-from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_logo_bytes, get_saving_totals
+from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_saving_totals
 from repositories.session_repo import SessionStateRepository
 from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
@@ -247,17 +246,31 @@ def render(month_key: str, month: str, year: int):
                 st.success(msg)
 
     # ===== Header (uses CSS from config_floosy.py) =====
-    logo_html = ""
-    logo_bytes = get_logo_bytes()
-    if logo_bytes:
-        b64 = base64.b64encode(logo_bytes).decode("utf-8")
-        logo_html = f'<img src="data:image/png;base64,{b64}" alt="GoushFi logo" />'
+    header_tagline = t("امسك زمام فلوسك بذكاء", "Smart money, in your hands")
+    logo_html = """
+    <div style="
+        width:78px;
+        height:78px;
+        border-radius:18px;
+        background: linear-gradient(135deg, #0f5f8c 0%, #12956b 100%);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#ffffff;
+        font-size:2.4rem;
+        font-weight:800;
+        box-shadow:0 10px 24px rgba(15,95,140,0.22);
+    ">G</div>
+    """
 
     st.markdown(
         f"""
         <div class="flossy-header">
             <div class="flossy-header-inner">
-                <div class="flossy-header-title">GoushFi</div>
+                <div class="flossy-header-title">
+                    <span>GoushFi</span>
+                    <span style="font-size:0.82rem;font-weight:600;opacity:0.86;margin-top:8px;">{header_tagline}</span>
+                </div>
                 <div>{logo_html}</div>
             </div>
         </div>
