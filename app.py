@@ -308,7 +308,7 @@ def _show_hosted_data_warning(t) -> None:
 
 
 def main():
-    st.set_page_config(page_title="فلوسي | Floosy", layout="wide")
+    st.set_page_config(page_title="GoushFi", layout="wide")
 
     # تهيئة عامة (session_state + css إن كانت داخل config_floosy)
     init_session_state()
@@ -374,7 +374,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    st.sidebar.title(t("فلوسي", "Floosy"))
+    st.sidebar.title("GoushFi")
 
     page_labels = {
         "home": t("الرئيسية", "Home"),
@@ -466,7 +466,9 @@ def main():
         except Exception:
             pass
     st.session_state["_last_applied_query_page"] = selected_key
-    _show_hosted_data_warning(t)
+    if not st.session_state.get("_hosted_data_warning_shown"):
+        _show_hosted_data_warning(t)
+        st.session_state["_hosted_data_warning_shown"] = True
     # اختيار الشهر/السنة (صفحات تحتاجها)
     month_key, month, year = get_month_selection(selected_key)
 

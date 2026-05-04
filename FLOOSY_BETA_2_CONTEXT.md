@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-04-29
+Last updated: 2026-05-04
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -20,6 +20,15 @@ For any new Codex/AI conversation:
 - Do not rely only on chat memory; keep important decisions here.
 
 In short: every meaningful change to Floosy should leave a trace in this context file.
+
+### User Rule (2026-05-04)
+
+This is now an explicit user rule:
+
+- Any work we do on Floosy Beta 2 must be written in this file.
+- Any bug that appears during testing must be written in this file.
+- Do not leave important progress or bugs only inside chat messages.
+- Treat this rule as mandatory project workflow, not a nice-to-have note.
 
 ### Context Capture Duty
 
@@ -106,6 +115,92 @@ When adding future updates:
 - Added one more localhost auth-restore fallback:
   - if the runtime URL is still blank during early app startup, Floosy now still trusts the local remembered-auth backup file when it already exists
   - this targets the specific localhost case where refresh returned the sign-in form with remembered email/password filled, while the hosted beta was restoring correctly
+- Tightened localhost remembered-auth restore priority:
+  - on local runs, Floosy now prefers the local remembered-auth backup over cookie/header payloads
+  - this avoids stale localhost cookies overriding the fresh local backup after sign-in and refresh
+
+### 2026-04-30
+
+- Product naming direction for the app beta is now:
+  - working beta name candidate: `Goush Money`
+  - do not rename the app UI/codebase yet
+  - keep the current Floosy/Floosy Beta naming in code until the app packaging / Apple submission phase gets closer
+  - use the candidate name only as a planning/reference decision for now
+- App beta packaging direction changed to a faster path:
+  - no Capacitor / CocoaPods path for now because local macOS Ruby/CocoaPods setup became a time sink
+  - use a simple native Xcode iOS shell with `WKWebView` instead
+  - the shell now opens `https://goush-beta.streamlit.app`
+  - the app shell injects light CSS/JS to hide some visible Streamlit chrome and feel less like a raw website
+  - current goal is a private iPhone beta/test build first, not an App Store-ready native app yet
+
+### 2026-05-01
+
+- Built the first working iPhone beta shell outside the main repo using a native Xcode `WKWebView` wrapper:
+  - the external shell project lives separately from the Floosy repo so the main Git history does not get mixed with Xcode/iOS files
+  - the shell successfully opens the hosted beta inside both the simulator and a real iPhone
+- Moved away from trying to control the Streamlit web sidebar directly on mobile:
+  - the iPhone beta now uses a native Arabic drawer/menu instead of depending on the hosted web sidebar behavior
+  - this is a deliberate mobile UX decision because the web sidebar was unreliable inside the wrapper
+- Added hosted query-param page navigation support for the mobile shell:
+  - Floosy now reads `page=...` from the URL and maps it to the matching internal section
+  - the sidebar radio state is overridden by the requested page when needed so mobile navigation can take control
+- Fixed a follow-up bug where Floosy's own browser-preference sync was overwriting the mobile `page=...` query param:
+  - `f_w` / `f_lang` updates now preserve the current `page`
+  - Floosy also re-stamps the active `page` query param after section selection so the link stays stable during reruns
+- Real-world mobile beta status after these changes:
+  - the shell, loading overlay, Arabic menu, and hosted page rendering are all working
+  - navigation fallback-to-dashboard behavior was the key remaining mobile-shell issue under active test
+  - latest live fixes were pushed specifically to stabilize `page=account` / `page=documents` routing from the native menu
+
+### 2026-05-04
+
+- Continued Beta 2 work on the iPhone shell and the hosted beta together instead of treating them as separate tracks:
+  - reviewed how web language state is written in `app.py` / `config_floosy.py`
+  - continued direct shell fixes in the external Xcode project file `ContentView.swift`
+- Web/sidebar routing status improved:
+  - localhost navigation is back to normal
+  - hosted beta navigation is also behaving correctly again
+  - `page`, `f_shell`, and `f_lang` preservation is now part of the expected shell/hosted behavior
+- Mobile-shell language sync remains the main open app-wrapper issue:
+  - in real testing, the web content can switch to Arabic while the native drawer/sidebar still shows English labels
+  - this happens most clearly when the app starts in English and the user later changes language to Arabic inside Settings
+- Latest shell-side engineering attempts for this bug:
+  - the page sends explicit language hints through `data-floosy-language`, `window.__floosyShellLanguage`, and the `floosyBridge`
+  - the shell watches DOM changes, history changes, and query-param changes
+  - the latest patch changed the shell to trust visible page language and explicit DOM hints before trusting an older `f_lang` in the URL
+  - native section navigation now also carries the currently detected language when opening a new section
+- Regression note:
+  - one later shell patch made the app behave worse in user testing
+  - that last patch was rolled back so work can continue from the earlier working shell baseline instead of compounding the regression
+- Follow-up shell patch after the rollback:
+  - native section navigation now passes the currently detected language in `f_lang` when opening another page from the native drawer
+  - the native drawer side now follows app language: Arabic drawer opens from the right, English drawer opens from the left
+  - the loading/opening screen is now centered independently from drawer alignment, so the startup card no longer appears stuck near the top edge
+- Latest verification status:
+  - `xcodebuild` succeeded after the newest `ContentView.swift` changes
+  - however, no final user confirmation exists yet that the Arabic native drawer issue is fully solved
+- Devin/PR workflow note captured for future safety:
+  - a Devin-generated PR (`PR #2`) was reviewed and should not be merged as-is because it is stale and far behind `main`
+  - most of the claimed UI fixes were already present on `main`
+  - the PR itself is not a safe source of truth for Beta 2 mobile work
+- Context-process decision reinforced:
+  - every meaningful Floosy Beta 2 change or bug must now be documented here as part of normal workflow, not only when a handoff happens
+- Product naming direction changed after later brand discussion:
+  - approved app name is now `GoushFi`
+  - this replaces `Goush Money` as the latest preferred name
+  - approved tagline is now `Smart money, in your hands`
+  - approved Arabic tagline direction is now `امسك زمام فلوسك بذكاء`
+  - approved display format for splash/header is:
+    - `GoushFi`
+    - `Smart money, in your hands`
+  - Arabic UI can use:
+    - `GoushFi`
+    - `امسك زمام فلوسك بذكاء`
+  - the iPhone shell now applies this branding directly in the startup/loading card and the native drawer header
+  - the iPhone shell app display name under the home-screen icon is now also set to `GoushFi`
+  - visible hosted/web app branding has now also started switching from `Floosy / فلوسي` to `GoushFi` in the main page title, dashboard header, sidebar title, and Settings heading
+  - the current logo can remain temporary for now
+  - logo, splash, and icon polish can happen later without blocking engineering progress
 
 ### 2026-04-20
 
@@ -218,6 +313,8 @@ Current working focus:
 - Documents workflow exists, but still needs better structure for company paper use.
 - Hosted Remember Sign-In was improved technically, but real Safari testing still shows it as unreliable on the deployed beta.
 - Monthly Items timing is clearer in the UI now, but may still need a fully separate entitlement due-date field if real-life testing shows the preview approach is not enough.
+- iPhone beta shell is now real and working in simulator / device, and hosted/local web navigation is behaving correctly again.
+- The remaining shell uncertainty is no longer basic routing; it is native drawer language sync after changing the app language inside Settings.
 
 ### Still Open
 
@@ -226,6 +323,13 @@ Current working focus:
 - Universal Search is still a planned idea, not an implemented feature yet.
 - Camera capture / mobile scan is still a planned idea, not an implemented feature yet.
 - Cloud first-login behavior now preserves local data safely, but still needs real-world testing across localhost vs hosted beta to confirm the user experience feels clear and not confusing.
+- The iPhone beta shell still needs mobile-app polish:
+  - reduce leftover Streamlit chrome where possible
+  - keep confirming final section routing from the native drawer after more real-device testing
+  - decide how much of the current web UI should stay visible in the beta wrapper
+- The iPhone beta shell still has one active bug under direct testing:
+  - if the app starts in English and the user changes language to Arabic inside Settings, the web content can become Arabic while the native drawer/sidebar remains English
+  - this is currently the top active mobile-shell bug
 
 Most important product rule:
 
@@ -585,6 +689,26 @@ Keep this section as a running log. Add new bugs under "Open / Needs Review" fir
 
 - Dashboard colors and summary tone still need final polish after logic stabilizes.
 
+- iPhone beta shell native drawer language can remain English after switching the app language to Arabic from inside Settings.
+  Current status: still open after multiple shell-side language-detection patches.
+  What is confirmed so far:
+  - localhost web navigation is fixed
+  - hosted beta web navigation is fixed
+  - the remaining issue is specifically in the native iPhone drawer language sync, not the hosted web sidebar itself
+  Latest engineering attempts on 2026-05-04:
+  - preserved `page`, `f_shell`, and `f_lang` more carefully for shell navigation
+  - posted explicit language messages from the page through `floosyBridge`
+  - watched DOM mutations, history changes, and `f_lang` URL changes from the shell
+  - changed the shell to prefer visible/explicit page language before stale query-param language
+  - carried the detected live language into native section navigation URLs
+  - one later attempt regressed the app and was rolled back immediately
+  - a smaller follow-up patch then reapplied only two behaviors:
+    - carry the detected live language during native section navigation
+    - switch native drawer side based on the current app language
+  Latest verification:
+  - build succeeded after the newest `ContentView.swift` update
+  - final real-device/user confirmation is still pending
+
 ### Bug Entry Template
 
 Use this when adding new bugs:
@@ -670,15 +794,27 @@ Only after behavior is stable:
 - Card hierarchy
 - Document page organization
 
+### iPhone Beta Shell
+
+Keep documenting mobile-wrapper behavior separately from general web bugs:
+
+- Confirm native drawer language follows the currently visible page language every time
+- Confirm first app launch language is correct
+- Confirm language change from Settings updates both page content and native drawer labels
+- Reduce leftover Streamlit chrome only after the language-sync bug is solved
+
 ## 10. Next Work Plan
 
 Recommended order:
 
-1. Test Monthly Items with real social security/salary/delayed income examples.
-2. Fix Dashboard Smart Summary based on the new entitlement logic.
-3. Organize Documents for company papers.
-4. Review Projects linked-account edge cases.
-5. Do light UI polish only after behavior is stable.
+1. Finish the iPhone beta shell native drawer language bug so Arabic page state and Arabic drawer labels stay in sync.
+2. Confirm the shell behavior on first launch, after Settings language changes, and after opening/closing the drawer repeatedly.
+3. Test Monthly Items with real social security/salary/delayed income examples.
+4. Fix Dashboard Smart Summary based on the new entitlement logic.
+5. Organize Documents for company papers.
+6. Review Projects linked-account edge cases.
+7. Do light UI polish only after behavior is stable.
+8. Keep `GoushFi` as the approved current app name, but delay any full logo/identity polish until app packaging / pre-Apple preparation.
 
 ## 11. Future Ideas
 

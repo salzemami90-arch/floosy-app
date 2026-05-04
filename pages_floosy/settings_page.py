@@ -274,7 +274,7 @@ def render():
     is_en = settings.get("language") == "English"
     t = (lambda ar, en: en if is_en else ar)
 
-    st.title(t("إعدادات فلوسي", "Floosy Settings"))
+    st.title(t("إعدادات GoushFi", "GoushFi Settings"))
     st.caption(
         t(
             "كل الإعدادات هنا مرتبة: عام، خصوصية، وسحابة.",

@@ -251,13 +251,13 @@ def render(month_key: str, month: str, year: int):
     logo_bytes = get_logo_bytes()
     if logo_bytes:
         b64 = base64.b64encode(logo_bytes).decode("utf-8")
-        logo_html = f'<img src="data:image/png;base64,{b64}" alt="Floosy logo" />'
+        logo_html = f'<img src="data:image/png;base64,{b64}" alt="GoushFi logo" />'
 
     st.markdown(
         f"""
         <div class="flossy-header">
             <div class="flossy-header-inner">
-                <div class="flossy-header-title">فلوسي | Floosy</div>
+                <div class="flossy-header-title">GoushFi</div>
                 <div>{logo_html}</div>
             </div>
         </div>
