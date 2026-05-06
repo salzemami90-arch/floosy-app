@@ -904,3 +904,26 @@ Floosy should reduce financial/admin confusion by showing what happened, when it
 - No pricing file changes
 - All existing expander content preserved verbatim (just relocated below the fold)
 - Bilingual AR/EN behavior preserved including RTL/LTR card alignment
+
+---
+
+## Change Log — 2026-05-06: Monthly Items Edge-Case Fixes
+
+### What changed
+Three targeted fixes for Monthly Items, identified during a read-only edge-case audit.
+
+### Fix 1 — 90-day projection no longer double-counts pending recurring items
+`services/cash_flow_engine.py` — `_recurring_projection()` now skips months that are already in the item's `pending_entitlements` list. Previously, pending months were counted both in the projected 90-day totals AND in carry_over (via `recurring_coverage()`), causing the same money to appear twice in the Financial Analyzer.
+
+### Fix 2 — "Due Day" label split for income vs expense
+`pages_floosy/account_page.py` — The add form and edit form now show "Expected Receipt Day" (`يوم الاستلام المتوقع`) for income items and "Due Payment Day" (`يوم الاستحقاق`) for expense items, instead of the ambiguous "Due/Expected Day" for both.
+
+### Fix 3 — Multi-month pending guidance
+`pages_floosy/account_page.py` — When a Monthly Item has more than one pending entitlement month, a calm caption now appears: "X months pending — confirm each separately" (`X أشهر بانتظار التأكيد — أكد كل شهر على حدة`). This prevents users from confirming one month and assuming all are handled.
+
+### What was NOT changed
+- No service/model/config architecture changes
+- No new data fields or structures
+- No pricing file changes
+- No changes to Monthly Items confirmation logic or transaction recording
+- Bilingual AR/EN behavior preserved

@@ -130,8 +130,8 @@ class RealWorldScenarioTests(unittest.TestCase):
         self.assertEqual(result["components"]["invoice_income"], 1200.0)
         self.assertEqual(result["components"]["document_expense"], 50.0)
         self.assertEqual(result["projected_next_90"]["income"], 2700.0)
-        self.assertEqual(result["projected_next_90"]["expense"], 1415.0)
-        self.assertEqual(result["projected_next_90"]["net"], 1285.0)
+        self.assertEqual(result["projected_next_90"]["expense"], 1335.0)
+        self.assertEqual(result["projected_next_90"]["net"], 1365.0)
 
     def test_projection_breakdown_spans_four_calendar_months_cleanly(self):
         repo = _ScenarioRepo(
