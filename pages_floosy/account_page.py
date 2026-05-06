@@ -1062,7 +1062,7 @@ def render(month_key: str, month: str, year: int):
             with e5:
                 new_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, value=float(item.get("amount", 0.0)), step=1.0, key=f"acct_tpl_amt_{i}")
             with e6:
-                _edit_day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if item.get("type") == "دخل" else t("يوم الاستحقاق", "Due Payment Day")
+                _edit_day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if new_type_label == t("دخل", "Income") else t("يوم الاستحقاق", "Due Payment Day")
                 new_day = st.number_input(_edit_day_label, min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
             with e7:
                 new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
