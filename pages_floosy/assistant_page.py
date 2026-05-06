@@ -22,6 +22,77 @@ def _section_label(title: str, summary: str = "") -> str:
     return f"{title} | {summary}" if summary else title
 
 
+def _quick_take_theme(status: str) -> dict:
+    if status == "empty":
+        return {
+            "background": "#FFFFFF",
+            "border": "#E2E8F0",
+            "label": "#64748B",
+            "text": "#0F172A",
+            "pill_bg": "#F8FAFC",
+            "pill_border": "#E2E8F0",
+            "pill_text": "#475569",
+        }
+    if status in {"cash_pressure_90", "coverage_gap", "project_pressure"}:
+        return {
+            "background": "#FEF2F2",
+            "border": "#EF4444",
+            "label": "#991B1B",
+            "text": "#7F1D1D",
+            "pill_bg": "#FFF1F2",
+            "pill_border": "#FECACA",
+            "pill_text": "#991B1B",
+        }
+    if status in {"needs_follow_up", "spending_high", "docs_due", "note_pattern"}:
+        return {
+            "background": "#FFFBEB",
+            "border": "#F59E0B",
+            "label": "#92400E",
+            "text": "#78350F",
+            "pill_bg": "#FFF7D6",
+            "pill_border": "#FDE68A",
+            "pill_text": "#92400E",
+        }
+    return {
+        "background": "#EAF5EF",
+        "border": "#047857",
+        "label": "#065F46",
+        "text": "#064E3B",
+        "pill_bg": "#F6FBF8",
+        "pill_border": "#BFD8CC",
+        "pill_text": "#064E3B",
+    }
+
+
+def _card_colors(value: float) -> dict:
+    if value > 0:
+        return {"bg": "#EAF5EF", "border": "#047857", "label": "#065F46", "value": "#064E3B"}
+    if value < 0:
+        return {"bg": "#FEF2F2", "border": "#EF4444", "label": "#991B1B", "value": "#7F1D1D"}
+    return {"bg": "#FFFBEB", "border": "#F59E0B", "label": "#92400E", "value": "#78350F"}
+
+
+def _render_action_card(title: str, value_text: str, delta_text: str, net_value: float, is_en: bool) -> None:
+    colors = _card_colors(net_value)
+    accent_side = "border-left" if is_en else "border-right"
+    text_dir = "ltr" if is_en else "rtl"
+    text_align = "left" if is_en else "right"
+    st.markdown(
+        f"""
+        <div style="
+          border-radius:14px;padding:14px 16px;border:1px solid {colors['border']};
+          {accent_side}:5px solid {colors['border']};background:{colors['bg']};
+          direction:{text_dir};text-align:{text_align};
+        ">
+          <div style="font-size:0.85rem;font-weight:700;color:{colors['label']};">{title}</div>
+          <div style="font-size:1.35rem;font-weight:800;color:{colors['value']};">{value_text}</div>
+          <div style="font-size:0.78rem;color:{colors['label']};margin-top:4px;">{delta_text}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render(month_key: str, month: str, year: int):
     is_en = st.session_state.settings.get("language") == "English"
     t = (lambda ar, en: en if is_en else ar)
@@ -51,6 +122,164 @@ def render(month_key: str, month: str, year: int):
     current = analyzer.totals_by_currency(current_tx, currency)
     previous = analyzer.totals_by_currency(previous_tx, currency)
     comparison = analyzer.compare_totals(current, previous)
+
+    recurring_items = st.session_state.get("recurring", {}).get("items", [])
+    active_items = [item for item in recurring_items if item.get("active", True)]
+    coverage = analyzer.recurring_coverage(active_items, month_key, currency)
+
+    projected_net_after_pending = current["net"] + coverage["net_coverage"]
+
+    cash_flow = cash_flow_engine.cash_flow_90d(
+        st.session_state,
+        currency,
+        as_of=date.today(),
+        horizon_days=90,
+    )
+    actual_90 = cash_flow["actual_last_90"]
+    projected_90 = cash_flow["projected_next_90"]
+    carry_over = cash_flow["carry_over"]
+    comparison_90 = cash_flow["comparison_vs_last_90"]
+    components_90 = cash_flow["components"]
+
+    savings = analyzer.savings_summary(st.session_state, month_key)
+    project = analyzer.projects_summary(st.session_state, month_key)
+    docs = analyzer.documents_summary(st.session_state)
+    project_impact = analyzer.project_impact_on_personal(st.session_state, month_key, currency)
+    seasonal = analyzer.seasonal_expense_summary(st.session_state, currency, limit_months=6)
+    category_signal = analyzer.seasonal_category_signal(st.session_state, month_key, currency, history_months=6)
+
+    # ── Zone A: AI Quick Take ─────────────────────────────────────────────
+    brief = analyzer.dashboard_brief(st.session_state, month_key, currency)
+    brief_status = str(brief.get("status", "stable") or "stable")
+
+    show_spending_note_on_good = brief_status == "spending_high" and float(brief.get("focus_value", 0.0)) >= 0
+    theme = _quick_take_theme("stable" if show_spending_note_on_good else brief_status)
+    border_side = "border-left" if is_en else "border-right"
+
+    if show_spending_note_on_good:
+        brief_message = t("الوضع المالي تحت السيطرة", "Financial position is under control")
+        brief_detail = t(
+            "صافي 90 يوم ما زال إيجابيًا، لكن مصروف هذا الشهر أعلى من المعتاد.",
+            "Your 90-day net is still positive, but this month's spending is above usual.",
+        )
+    else:
+        brief_message = brief["message_en"] if is_en else brief["message_ar"]
+        brief_detail = brief["detail_en"] if is_en else brief["detail_ar"]
+
+    focus_label = brief["focus_label_en"] if is_en else brief["focus_label_ar"]
+    support_label = brief["support_label_en"] if is_en else brief["support_label_ar"]
+    focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
+    support_value = f"{brief.get('support_value', 0.0):,.0f} {currency_view}"
+
+    st.markdown(
+        f"### {t('نظرة سريعة', 'Quick Take')}",
+    )
+
+    if brief_status == "empty":
+        st.info(
+            t(
+                "أضف أول حركة مالية لتفعيل التحليل.",
+                "Add your first transaction to activate the analysis.",
+            )
+        )
+    else:
+        st.markdown(
+            f"""
+            <div style="background:{theme['background']};border:1px solid {theme['pill_border']};{border_side}:6px solid {theme['border']};border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+                <div style="font-weight:700;font-size:1.08rem;color:{theme['text']};">{brief_message}</div>
+                <div style="color:{theme['label']};font-size:0.92rem;margin-top:4px;">{brief_detail}</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                    <div style="background:{theme['pill_bg']};border:1px solid {theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+                        <span style="color:{theme['label']};">{focus_label}:</span>
+                        <span style="font-weight:700;color:{theme['pill_text']};"> {focus_value}</span>
+                    </div>
+                    <div style="background:{theme['pill_bg']};border:1px solid {theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+                        <span style="color:{theme['label']};">{support_label}:</span>
+                        <span style="font-weight:700;color:{theme['pill_text']};"> {support_value}</span>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # Thin-data calm caption
+    tx_by_month = st.session_state.get("transactions", {})
+    tx_count = sum(len(txs or []) for txs in tx_by_month.values()) if isinstance(tx_by_month, dict) else 0
+    if 0 < tx_count < 5 and seasonal.get("history_month_count", 0) < 2:
+        st.caption(
+            t(
+                "بيانات محدودة — ستتحسن الرؤى بإضافة المزيد من المعاملات.",
+                "Limited data — insights will improve as you add more transactions.",
+            )
+        )
+
+    # ── Zone B: 3 Action Cards ────────────────────────────────────────────
+    if brief_status != "empty":
+        ac1, ac2, ac3 = st.columns(3)
+        with ac1:
+            _render_action_card(
+                title=t("هذا الشهر", "This Month"),
+                value_text=f"{current['net']:,.2f} {currency_view}",
+                delta_text=f"{comparison['net_delta']:+,.2f} ({comparison['net_delta_pct']:+.1f}%)",
+                net_value=current["net"],
+                is_en=is_en,
+            )
+        with ac2:
+            _render_action_card(
+                title=t("الاستحقاقات", "Entitlements"),
+                value_text=f"{coverage['net_coverage']:,.2f} {currency_view}",
+                delta_text=t(
+                    f"{coverage['overdue_count']} متأخر · {coverage['expected_count']} متوقع",
+                    f"{coverage['overdue_count']} overdue · {coverage['expected_count']} expected",
+                ),
+                net_value=coverage["net_coverage"],
+                is_en=is_en,
+            )
+        with ac3:
+            _render_action_card(
+                title=t("90 يوم", "90-Day Outlook"),
+                value_text=f"{projected_90['net']:,.2f} {currency_view}",
+                delta_text=t(
+                    f"{comparison_90['net_delta']:+,.2f} عن آخر 90 يوم",
+                    f"{comparison_90['net_delta']:+,.2f} vs last 90 days",
+                ),
+                net_value=projected_90["net"],
+                is_en=is_en,
+            )
+        st.markdown("")
+
+    # ── Zone C: Upcoming Items (above the fold) ──────────────────────────
+    upcoming_items = cash_flow.get("upcoming_items", [])
+    if upcoming_items:
+        source_labels = {
+            "recurring": t("قالب متكرر", "Recurring"),
+            "invoice": t("فاتورة", "Invoice"),
+            "document": t("مستند", "Document"),
+            "transaction": t("معاملة", "Transaction"),
+        }
+        type_labels = {
+            "income": t("دخل", "Income"),
+            "expense": t("مصروف", "Expense"),
+        }
+        upcoming_df = pd.DataFrame(
+            [
+                {
+                    t("التاريخ", "Date"): item["due_date_iso"],
+                    t("المصدر", "Source"): source_labels.get(item.get("source", ""), item.get("source", "")),
+                    t("النوع", "Type"): type_labels.get(item.get("type", ""), item.get("type", "")),
+                    t("العنصر", "Item"): item.get("name", ""),
+                    t("الحالة", "Status"): item.get("status", ""),
+                    t("المبلغ", "Amount"): f"{item['amount']:,.2f} {currency_view}",
+                }
+                for item in upcoming_items
+            ]
+        )
+        st.markdown(f"#### {t('أقرب العناصر القادمة', 'Upcoming Items')}")
+        st.dataframe(upcoming_df, hide_index=True)
+
+    # ── Zone D: Detail Expanders (below the fold) ────────────────────────
+    st.markdown(f"### {t('التفاصيل', 'Details')}")
 
     with st.expander(
         _section_label(
@@ -85,12 +314,6 @@ def render(month_key: str, month: str, year: int):
             st.write(t(f"عدد معاملات هذا الشهر: **{current['count']}**", f"Transactions this month: **{current['count']}**"))
         with s2:
             st.write(t(f"عدد معاملات الشهر السابق: **{previous['count']}**", f"Transactions previous month: **{previous['count']}**"))
-
-    recurring_items = st.session_state.get("recurring", {}).get("items", [])
-    active_items = [item for item in recurring_items if item.get("active", True)]
-    coverage = analyzer.recurring_coverage(active_items, month_key, currency)
-
-    projected_net_after_pending = current["net"] + coverage["net_coverage"]
 
     with st.expander(
         _section_label(
@@ -169,18 +392,6 @@ def render(month_key: str, month: str, year: int):
             st.warning(t("في فجوة تغطية حالياً وتحتاج متابعة.", "There is a current coverage gap that needs follow-up."))
         else:
             st.info(t("الوضع متعادل تقريباً بين الالتزامات والدخل المتوقع.", "The situation is nearly balanced between commitments and expected income."))
-
-    cash_flow = cash_flow_engine.cash_flow_90d(
-        st.session_state,
-        currency,
-        as_of=date.today(),
-        horizon_days=90,
-    )
-    actual_90 = cash_flow["actual_last_90"]
-    projected_90 = cash_flow["projected_next_90"]
-    carry_over = cash_flow["carry_over"]
-    comparison_90 = cash_flow["comparison_vs_last_90"]
-    components_90 = cash_flow["components"]
 
     with st.expander(
         _section_label(
@@ -306,39 +517,6 @@ def render(month_key: str, month: str, year: int):
             st.markdown(f"#### {t('تقسيم 90 يوم حسب الشهر', '90-Day Monthly Split')}")
             st.dataframe(monthly_projection_df, hide_index=True)
 
-        upcoming_items = cash_flow.get("upcoming_items", [])
-        if upcoming_items:
-            source_labels = {
-                "recurring": t("قالب متكرر", "Recurring"),
-                "invoice": t("فاتورة", "Invoice"),
-                "document": t("مستند", "Document"),
-                "transaction": t("معاملة", "Transaction"),
-            }
-            type_labels = {
-                "income": t("دخل", "Income"),
-                "expense": t("مصروف", "Expense"),
-            }
-            upcoming_df = pd.DataFrame(
-                [
-                    {
-                        t("التاريخ", "Date"): item["due_date_iso"],
-                        t("المصدر", "Source"): source_labels.get(item.get("source", ""), item.get("source", "")),
-                        t("النوع", "Type"): type_labels.get(item.get("type", ""), item.get("type", "")),
-                        t("العنصر", "Item"): item.get("name", ""),
-                        t("الحالة", "Status"): item.get("status", ""),
-                        t("المبلغ", "Amount"): f"{item['amount']:,.2f} {currency_view}",
-                    }
-                    for item in upcoming_items
-                ]
-            )
-            st.markdown(f"#### {t('أقرب العناصر القادمة', 'Upcoming Items')}")
-            st.dataframe(upcoming_df, hide_index=True)
-
-    savings = analyzer.savings_summary(st.session_state, month_key)
-    project = analyzer.projects_summary(st.session_state, month_key)
-    docs = analyzer.documents_summary(st.session_state)
-
-    project_impact = analyzer.project_impact_on_personal(st.session_state, month_key, currency)
     with st.expander(
         _section_label(
             t("التوفير والمشاريع", "Savings and Projects"),
@@ -384,9 +562,6 @@ def render(month_key: str, month: str, year: int):
                 ),
                 delta_color="inverse" if project_impact["personal_net_after_support"] < 0 else "normal",
             )
-
-    seasonal = analyzer.seasonal_expense_summary(st.session_state, currency, limit_months=6)
-    category_signal = analyzer.seasonal_category_signal(st.session_state, month_key, currency, history_months=6)
 
     with st.expander(
         _section_label(

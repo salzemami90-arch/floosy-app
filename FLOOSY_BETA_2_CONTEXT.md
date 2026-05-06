@@ -876,3 +876,31 @@ If context is compressed or unclear:
 ## 13. One-Line Reminder
 
 Floosy should reduce financial/admin confusion by showing what happened, when it happened, what month it belongs to, and where the proof is.
+
+---
+
+## Change Log — 2026-05-06: Financial Analyzer Insight-First Redesign
+
+### What changed
+`pages_floosy/assistant_page.py` was restructured from metric-dump (7 collapsed expanders) to insight-first layout.
+
+### New page structure (top to bottom)
+1. **Zone A — AI Quick Take:** Hero card powered by `dashboard_brief()`. Shows the single most important financial signal with colored severity, headline, detail sentence, and two summary pills (90-Day Net + Needs Follow-up). Includes `show_spending_note_on_good` override (same as Dashboard). No LLM — pure rule-based cascade.
+2. **Thin-data caption:** When `tx_count > 0 and < 5` and `history_month_count < 2`, shows "Limited data — insights will improve as you add more transactions." UI-only guard.
+3. **Zone B — 3 Action Cards:** Always visible, never collapsed. This Month (net + delta vs previous), Entitlements (coverage net + overdue/expected counts), 90-Day Outlook (projected net + delta vs last 90 days). Color-coded green/amber/red by value.
+4. **Zone C — Upcoming Items table:** Promoted from inside the 90-Day Cash Flow expander to be visible without clicking.
+5. **Zone D — Detail expanders:** All 6 original sections (This Month Overview, Entitlements and Coverage, 90-Day Cash Flow, Savings and Projects, Seasonal Expense Behavior, Documents) moved below the fold, collapsed, content unchanged internally. The upcoming-items table was removed from inside the 90-Day expander since it now lives in Zone C.
+6. **Zone E — Footer:** Unchanged timestamp.
+
+### New helper functions added
+- `_quick_take_theme(status)` — color mapping for Quick Take card (identical to `dashboard_page._summary_theme`)
+- `_card_colors(value)` — green/amber/red color set based on numeric value sign
+- `_render_action_card(title, value_text, delta_text, net_value, is_en)` — renders a single styled HTML action card
+
+### What was NOT changed
+- No service/model/config changes
+- No new backend functions
+- No LLM integration
+- No pricing file changes
+- All existing expander content preserved verbatim (just relocated below the fold)
+- Bilingual AR/EN behavior preserved including RTL/LTR card alignment
