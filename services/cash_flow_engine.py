@@ -172,8 +172,12 @@ class CashFlowEngine:
 
         active_items = [item for item in raw_items if isinstance(item, dict) and item.get("active", True)]
         for month_start in self._month_starts_between(start_date, end_date):
+            month_key = self._month_key_for(month_start)
             for item in active_items:
                 if not self._currency_matches(item.get("currency", ""), currency):
+                    continue
+                pending = item.get("pending_entitlements", [])
+                if isinstance(pending, list) and month_key in pending:
                     continue
                 due_date = self._safe_due_date(month_start.year, month_start.month, item.get("day", 1))
                 if not (start_date <= due_date <= end_date):

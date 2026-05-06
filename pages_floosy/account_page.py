@@ -971,7 +971,8 @@ def render(month_key: str, month: str, year: int):
                 amount = st.number_input(t("المبلغ الافتراضي", "Default Amount"), min_value=0.0, step=1.0)
             with t2:
                 category = st.text_input(t("التصنيف", "Category"), value=t("أخرى", "Other"))
-                due_day = st.number_input(t("يوم الاستحقاق/المتوقع", "Due/Expected Day"), min_value=1, max_value=31, value=25, step=1)
+                _day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if tx_type == t("دخل", "Income") else t("يوم الاستحقاق", "Due Payment Day")
+                due_day = st.number_input(_day_label, min_value=1, max_value=31, value=25, step=1)
                 item_currency = st.selectbox(
                     t("العملة", "Currency"),
                     CURRENCY_OPTIONS,
@@ -1061,7 +1062,8 @@ def render(month_key: str, month: str, year: int):
             with e5:
                 new_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, value=float(item.get("amount", 0.0)), step=1.0, key=f"acct_tpl_amt_{i}")
             with e6:
-                new_day = st.number_input(t("اليوم", "Day"), min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
+                _edit_day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if item.get("type") == "دخل" else t("يوم الاستحقاق", "Due Payment Day")
+                new_day = st.number_input(_edit_day_label, min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
             with e7:
                 new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
             with e8:
@@ -1221,6 +1223,8 @@ def render(month_key: str, month: str, year: int):
                 if pending:
                     pending_labels = ", ".join(_month_label_from_key(mk, is_en) for mk in _sort_month_keys(pending))
                     st.caption(f"{t('أشهر الاستحقاق غير المؤكدة', 'Unconfirmed entitlement months')}: {pending_labels}")
+                    if len(pending) > 1:
+                        st.caption(t(f"{len(pending)} أشهر بانتظار التأكيد — أكد كل شهر على حدة", f"{len(pending)} months pending — confirm each separately"))
                 else:
                     st.caption(t("لا توجد أشهر استحقاق بانتظار التأكيد.", "No entitlement months waiting for confirmation."))
 
