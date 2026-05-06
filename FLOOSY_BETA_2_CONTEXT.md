@@ -927,3 +927,29 @@ Three targeted fixes for Monthly Items, identified during a read-only edge-case 
 - No pricing file changes
 - No changes to Monthly Items confirmation logic or transaction recording
 - Bilingual AR/EN behavior preserved
+
+---
+
+## Change Log — 2026-05-06: Monthly Items Historical Backfill (1.0)
+
+### What changed
+Added an optional "Last confirmed month" dropdown to the Monthly Items add and edit forms. This fixes a real-life gap where items with unknown history showed only the current month as pending.
+
+### Problem
+`_ensure_pending_month()` falls through to `start_key = month_key` when `last_paid_month` is empty, generating only the current month as pending. For pre-existing obligations (salary, rent, subscriptions) added to GoushFi for the first time, this hid all historical missed months.
+
+### Solution — "Last confirmed month" dropdown
+- **Add form:** New `st.selectbox` with options: "Starts this month" (default, preserves current behavior) + last 12 months. If user selects a month, it becomes `last_paid_month`, and `_ensure_pending_month()` auto-fills all following months as pending.
+- **Edit form:** Same dropdown for existing items. Shows current `last_paid_month` if set, or "Not set" if empty. Changing the value clears `pending_entitlements` so they regenerate correctly on next render.
+- **12-month lookback cap:** The dropdown only offers the last 12 months for safety.
+- **Bilingual help text:** Both forms include a caption explaining the field's purpose.
+
+### How it works with existing logic
+No service/engine changes needed. `_ensure_pending_month(item, month_key)` already checks `last_paid_month` first (line 623–625). If set, `start_key = _shift_month_key(last_paid_month, 1)` generates all months from `last_paid_month + 1` through the current month. The dropdown simply provides a way to set `last_paid_month` at creation time or retroactively.
+
+### What was NOT changed
+- No service/model/config changes
+- No auto-detection from transaction history
+- No guided wizard or multi-step flow
+- No pricing file changes
+- Bilingual AR/EN behavior preserved

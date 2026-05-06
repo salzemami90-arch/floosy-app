@@ -986,6 +986,23 @@ def render(month_key: str, month: str, year: int):
             )
 
             is_variable = st.checkbox(t("مبلغ متغير", "Variable Amount"), value=False)
+
+            _starts_label = t("يبدأ من هذا الشهر", "Starts this month")
+            _lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), _shift_month_key(month_key, -1))
+            _lookback_labels = [_starts_label] + [_month_label_from_key(mk, is_en) for mk in reversed(_lookback_keys)]
+            _lookback_values = [""] + list(reversed(_lookback_keys))
+            last_confirmed_idx = st.selectbox(
+                t("آخر شهر مؤكد (إن وجد)", "Last confirmed month (if any)"),
+                range(len(_lookback_labels)),
+                index=0,
+                format_func=lambda i: _lookback_labels[i],
+            )
+            _selected_last_paid = _lookback_values[last_confirmed_idx]
+            st.caption(t(
+                "إذا كان هذا العنصر نشطاً من قبل، اختر آخر شهر استلمته أو دفعته. جوشفي ستضع الأشهر التالية كبانتظار التأكيد.",
+                "If this item was already active, select the last month you received/paid it. GoushFi will mark all following months as pending.",
+            ))
+
             add_btn = st.form_submit_button(t("إضافة عنصر جديد", "Add New Item"), use_container_width=True)
 
             if add_btn:
@@ -1003,7 +1020,7 @@ def render(month_key: str, month: str, year: int):
                             "day": int(due_day),
                             "active": True,
                             "is_variable": bool(is_variable),
-                            "last_paid_month": "",
+                            "last_paid_month": _selected_last_paid,
                             "last_paid_date": "",
                             "pending_entitlements": [],
                         }
@@ -1069,17 +1086,31 @@ def render(month_key: str, month: str, year: int):
             with e8:
                 new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{i}")
 
+            _edit_not_set_label = t("غير محدد", "Not set")
+            _edit_lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), _shift_month_key(month_key, -1))
+            _edit_lookback_labels = [_edit_not_set_label] + [_month_label_from_key(mk, is_en) for mk in reversed(_edit_lookback_keys)]
+            _edit_lookback_values = [""] + list(reversed(_edit_lookback_keys))
+            _current_lpm = str(item.get("last_paid_month") or "").strip()
+            _edit_lpm_default = _edit_lookback_values.index(_current_lpm) if _current_lpm in _edit_lookback_values else 0
+            new_last_confirmed_idx = st.selectbox(
+                t("آخر شهر مؤكد", "Last confirmed month"),
+                range(len(_edit_lookback_labels)),
+                index=_edit_lpm_default,
+                format_func=lambda idx: _edit_lookback_labels[idx],
+                key=f"acct_tpl_lpm_{i}",
+            )
+            _edit_selected_lpm = _edit_lookback_values[new_last_confirmed_idx]
+            st.caption(t(
+                "اختر آخر شهر تم دفعه أو استلامه لهذا العنصر. الأشهر التالية ستصبح بانتظار التأكيد.",
+                "Select the last month this item was paid/received. Following months will become pending.",
+            ))
+
             current_example_label = _entitlement_date_label(month_key, int(new_day or 1), is_en)
-            last_confirmed_month_label = _month_label_from_key(str(item.get("last_paid_month") or "").strip(), is_en) if str(item.get("last_paid_month") or "").strip() else ""
             last_paid_date_text = str(item.get("last_paid_date") or "").strip() or "-"
             timeline_bits = [
                 f"{t('مثال الشهر الحالي', 'Current month example')}: {current_example_label or '-'}",
                 f"{t('آخر تاريخ دفع/استلام', 'Last payment/receipt date')}: {last_paid_date_text}",
             ]
-            if last_confirmed_month_label:
-                timeline_bits.append(
-                    f"{t('آخر شهر استحقاق مؤكد', 'Last confirmed entitlement month')}: {last_confirmed_month_label}"
-                )
             st.caption(" | ".join(timeline_bits))
 
             a1, a2 = st.columns(2)
@@ -1096,6 +1127,9 @@ def render(month_key: str, month: str, year: int):
                         item["day"] = int(new_day)
                         item["active"] = bool(new_active)
                         item["is_variable"] = bool(new_variable)
+                        if _edit_selected_lpm != _current_lpm:
+                            item["last_paid_month"] = _edit_selected_lpm
+                            item["pending_entitlements"] = []
                         st.success(t("تم تعديل العنصر.", "Item updated."))
                         st.rerun()
             with a2:
