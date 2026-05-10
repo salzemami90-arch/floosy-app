@@ -1191,6 +1191,18 @@ def render(month_key: str, month: str, year: int):
                     f"{t('شهر الاستحقاق المؤكد', 'Confirmed entitlement month')}: {latest_paid_month_label or '-'}"
                 )
             amount_text = f"{float(item.get('amount', 0.0)):,.0f} {item_currency}"
+            meta_rows = [
+                f'<div class="floosy-monthly-item-meta" style="color:{meta_color};">{var_txt} | {day_label}: {item.get("day", 1)}</div>'
+            ]
+            if due_summary:
+                meta_rows.append(
+                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:3px;">{due_summary}</div>'
+                )
+            if payment_summary:
+                meta_rows.append(
+                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:2px;">{payment_summary}</div>'
+                )
+            meta_html = "".join(meta_rows)
 
             st.markdown(
                 f"""
@@ -1200,9 +1212,7 @@ def render(month_key: str, month: str, year: int):
                         <div class="floosy-monthly-item-amount">{amount_text}</div>
                     </div>
                     <div class="floosy-monthly-item-state" style="color:{state_color};">{state_txt}</div>
-                    <div class="floosy-monthly-item-meta" style="color:{meta_color};">{var_txt} | {day_label}: {item.get('day', 1)}</div>
-                    {f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:3px;">{due_summary}</div>' if due_summary else ''}
-                    {f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:2px;">{payment_summary}</div>' if payment_summary else ''}
+                    {meta_html}
                 </div>
                 """,
                 unsafe_allow_html=True,
