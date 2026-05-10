@@ -528,11 +528,13 @@ def _load_json_payload_from_file() -> dict | None:
 
 def export_app_state_payload() -> dict:
     """Export app data keys as JSON-safe payload."""
-    return {
+    payload = {
         key: _encode_for_json(st.session_state.get(key))
         for key in PERSIST_KEYS
         if key in st.session_state
     }
+    payload["_schema_version"] = 1
+    return payload
 
 
 def import_app_state_payload(raw_payload) -> None:
@@ -1102,6 +1104,8 @@ hr {
         st.session_state["_cloud_cookie_restore_checked"] = False
     st.session_state.setdefault("_cloud_last_snapshot", "")
     st.session_state.setdefault("_cloud_last_pull_user", "")
+    st.session_state.setdefault("_cloud_auth_issued_at", "")
+    st.session_state.setdefault("_cloud_sync_last_error", "")
 
 def get_month_selection(page: str):
     """

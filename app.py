@@ -39,6 +39,10 @@ def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_
         "access_token": access_token,
         "refresh_token": refresh_token,
     }
+    if bool(logged_in) and access_token:
+        st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
+    elif not bool(logged_in):
+        st.session_state["_cloud_auth_issued_at"] = ""
 
 
 def _set_scope_owner(user_id: str = "", email: str = "") -> None:
@@ -236,6 +240,27 @@ def _sync_cloud_if_logged_in() -> None:
     if not client.is_configured:
         return
 
+    # Refresh access token if it may be stale (issued >50 min ago).
+    auth_issued = st.session_state.get("_cloud_auth_issued_at", "")
+    if auth_issued:
+        try:
+            age_seconds = (datetime.now() - datetime.fromisoformat(auth_issued)).total_seconds()
+        except Exception:
+            age_seconds = 0
+        if age_seconds > 3000:
+            refresh_token = str(cloud_auth.get("refresh_token") or "")
+            if refresh_token:
+                refreshed = client.refresh_session(refresh_token)
+                if refreshed.get("ok"):
+                    access_token = str(refreshed.get("access_token") or access_token)
+                    new_refresh = str(refreshed.get("refresh_token") or refresh_token)
+                    _set_cloud_auth(True, email=str(cloud_auth.get("email") or ""), user_id=user_id, access_token=access_token, refresh_token=new_refresh)
+                    st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
+                else:
+                    st.session_state["_cloud_sync_last_error"] = "token_refresh_failed"
+                    pause_cloud_auto_sync(st.session_state, user_id, reason="token_refresh_failed")
+                    return
+
     payload = export_app_state_payload()
     try:
         snapshot = json.dumps(payload, ensure_ascii=False, sort_keys=True)
@@ -252,10 +277,13 @@ def _sync_cloud_if_logged_in() -> None:
     if push.get("ok"):
         st.session_state["_cloud_last_snapshot"] = snapshot
         st.session_state["_cloud_last_pull_user"] = user_id
+        st.session_state["_cloud_sync_last_error"] = ""
         mark_cloud_sync_ready(st.session_state, user_id)
         if isinstance(settings, dict):
             settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
             st.session_state["settings"] = settings
+    else:
+        st.session_state["_cloud_sync_last_error"] = str(push.get("error") or "sync_push_failed")
 
 
 def _runtime_url_for_warning() -> str:
