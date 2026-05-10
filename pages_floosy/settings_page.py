@@ -68,6 +68,10 @@ def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_
         "access_token": access_token,
         "refresh_token": refresh_token,
     }
+    if bool(logged_in) and access_token:
+        st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
+    elif not bool(logged_in):
+        st.session_state["_cloud_auth_issued_at"] = ""
 
 
 def _sync_snapshot_from_state() -> None:
@@ -196,8 +200,6 @@ def _clear_scoped_finance_state() -> None:
 
 def _render_cloud_sync_pause_notice(t) -> None:
     reason = cloud_sync_pause_reason(st.session_state)
-    if not reason:
-        return
 
     if reason in {"local_cloud_conflict_after_sign_in", "local_cloud_conflict_after_cookie_restore"}:
         st.warning(
