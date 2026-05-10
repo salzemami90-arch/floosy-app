@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import streamlit as st
 
@@ -25,6 +25,9 @@ from services.cloud_sync_guard import (
     should_keep_local_data_before_auto_import,
 )
 from services.supabase_sync import SupabaseSyncClient
+
+
+KUWAIT_TZ = timezone(timedelta(hours=3), name="Asia/Kuwait")
 
 
 CURRENCY_OPTION_AR_TO_EN = {
@@ -82,8 +85,21 @@ def _mark_cloud_sync_now() -> None:
     settings = st.session_state.get("settings")
     if not isinstance(settings, dict):
         return
-    settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
+    settings["cloud_last_sync_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     st.session_state["settings"] = settings
+
+
+def _format_cloud_sync_label(raw_value: str, empty_label: str) -> str:
+    clean_value = str(raw_value or "").strip()
+    if not clean_value:
+        return empty_label
+    try:
+        parsed_sync = datetime.fromisoformat(clean_value.replace("Z", "+00:00"))
+        if parsed_sync.tzinfo is None:
+            parsed_sync = parsed_sync.replace(tzinfo=timezone.utc)
+        return parsed_sync.astimezone(KUWAIT_TZ).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return clean_value
 
 
 def _render_storage_location_status(t, cloud_sync_enabled: bool, cloud_configured: bool, cloud_logged_in: bool, last_sync_label: str) -> None:
@@ -284,14 +300,10 @@ def render():
 
     cloud_sync_enabled = bool(settings.get("cloud_sync_enabled", False))
     last_sync_raw = str(settings.get("cloud_last_sync_at", "") or "").strip()
-    if last_sync_raw:
-        try:
-            parsed_sync = datetime.fromisoformat(last_sync_raw.replace("Z", ""))
-            last_sync_label = parsed_sync.strftime("%Y-%m-%d %H:%M")
-        except Exception:
-            last_sync_label = last_sync_raw
-    else:
-        last_sync_label = t("لم تتم مزامنة بعد", "No sync yet")
+    last_sync_label = _format_cloud_sync_label(
+        last_sync_raw,
+        t("لم تتم مزامنة بعد", "No sync yet"),
+    )
 
     backup_name_top, backup_bytes_top = _build_backup_file()
     cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
