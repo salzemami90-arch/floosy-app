@@ -1,6 +1,6 @@
 # Floosy Beta 2 Context
 
-Last updated: 2026-05-04
+Last updated: 2026-05-06
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -55,6 +55,14 @@ When adding future updates:
 - Add the commit hash if available.
 - Summarize the product change, not only the code change.
 - Keep older entries. Do not delete history unless creating a cleaner Beta 3 context file.
+
+### 2026-05-06
+
+- Cloud/data-safety hardening for 1.0 readiness (3 blocker fixes + 1 low-cost improvement):
+  - Auto-sync now refreshes the Supabase access token if the current one is older than 50 minutes, preventing silent sync failures after token expiry. If refresh fails, auto-sync pauses and the user is notified.
+  - "Save My Data" now checks for meaningful local data before pushing to cloud. If local state is empty or minimal (e.g. after "Delete This Device Data"), the user sees a warning instead of silently overwriting the cloud copy with nothing.
+  - Auto-sync failures are no longer silently swallowed. A lightweight caption appears on the Cloud settings tab when the last sync attempt failed, and token refresh failures show a clear warning with recovery instructions.
+  - Cloud payloads now include `_schema_version: 1` to future-proof data migrations when the schema evolves.
 
 ### 2026-04-27
 

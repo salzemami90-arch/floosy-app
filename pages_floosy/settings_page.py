@@ -20,6 +20,7 @@ from services.cloud_sync_guard import (
     clear_cloud_sync_guard,
     cloud_sync_pause_reason,
     mark_cloud_sync_ready,
+    payload_has_meaningful_data,
     payload_snapshot,
     pause_cloud_auto_sync,
     should_keep_local_data_before_auto_import,
@@ -67,6 +68,10 @@ def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_
         "access_token": access_token,
         "refresh_token": refresh_token,
     }
+    if bool(logged_in) and access_token:
+        st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
+    elif not bool(logged_in):
+        st.session_state["_cloud_auth_issued_at"] = ""
 
 
 def _sync_snapshot_from_state() -> None:
@@ -195,8 +200,6 @@ def _clear_scoped_finance_state() -> None:
 
 def _render_cloud_sync_pause_notice(t) -> None:
     reason = cloud_sync_pause_reason(st.session_state)
-    if not reason:
-        return
 
     if reason in {"local_cloud_conflict_after_sign_in", "local_cloud_conflict_after_cookie_restore"}:
         st.warning(
@@ -224,6 +227,22 @@ def _render_cloud_sync_pause_notice(t) -> None:
             t(
                 "تم حذف النسخة السحابية، لذلك أوقفنا الرفع التلقائي مؤقتًا. إذا رغبت في إنشاء نسخة سحابية جديدة استخدم حفظ بياناتي.",
                 "The cloud copy was deleted, so auto upload is paused for now. If you want to create a new cloud copy, use Save My Data.",
+            )
+        )
+    elif reason == "token_refresh_failed":
+        st.warning(
+            t(
+                "تعذر تجديد جلسة السحابة تلقائيًا. المزامنة التلقائية متوقفة مؤقتًا. يرجى تسجيل الخروج وإعادة تسجيل الدخول.",
+                "Cloud session could not be refreshed automatically. Auto-sync is paused. Please sign out and sign in again.",
+            )
+        )
+
+    sync_error = str(st.session_state.get("_cloud_sync_last_error") or "").strip()
+    if sync_error and reason != "token_refresh_failed":
+        st.caption(
+            t(
+                "آخر محاولة مزامنة تلقائية لم تنجح. بياناتك المحلية آمنة وستُحاول المزامنة مرة أخرى تلقائيًا.",
+                "The last auto-sync attempt was not successful. Your local data is safe and sync will retry automatically.",
             )
         )
 
@@ -721,6 +740,7 @@ def render():
                         import_app_state_payload(pull.get("data"))
                         _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
                         st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
+                        st.session_state["_cloud_sync_last_error"] = ""
                         mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
                         _mark_cloud_sync_now()
                         _sync_snapshot_from_state()
@@ -731,17 +751,26 @@ def render():
             with r1c2:
                 if st.button(t("حفظ بياناتي", "Save My Data"), use_container_width=True, key="cloud_save_btn"):
                     payload = export_app_state_payload()
-                    push = client.upsert_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""), payload)
-                    if push.get("ok"):
-                        _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
-                        mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
-                        _mark_cloud_sync_now()
-                        _sync_snapshot_from_state()
-                        save_persistent_state()
-                        st.success(t("تم حفظ بياناتك في السحابة.", "Your data was saved to cloud."))
+                    if not payload_has_meaningful_data(payload):
+                        st.warning(
+                            t(
+                                "لا توجد بيانات كافية لحفظها. تأكد من وجود معاملات أو التزامات قبل رفعها إلى السحابة.",
+                                "No meaningful data to save. Make sure you have transactions or items before uploading to cloud.",
+                            )
+                        )
                     else:
-                        cloud_error = _cloud_error_text(push.get("error", ""), t)
-                        st.error(t(f"تعذر الحفظ: {cloud_error}", f"Save failed: {cloud_error}"))
+                        push = client.upsert_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""), payload)
+                        if push.get("ok"):
+                            _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
+                            st.session_state["_cloud_sync_last_error"] = ""
+                            mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
+                            _mark_cloud_sync_now()
+                            _sync_snapshot_from_state()
+                            save_persistent_state()
+                            st.success(t("تم حفظ بياناتك في السحابة.", "Your data was saved to cloud."))
+                        else:
+                            cloud_error = _cloud_error_text(push.get("error", ""), t)
+                            st.error(t(f"تعذر الحفظ: {cloud_error}", f"Save failed: {cloud_error}"))
 
             r2c1, r2c2 = st.columns(2)
             with r2c1:
