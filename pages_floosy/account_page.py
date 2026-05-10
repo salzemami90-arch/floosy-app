@@ -1087,10 +1087,13 @@ def render(month_key: str, month: str, year: int):
                 new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{i}")
 
             _edit_not_set_label = t("غير محدد", "Not set")
-            _edit_lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), _shift_month_key(month_key, -1))
+            _edit_lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), month_key)
             _edit_lookback_labels = [_edit_not_set_label] + [_month_label_from_key(mk, is_en) for mk in reversed(_edit_lookback_keys)]
             _edit_lookback_values = [""] + list(reversed(_edit_lookback_keys))
             _current_lpm = str(item.get("last_paid_month") or "").strip()
+            if _current_lpm and _current_lpm not in _edit_lookback_values:
+                _edit_lookback_labels.append(_month_label_from_key(_current_lpm, is_en))
+                _edit_lookback_values.append(_current_lpm)
             _edit_lpm_default = _edit_lookback_values.index(_current_lpm) if _current_lpm in _edit_lookback_values else 0
             new_last_confirmed_idx = st.selectbox(
                 t("آخر شهر مؤكد", "Last confirmed month"),
