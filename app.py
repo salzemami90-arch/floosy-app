@@ -448,12 +448,6 @@ def main():
     )
     selected_key = page_keys[page_values.index(selected_label)]
 
-    # Apply a new query-param page once when it changes, then let the
-    # active sidebar selection continue normally on later reruns.
-    if should_apply_requested_page and selected_key != requested_page:
-        selected_key = requested_page
-        st.session_state[sidebar_radio_key] = page_labels[requested_page]
-
     # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
     try:
