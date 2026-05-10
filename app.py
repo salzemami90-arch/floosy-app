@@ -1,6 +1,6 @@
 import json
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 import streamlit as st
 
@@ -176,7 +176,7 @@ def _restore_cloud_auth_from_cookie(browser_storage_auth: dict | None = None, br
         mark_cloud_sync_ready(st.session_state, user_id)
         if isinstance(st.session_state.get("settings"), dict):
             st.session_state.settings["cloud_sync_enabled"] = True
-            st.session_state.settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
+            st.session_state.settings["cloud_last_sync_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         save_persistent_state()
     elif pull.get("ok") and pull.get("data") is None:
         st.session_state["_cloud_last_snapshot"] = ""
@@ -280,7 +280,7 @@ def _sync_cloud_if_logged_in() -> None:
         st.session_state["_cloud_sync_last_error"] = ""
         mark_cloud_sync_ready(st.session_state, user_id)
         if isinstance(settings, dict):
-            settings["cloud_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
+            settings["cloud_last_sync_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
             st.session_state["settings"] = settings
     else:
         st.session_state["_cloud_sync_last_error"] = str(push.get("error") or "sync_push_failed")
