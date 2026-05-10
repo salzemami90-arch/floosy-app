@@ -474,6 +474,7 @@ def render(month_key: str, month: str, year: int):
     )
     if st.button(t("فتح المحلل المالي", "Open Financial Analyzer"), key="open_assistant_from_dashboard"):
         st.session_state.current_page = "assistant"
+        st.session_state["sidebar_section"] = "assistant"
         st.rerun()
 
     # ===== Floating + button + Modal (session_state only) =====

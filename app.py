@@ -415,7 +415,6 @@ def main():
         "settings": t("الإعدادات", "Settings"),
     }
 
-    # --- حفظ الصفحة الحالية بالـ session_state (بدون query params) ---
     if "current_page" not in st.session_state:
         st.session_state.current_page = "home"
 
@@ -442,52 +441,44 @@ def main():
     }
     st.session_state.current_page = legacy_map.get(st.session_state.current_page, st.session_state.current_page)
 
-    requested_page = ""
-    try:
-        requested_page = str(st.query_params.get("page", "") or "").strip()
-    except Exception:
+    # Query params are only an entry point for shared links. Updating them after
+    # every sidebar click causes an extra Streamlit rerun, which can swallow the
+    # first navigation click on hosted builds.
+    if not st.session_state.get("_nav_initial_query_page_applied", False):
         requested_page = ""
-    requested_page = legacy_map.get(requested_page, requested_page)
-    last_applied_query_page = str(st.session_state.get("_last_applied_query_page", "") or "").strip()
-    should_apply_requested_page = requested_page in page_labels and requested_page != last_applied_query_page
-
-    if should_apply_requested_page:
-        st.session_state.current_page = requested_page
-        st.session_state["_last_applied_query_page"] = requested_page
+        try:
+            requested_page = str(st.query_params.get("page", "") or "").strip()
+        except Exception:
+            requested_page = ""
+        requested_page = legacy_map.get(requested_page, requested_page)
+        if requested_page in page_labels:
+            st.session_state.current_page = requested_page
+        st.session_state["_nav_initial_query_page_applied"] = True
 
     if st.session_state.current_page not in page_labels:
         st.session_state.current_page = "home"
 
     page_keys = list(page_labels.keys())
-    page_values = [page_labels[k] for k in page_keys]
     default_index = page_keys.index(st.session_state.current_page)
     sidebar_radio_key = "sidebar_section"
 
-    if should_apply_requested_page:
-        st.session_state[sidebar_radio_key] = page_labels[requested_page]
-    elif st.session_state.get(sidebar_radio_key) not in page_values:
-        st.session_state[sidebar_radio_key] = page_values[default_index]
+    sidebar_value = legacy_map.get(
+        str(st.session_state.get(sidebar_radio_key, "") or "").strip(),
+        str(st.session_state.get(sidebar_radio_key, "") or "").strip(),
+    )
+    if sidebar_value not in page_labels:
+        sidebar_value = st.session_state.current_page
+    st.session_state[sidebar_radio_key] = sidebar_value
 
-    selected_label = st.sidebar.radio(
+    selected_key = st.sidebar.radio(
         t("القسم", "Section"),
-        page_values,
+        page_keys,
         index=default_index,
         key=sidebar_radio_key,
+        format_func=lambda page_key: page_labels[page_key],
     )
-    selected_key = page_keys[page_values.index(selected_label)]
 
-    # تحديث الصفحة الحالية
     st.session_state.current_page = selected_key
-    try:
-        current_query_page = str(st.query_params.get("page", "") or "").strip()
-    except Exception:
-        current_query_page = ""
-    if current_query_page != selected_key:
-        try:
-            st.query_params["page"] = selected_key
-        except Exception:
-            pass
-    st.session_state["_last_applied_query_page"] = selected_key
     if not st.session_state.get("_hosted_data_warning_shown"):
         _show_hosted_data_warning(t)
         st.session_state["_hosted_data_warning_shown"] = True
