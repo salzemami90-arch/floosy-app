@@ -30,11 +30,16 @@ def cloud_sync_pause_reason(session_state) -> str:
     return str(session_state.get(PAUSE_REASON_KEY) or "").strip()
 
 
+def _payload_for_snapshot(payload: dict) -> dict:
+    # Top-level underscore keys are payload metadata, not user finance data.
+    return {key: value for key, value in payload.items() if not str(key).startswith("_")}
+
+
 def payload_snapshot(payload) -> str:
     if not isinstance(payload, dict):
         return ""
     try:
-        return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        return json.dumps(_payload_for_snapshot(payload), ensure_ascii=False, sort_keys=True)
     except Exception:
         return ""
 
