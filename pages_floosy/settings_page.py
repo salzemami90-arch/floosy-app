@@ -77,6 +77,46 @@ def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_
         st.session_state["_cloud_auth_issued_at"] = ""
 
 
+def _refresh_cloud_auth_for_manual_action(client: SupabaseSyncClient) -> tuple[dict, str]:
+    cloud_auth = st.session_state.get("cloud_auth", {})
+    if not isinstance(cloud_auth, dict):
+        return {}, "missing_cloud_auth"
+
+    refresh_token = str(cloud_auth.get("refresh_token") or "").strip()
+    if not refresh_token:
+        return cloud_auth, ""
+
+    refreshed = client.refresh_session(refresh_token)
+    if not refreshed.get("ok"):
+        st.session_state["_cloud_sync_last_error"] = "token_refresh_failed"
+        pause_cloud_auto_sync(
+            st.session_state,
+            str(cloud_auth.get("user_id") or ""),
+            reason="token_refresh_failed",
+        )
+        return cloud_auth, str(refreshed.get("error") or "token_refresh_failed")
+
+    user_obj = refreshed.get("user") if isinstance(refreshed.get("user"), dict) else {}
+    email = str(user_obj.get("email") or cloud_auth.get("email") or "")
+    user_id = str(user_obj.get("id") or cloud_auth.get("user_id") or "")
+    access_token = str(refreshed.get("access_token") or cloud_auth.get("access_token") or "")
+    new_refresh_token = str(refreshed.get("refresh_token") or refresh_token)
+
+    if not user_id or not access_token:
+        return cloud_auth, "token_refresh_missing_auth"
+
+    _set_cloud_auth(
+        True,
+        email=email,
+        user_id=user_id,
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+    )
+    if st.session_state.get("_cloud_remember_login") is not False:
+        remember_cloud_auth(email, user_id, new_refresh_token)
+    return st.session_state.get("cloud_auth", {}), ""
+
+
 def _sync_snapshot_from_state() -> None:
     try:
         st.session_state["_cloud_last_snapshot"] = json.dumps(
@@ -723,6 +763,11 @@ def render():
             r1c1, r1c2 = st.columns(2)
             with r1c1:
                 if st.button(t("تحميل بياناتي", "Load My Data"), use_container_width=True, key="cloud_load_btn"):
+                    cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                    if refresh_error:
+                        cloud_error = _cloud_error_text(refresh_error, t)
+                        st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                        st.stop()
                     pull = client.fetch_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
                     if not pull.get("ok"):
                         cloud_error = _cloud_error_text(pull.get("error", ""), t)
@@ -771,6 +816,11 @@ def render():
                             )
                         )
                     else:
+                        cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                        if refresh_error:
+                            cloud_error = _cloud_error_text(refresh_error, t)
+                            st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                            st.stop()
                         push = client.upsert_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""), payload)
                         if push.get("ok"):
                             _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
@@ -807,6 +857,11 @@ def render():
                     key="cloud_delete_btn",
                     disabled=not delete_confirm,
                 ):
+                    cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                    if refresh_error:
+                        cloud_error = _cloud_error_text(refresh_error, t)
+                        st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                        st.stop()
                     delete_res = client.delete_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
                     if delete_res.get("ok"):
                         st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
@@ -855,6 +910,11 @@ def render():
                     key="cloud_delete_account_btn",
                     disabled=not delete_account_confirm,
                 ):
+                    cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                    if refresh_error:
+                        cloud_error = _cloud_error_text(refresh_error, t)
+                        st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                        st.stop()
                     data_delete_res = client.delete_user_data(
                         cloud_auth.get("user_id", ""),
                         cloud_auth.get("access_token", ""),

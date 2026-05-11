@@ -979,3 +979,26 @@ After `_schema_version: 1` was added to exported cloud payloads, older cloud cop
 - Added a regression test proving `_schema_version` alone does not trigger cloud conflict.
 - Targeted cloud sync guard tests passed.
 - Full test suite passed: `94 passed, 1 skipped`.
+
+---
+
+## Change Log — 2026-05-11: Manual Cloud Token Refresh Fix
+
+### What changed
+Manual Cloud actions now refresh the Supabase session before using the stored access token.
+
+### Problem
+The auto-sync path already refreshed an expired Supabase access token, but the manual Cloud buttons still used the old `cloud_auth["access_token"]` directly. After the token expired, pressing `Save My Data` could fail with `JWT expired` even though the user was still signed in and the Cloud status looked connected.
+
+### Solution
+`pages_floosy/settings_page.py` now refreshes `cloud_auth` before manual Cloud actions:
+- `Load My Data`
+- `Save My Data`
+- `Delete My Cloud Data`
+- `Delete Account Permanently`
+
+The refreshed access token and refresh token are written back to session state and the remembered auth cookie when applicable.
+
+### Verification
+- Added regression tests for successful manual token refresh and refresh failure handling.
+- Targeted cloud tests passed: `13 passed`.
