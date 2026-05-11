@@ -41,3 +41,14 @@ def test_payload_snapshot_is_stable_for_equal_payloads():
     payload_b = {"documents": [], "transactions": {"2026-04": [{"note": "x", "amount": 1}]}}
 
     assert payload_snapshot(payload_a) == payload_snapshot(payload_b)
+
+
+def test_schema_version_metadata_does_not_trigger_cloud_conflict():
+    local_payload = {
+        "_schema_version": 1,
+        "transactions": {"2026-04": [{"amount": 10, "note": "same"}]},
+    }
+    remote_payload = {"transactions": {"2026-04": [{"amount": 10, "note": "same"}]}}
+
+    assert payload_snapshot(local_payload) == payload_snapshot(remote_payload)
+    assert should_keep_local_data_before_auto_import(local_payload, remote_payload) is False

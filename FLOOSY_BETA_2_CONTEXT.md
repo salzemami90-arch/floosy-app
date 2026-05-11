@@ -961,3 +961,21 @@ No service/engine changes needed. `_ensure_pending_month(item, month_key)` alrea
 - No guided wizard or multi-step flow
 - No pricing file changes
 - Bilingual AR/EN behavior preserved
+
+---
+
+## Change Log — 2026-05-11: Cloud Payload Metadata Conflict Fix
+
+### What changed
+Cloud conflict snapshots now ignore top-level underscore-prefixed metadata keys such as `_schema_version`.
+
+### Problem
+After `_schema_version: 1` was added to exported cloud payloads, older cloud copies without that metadata key could compare differently from an otherwise identical local payload. This could pause auto-import with a false local-vs-cloud conflict even though the user's finance data was the same.
+
+### Solution
+`services/cloud_sync_guard.py` now normalizes payloads before snapshot comparison by excluding top-level metadata keys that start with `_`.
+
+### Verification
+- Added a regression test proving `_schema_version` alone does not trigger cloud conflict.
+- Targeted cloud sync guard tests passed.
+- Full test suite passed: `94 passed, 1 skipped`.
