@@ -12,6 +12,7 @@ from config_floosy import (
     import_app_state_payload,
     init_session_state,
     save_persistent_state,
+    clear_regular_web_page_query_param,
 )
 from services.cloud_auth_cookie import (
     bootstrap_cloud_auth_from_storage,
@@ -453,6 +454,7 @@ def main():
         requested_page = legacy_map.get(requested_page, requested_page)
         if requested_page in page_labels:
             st.session_state.current_page = requested_page
+            clear_regular_web_page_query_param()
         st.session_state["_nav_initial_query_page_applied"] = True
 
     if st.session_state.current_page not in page_labels:

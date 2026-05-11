@@ -14,7 +14,9 @@ from config_floosy import (
     _is_shared_hosted_url,
     _local_persistence_enabled,
     _preferred_language_from_accept_language,
+    clear_regular_web_page_query_param,
     get_month_selection,
+    sync_browser_preferences_state,
 )
 
 
@@ -129,6 +131,66 @@ class RuntimeDetectionTests(unittest.TestCase):
         self.assertEqual(fake_st.session_state["settings"]["language"], "English")
         self.assertTrue(fake_st.session_state["settings"]["language_user_selected"])
         self.assertTrue(fake_st.session_state["_welcome_completed"])
+
+    def test_regular_web_preferences_drop_stale_page_query(self):
+        fake_st = SimpleNamespace(
+            query_params={
+                "page": "tax",
+                "f_w": "1",
+                "f_lang": "en",
+            },
+            session_state={},
+        )
+
+        with patch("config_floosy.st", fake_st):
+            sync_browser_preferences_state(language="English")
+
+        self.assertNotIn("page", fake_st.query_params)
+        self.assertEqual(fake_st.query_params["f_lang"], "en")
+
+    def test_shell_preferences_preserve_page_query(self):
+        fake_st = SimpleNamespace(
+            query_params={
+                "page": "tax",
+                "f_shell": "1",
+                "f_w": "1",
+                "f_lang": "en",
+            },
+            session_state={},
+        )
+
+        with patch("config_floosy.st", fake_st):
+            sync_browser_preferences_state(language="English")
+
+        self.assertEqual(fake_st.query_params["page"], "tax")
+        self.assertEqual(fake_st.query_params["f_shell"], "1")
+
+    def test_regular_web_deep_link_is_cleared_after_initial_use(self):
+        fake_st = SimpleNamespace(
+            query_params={
+                "page": "tax",
+            },
+            session_state={},
+        )
+
+        with patch("config_floosy.st", fake_st):
+            clear_regular_web_page_query_param()
+
+        self.assertNotIn("page", fake_st.query_params)
+
+    def test_shell_deep_link_is_not_cleared(self):
+        fake_st = SimpleNamespace(
+            query_params={
+                "page": "tax",
+                "f_shell": "1",
+            },
+            session_state={},
+        )
+
+        with patch("config_floosy.st", fake_st):
+            clear_regular_web_page_query_param()
+
+        self.assertEqual(fake_st.query_params["page"], "tax")
 
 
 if __name__ == "__main__":
