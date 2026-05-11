@@ -63,18 +63,11 @@ def _cloud_error_text(error, t) -> str:
     return raw[:500]
 
 
-def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_token: str = "", refresh_token: str = "") -> None:
-    st.session_state["cloud_auth"] = {
-        "logged_in": bool(logged_in),
-        "email": email,
-        "user_id": user_id,
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-    }
-    if bool(logged_in) and access_token:
-        st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
-    elif not bool(logged_in):
-        st.session_state["_cloud_auth_issued_at"] = ""
+from services.cloud_state_helpers import (
+    clear_scoped_finance_state as _clear_scoped_finance_state,
+    set_cloud_auth as _set_cloud_auth,
+    set_scope_owner as _set_scope_owner,
+)
 
 
 def _refresh_cloud_auth_for_manual_action(client: SupabaseSyncClient) -> tuple[dict, str]:
@@ -152,11 +145,11 @@ def _build_backup_file() -> tuple[str, bytes]:
     backup_now = datetime.now()
     backup_payload["_meta"] = {
         "saved_at": backup_now.isoformat(timespec="seconds"),
-        "source": "floosy_settings_backup",
+        "source": "goushfi_settings_backup",
         "version": 1,
     }
     timestamp_for_file = backup_now.strftime("%Y%m%d_%H%M%S")
-    backup_name = f"floosy_backup_{timestamp_for_file}.json"
+    backup_name = f"goushfi_backup_{timestamp_for_file}.json"
     backup_bytes = json.dumps(backup_payload, ensure_ascii=False, indent=2).encode("utf-8")
     return backup_name, backup_bytes
 
@@ -171,27 +164,7 @@ def _get_app_scope() -> dict:
     return scope
 
 
-def _set_scope_owner(user_id: str = "", email: str = "") -> None:
-    scope = _get_app_scope()
-    scope["owner_user_id"] = str(user_id or "")
-    scope["owner_email"] = str(email or "")
-    st.session_state["app_scope"] = scope
 
-
-def _clear_scoped_finance_state() -> None:
-    st.session_state["transactions"] = {}
-    st.session_state["savings"] = {}
-    st.session_state["project_data"] = {}
-    st.session_state["recurring"] = {"items": []}
-    st.session_state["documents"] = []
-    st.session_state["mustndaty_documents"] = st.session_state["documents"]
-    st.session_state["invoices"] = []
-    st.session_state["tax_profile"] = {}
-    st.session_state["tax_tags"] = []
-    st.session_state["_persist_last_snapshot"] = ""
-    st.session_state["_cloud_last_snapshot"] = ""
-    st.session_state["_cloud_last_pull_user"] = ""
-    clear_cloud_sync_guard(st.session_state)
 
 
 def _render_cloud_sync_pause_notice(t) -> None:

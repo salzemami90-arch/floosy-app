@@ -1,3 +1,4 @@
+from services import cloud_state_helpers
 from pages_floosy import settings_page
 
 
@@ -29,6 +30,7 @@ def test_manual_cloud_action_refreshes_expired_access_token(monkeypatch):
     fake_st = _FakeSt()
     remembered = {}
     monkeypatch.setattr(settings_page, "st", fake_st)
+    monkeypatch.setattr(cloud_state_helpers, "st", fake_st)
     monkeypatch.setattr(
         settings_page,
         "remember_cloud_auth",
@@ -63,6 +65,7 @@ def test_manual_cloud_action_refreshes_expired_access_token(monkeypatch):
 def test_manual_cloud_action_reports_refresh_failure(monkeypatch):
     fake_st = _FakeSt()
     monkeypatch.setattr(settings_page, "st", fake_st)
+    monkeypatch.setattr(cloud_state_helpers, "st", fake_st)
     client = _RefreshClient({"ok": False, "error": "JWT expired"})
 
     cloud_auth, error = settings_page._refresh_cloud_auth_for_manual_action(client)

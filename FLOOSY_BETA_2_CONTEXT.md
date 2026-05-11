@@ -1045,3 +1045,26 @@ During hosted testing, refreshing `goush-beta.streamlit.app` could reopen `Invoi
 ### Verification
 - Added regression tests proving regular web clears stale `page` while shell links keep it.
 - `python3 -m py_compile app.py config_floosy.py` passed.
+
+---
+
+## Change Log — Bug Sweep & Branding Cleanup
+
+### What changed
+1. **Removed old Floosy logo fallback** — `get_logo_bytes()` no longer falls back to `floosy_logo.png`. If the user hasn't uploaded a logo, the preview section shows "No uploaded logo" instead of the old blue F logo.
+2. **Renamed backup file** — export filename changed from `floosy_backup_*.json` to `goushfi_backup_*.json`. Metadata source changed from `floosy_settings_backup` to `goushfi_settings_backup`.
+3. **Extracted duplicated auth/state functions** — `_set_cloud_auth`, `_set_scope_owner`, `_clear_scoped_finance_state` moved to `services/cloud_state_helpers.py`. Both `app.py` and `settings_page.py` now import from the same source. Eliminates risk of silent divergence.
+4. **Fixed `_cloud_sync_last_error` not cleared on account switch** — `clear_scoped_finance_state()` now resets `_cloud_sync_last_error` to `""`, preventing stale error banners after switching cloud accounts.
+5. **Updated E2E tests** — `test_smoke_playwright.py` now expects "GoushFi Settings" instead of "Floosy Settings".
+
+### Files changed
+- `config_floosy.py` — removed `floosy_logo.png` fallback in `get_logo_bytes()`
+- `pages_floosy/settings_page.py` — renamed backup identifiers, replaced local function definitions with imports from shared module
+- `services/cloud_state_helpers.py` — new shared module for auth/state helpers
+- `app.py` — replaced local function definitions with imports from shared module
+- `e2e_tests/test_smoke_playwright.py` — updated branding expectation
+- `tests/test_settings_cloud_manual_refresh.py` — updated monkeypatch for shared module
+
+### Verification
+- 100/100 tests pass.
+- `py_compile` clean on all changed files.
