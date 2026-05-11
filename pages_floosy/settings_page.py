@@ -57,8 +57,8 @@ def _cloud_error_text(error, t) -> str:
         or "error code 521" in raw_lower
     ):
         return t(
-            "السحابة غير متاحة مؤقتًا أو مشروع Supabase لا يزال قيد التجهيز. يرجى الانتظار دقائق ثم المحاولة مرة ثانية.",
-            "Cloud is temporarily unavailable or the Supabase project is still setting up. Wait a few minutes, then try again.",
+            "السحابة غير متاحة مؤقتًا أو لا تزال قيد التجهيز. يرجى الانتظار دقائق ثم المحاولة مرة ثانية.",
+            "Cloud is temporarily unavailable or still setting up. Wait a few minutes, then try again.",
         )
     return raw[:500]
 
@@ -145,66 +145,6 @@ def _format_cloud_sync_label(raw_value: str, empty_label: str) -> str:
         return parsed_sync.astimezone(KUWAIT_TZ).strftime("%Y-%m-%d %H:%M")
     except Exception:
         return clean_value
-
-
-def _render_storage_location_status(t, cloud_sync_enabled: bool, cloud_configured: bool, cloud_logged_in: bool, last_sync_label: str) -> None:
-    if not cloud_sync_enabled:
-        bg = "#fff7ed"
-        border = "#f59e0b"
-        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
-        detail = t(
-            "أي شيء تضيفينه الآن يبقى محليًا على هذا الجهاز فقط، ولن يذهب إلى السحابة إلا بعد تفعيلها.",
-            "Anything you add now stays locally on this device only and will not go to the cloud until cloud sync is enabled.",
-        )
-    elif not cloud_configured:
-        bg = "#fff7ed"
-        border = "#f97316"
-        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
-        detail = t(
-            "السحابة مفعلة بالواجهة، لكن الربط غير مكتمل بعد. بياناتك الحالية تبقى على هذا الجهاز فقط.",
-            "Cloud is enabled in the UI, but the connection is not configured yet. Your current data stays on this device only.",
-        )
-    elif not cloud_logged_in:
-        bg = "#eff6ff"
-        border = "#2563eb"
-        title = t("الحفظ الحالي: هذا الجهاز فقط", "Current save location: This device only")
-        detail = t(
-            "السحابة جاهزة، لكنك لستِ مسجلة الدخول الآن. بياناتك الحالية تبقى على هذا الجهاز حتى تسجلي الدخول ثم تحفظينها للسحابة.",
-            "Cloud is ready, but you are not signed in right now. Your current data stays on this device until you sign in and save it to the cloud.",
-        )
-    elif last_sync_label == t("لم تتم مزامنة بعد", "No sync yet"):
-        bg = "#fffbeb"
-        border = "#f59e0b"
-        title = t("الحفظ الحالي: على الجهاز، ولم تُنشأ نسخة سحابية بعد", "Current save location: On this device, no cloud copy yet")
-        detail = t(
-            "أنتِ مسجلة الدخول، لكن لم تتم مزامنة ناجحة بعد. إذا كانت البيانات الحالية هي الصح، اضغطي حفظ بياناتي لإنشاء نسخة سحابية.",
-            "You are signed in, but no successful sync has happened yet. If the current data is the correct copy, press Save My Data to create a cloud copy.",
-        )
-    else:
-        bg = "#ecfdf5"
-        border = "#10b981"
-        title = t("الحفظ الحالي: هذا الجهاز + السحابة", "Current save location: This device + cloud")
-        detail = t(
-            f"بياناتك الحالية محفوظة على هذا الجهاز، وآخر مزامنة سحابية كانت: {last_sync_label}.",
-            f"Your current data is saved on this device, and the last cloud sync was: {last_sync_label}.",
-        )
-
-    st.markdown(
-        f"""
-        <div style="
-            background:{bg};
-            border:1px solid {border};
-            border-right:6px solid {border};
-            border-radius:12px;
-            padding:12px 14px;
-            margin:6px 0 14px 0;
-        ">
-            <div style="font-weight:800;color:#0f172a;margin-bottom:4px;">{title}</div>
-            <div style="color:#475569;font-size:0.93rem;line-height:1.55;">{detail}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 def _build_backup_file() -> tuple[str, bytes]:
@@ -304,9 +244,9 @@ def _render_cloud_sync_pause_notice(t) -> None:
 
 
 def _render_cloud_sql_setup(t):
-    with st.expander(t("إعداد جدول البيانات (مرة واحدة)", "Data Table Setup (one-time)"), expanded=False):
-        st.code(
-            """
+    st.caption(t("SQL إعداد جدول البيانات مرة واحدة:", "One-time data table SQL:"))
+    st.code(
+        """
 create table if not exists public.user_app_data (
   user_id uuid primary key references auth.users(id) on delete cascade,
   data jsonb not null default '{}'::jsonb,
@@ -339,9 +279,9 @@ drop policy if exists "Users can delete own data" on public.user_app_data;
 create policy "Users can delete own data"
 on public.user_app_data for delete
 using (auth.uid() = user_id);
-            """.strip(),
-            language="sql",
-        )
+        """.strip(),
+        language="sql",
+    )
 
 
 def render():
@@ -364,7 +304,6 @@ def render():
         t("لم تتم مزامنة بعد", "No sync yet"),
     )
 
-    backup_name_top, backup_bytes_top = _build_backup_file()
     cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
     cloud_auth = st.session_state.get("cloud_auth", {})
     cloud_logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
@@ -382,8 +321,8 @@ def render():
         status_border = "#f97316"
         status_text = "#9a3412"
         status_hint = t(
-            "السحابة مفعلة، لكن إعداد Supabase غير مكتمل بعد. يرجى إضافة مفاتيح الربط أولًا من بيئة التشغيل.",
-            "Cloud sync is enabled, but Supabase is not configured yet. Add the connection secrets first.",
+            "السحابة مفعلة، لكنها غير متاحة في هذه البيئة حاليًا.",
+            "Cloud sync is enabled, but cloud is not available in this environment right now.",
         )
     elif cloud_logged_in:
         status_value = t("متصلة", "Connected")
@@ -412,51 +351,25 @@ def render():
             margin:6px 0 10px 0;
             color:{status_text};
         ">
-            <div style="font-weight:800;">{t("شريط حالة السحابة", "Cloud Status Bar")}: {status_value}</div>
-            <div style="font-size:0.9rem; margin-top:4px;">{status_hint}</div>
+            <div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:800;">{t("حالة السحابة", "Cloud Status")}: {status_value}</div>
+                    <div style="font-size:0.9rem; margin-top:4px;">{status_hint}</div>
+                </div>
+                <div style="
+                    background:rgba(255,255,255,0.65);
+                    border:1px solid rgba(15,23,42,0.08);
+                    border-radius:999px;
+                    padding:6px 10px;
+                    font-size:0.84rem;
+                    font-weight:700;
+                    white-space:nowrap;
+                ">{t("آخر مزامنة", "Last Sync")}: {last_sync_label}</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    s1, s2 = st.columns(2)
-    with s1:
-        st.metric(
-            t("حالة السحابة", "Cloud Status"),
-            status_value,
-        )
-    with s2:
-        st.metric(t("آخر مزامنة", "Last Sync"), last_sync_label)
-
-    if not cloud_sync_enabled:
-        st.warning(
-            t(
-                "السحابة غير مفعلة حاليًا. يمكنك تفعيلها أو تصدير بياناتك الآن.",
-                "Cloud is currently disabled. You can enable it or export your data now.",
-            )
-        )
-        a1, a2 = st.columns(2)
-        with a1:
-            if st.button(t("فعّل السحابة", "Enable Cloud"), key="settings_status_enable_cloud_btn", use_container_width=True):
-                settings["cloud_sync_enabled"] = True
-                st.session_state.settings = settings
-                st.rerun()
-        with a2:
-            st.download_button(
-                label=t("تصدير بياناتي", "Export My Data"),
-                data=backup_bytes_top,
-                file_name=backup_name_top,
-                mime="application/json",
-                use_container_width=True,
-                key="settings_status_backup_download_btn",
-            )
-    elif not cloud_client.is_configured:
-        st.warning(
-            t(
-                "السحابة مفعلة لكن إعداد الربط غير مكتمل. لن تبدأ المزامنة حتى تتم إضافة مفاتيح Supabase.",
-                "Cloud sync is enabled but not fully configured. Sync will not start until Supabase secrets are added.",
-            )
-        )
 
     st.markdown(
         """
@@ -597,13 +510,20 @@ def render():
 
     with tab_privacy:
         st.subheader(t("الخصوصية والمزامنة", "Privacy and Sync"))
-        _render_storage_location_status(
-            t,
-            cloud_sync_enabled=cloud_sync_enabled,
-            cloud_configured=cloud_client.is_configured,
-            cloud_logged_in=cloud_logged_in,
-            last_sync_label=last_sync_label,
-        )
+        if cloud_sync_enabled and cloud_client.is_configured and cloud_logged_in:
+            st.caption(
+                t(
+                    f"الحفظ الحالي: هذا الجهاز + السحابة. آخر مزامنة: {last_sync_label}.",
+                    f"Current save location: this device + cloud. Last sync: {last_sync_label}.",
+                )
+            )
+        else:
+            st.caption(
+                t(
+                    "الحفظ الحالي: هذا الجهاز فقط إلى أن يتم تفعيل السحابة وتسجيل الدخول.",
+                    "Current save location: this device only until cloud sync is enabled and signed in.",
+                )
+            )
 
         cloud_sync_enabled = st.checkbox(
             t("تفعيل المزامنة السحابية (اختياري)", "Enable Cloud Sync (Optional)"),
@@ -714,7 +634,7 @@ def render():
                     st.rerun()
 
     with tab_cloud:
-        st.subheader(t("حساب السحابة (Supabase)", "Cloud Account (Supabase)"))
+        st.subheader(t("حساب السحابة", "Cloud Account"))
 
         cloud_sync_enabled = bool(st.session_state.settings.get("cloud_sync_enabled", False))
         cloud_auth = st.session_state.get("cloud_auth", {})
@@ -742,11 +662,19 @@ def render():
         if not client.is_configured:
             st.info(
                 t(
-                    "للتفعيل، يرجى إضافة SUPABASE_URL و SUPABASE_ANON_KEY في secrets أو متغيرات البيئة.",
-                    "To enable cloud sync, add SUPABASE_URL and SUPABASE_ANON_KEY in secrets or environment variables.",
+                    "السحابة غير متاحة في هذه البيئة حاليًا.",
+                    "Cloud is not available in this environment right now.",
                 )
             )
-            _render_cloud_sql_setup(t)
+            with st.expander(t("إعداد متقدم للمطورين", "Advanced setup for developers"), expanded=False):
+                st.caption(
+                    t(
+                        "لبيئة النشر فقط: أضف مفاتيح ربط السحابة في secrets أو متغيرات البيئة.",
+                        "Deployment only: add cloud connection keys in secrets or environment variables.",
+                    )
+                )
+                st.caption("Required keys: SUPABASE_URL and SUPABASE_ANON_KEY")
+                _render_cloud_sql_setup(t)
             return
 
         logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
@@ -1008,8 +936,8 @@ def render():
                         )
                         st.caption(
                             t(
-                                "إذا لم يصل الإيميل، يرجى التأكد من إعدادات البريد في Supabase Auth.",
-                                "If the email does not arrive, check the email settings in Supabase Auth.",
+                                "إذا لم يصل الإيميل، حاول مرة أخرى أو تواصل مع الدعم.",
+                                "If the email does not arrive, try again or contact support.",
                             )
                         )
                     else:
@@ -1050,7 +978,7 @@ def render():
                                     user_id = str(user_res["user"].get("id") or "")
 
                             if not user_id:
-                                st.error(t("تعذر تحديد معرف المستخدم من Supabase.", "Could not determine user id from Supabase."))
+                                st.error(t("تعذر التحقق من الحساب. يرجى المحاولة مرة أخرى.", "Could not verify your account. Please try again."))
                             else:
                                 scope = _get_app_scope()
                                 previous_owner = str(scope.get("owner_user_id") or "")

@@ -1002,3 +1002,26 @@ The refreshed access token and refresh token are written back to session state a
 ### Verification
 - Added regression tests for successful manual token refresh and refresh failure handling.
 - Targeted cloud tests passed: `13 passed`.
+
+---
+
+## Change Log — 2026-05-11: Settings UX Cleanup
+
+### What changed
+Settings kept the same General / Privacy / Cloud structure, but the top area was simplified for 1.0.
+
+### Problem
+The Settings page repeated cloud state several times before the user reached the tabs: a status bar, two metric cards, a warning/CTA block, and another storage-location card inside Privacy. The Cloud tab also exposed developer terminology such as Supabase in user-facing headings and messages.
+
+### Solution
+- Removed the two top `st.metric` cards and moved Last Sync into the single Cloud Status card.
+- Removed the redundant Privacy storage-location card and replaced it with one short caption.
+- Changed the Cloud tab heading from "Cloud Account (Supabase)" to "Cloud Account".
+- Moved deployment details such as `SUPABASE_URL` and `SUPABASE_ANON_KEY` behind an Advanced setup expander.
+- Replaced user-facing Supabase/Auth wording with plain Cloud/account wording.
+
+### What was NOT changed
+- No redesign of the tab structure.
+- No changes to Load / Save / Sign Out / Delete button layout.
+- No changes to the sign-in/sign-up flow.
+- No cloud service logic changes.
