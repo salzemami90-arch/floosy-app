@@ -285,9 +285,19 @@ def sync_browser_preferences_state(
             st.query_params["f_shell"] = current_shell
         elif "f_shell" in st.query_params:
             del st.query_params["f_shell"]
-        if current_page:
+        if current_page and current_shell:
             st.query_params["page"] = current_page
         elif "page" in st.query_params:
+            del st.query_params["page"]
+    except Exception:
+        return
+
+
+def clear_regular_web_page_query_param() -> None:
+    """Keep mobile shell deep links, but do not let web page links stick forever."""
+    try:
+        current_shell = str(st.query_params.get("f_shell", "") or "").strip()
+        if not current_shell and "page" in st.query_params:
             del st.query_params["page"]
     except Exception:
         return

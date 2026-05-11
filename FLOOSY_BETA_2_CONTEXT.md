@@ -1025,3 +1025,23 @@ The Settings page repeated cloud state several times before the user reached the
 - No changes to Load / Save / Sign Out / Delete button layout.
 - No changes to the sign-in/sign-up flow.
 - No cloud service logic changes.
+
+---
+
+## Change Log — 2026-05-11: Hosted Stale Page Query Fix
+
+### What changed
+Regular hosted web links no longer keep a stale `page=...` query parameter forever after it is used as an entry link.
+
+### Problem
+During hosted testing, refreshing `goush-beta.streamlit.app` could reopen `Invoices & Tax` instead of Home, while localhost reopened Home. The hosted browser had previously carried a `page=tax` query parameter, and the app correctly treated it as an entry/deep link. However, because the parameter stayed in the URL state, every future refresh kept reopening Tax.
+
+### Solution
+- `app.py` still honors a valid `page` query parameter once on first load.
+- After a regular web load uses that parameter, `clear_regular_web_page_query_param()` removes it so future refreshes start cleanly.
+- Mobile shell links that include `f_shell` still preserve `page`, so native drawer/deep-link behavior is not broken.
+- `sync_browser_preferences_state()` no longer preserves stale `page` query params on regular web sessions.
+
+### Verification
+- Added regression tests proving regular web clears stale `page` while shell links keep it.
+- `python3 -m py_compile app.py config_floosy.py` passed.
