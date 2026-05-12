@@ -281,51 +281,6 @@ def render(month_key: str, month: str, year: int):
         st.markdown(t("مرحباً", "Hello"))
 
     st.caption(t(f"الشهر المعروض: {month_display} {year}", f"Selected month: {month_display} {year}"))
-
-    # ===== Welcome Guide (first visit only) =====
-    if not st.session_state.get("_welcome_guide_dismissed"):
-        _has_name = bool((settings.get("name") or "").strip())
-        _has_tx = bool(st.session_state.get("transactions", {}))
-        if _has_name and _has_tx:
-            st.session_state["_welcome_guide_dismissed"] = True
-        else:
-            _wg_dir = "ltr" if is_ltr else "rtl"
-            _wg_align = "left" if is_ltr else "right"
-            _step1_icon = "●" if not _has_name else "✓"
-            _step2_icon = "●" if not _has_tx else "✓"
-            _step1_style = "opacity:0.45;text-decoration:line-through;" if _has_name else ""
-            _step2_style = "opacity:0.45;text-decoration:line-through;" if _has_tx else ""
-            st.markdown(
-                f"""
-                <div style="
-                    direction:{_wg_dir};text-align:{_wg_align};
-                    background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);
-                    border:1px solid #bae6fd;border-radius:16px;
-                    padding:20px 24px;margin:12px 0 18px 0;
-                ">
-                    <div style="font-size:1.15rem;font-weight:700;color:#0c4a6e;margin-bottom:10px;">
-                        {t("مرحبًا بك في GoushFi! 🎉", "Welcome to GoushFi! 🎉")}
-                    </div>
-                    <div style="font-size:0.92rem;color:#0369a1;margin-bottom:14px;">
-                        {t("ابدأ بهالخطوات البسيطة:", "Get started with these simple steps:")}
-                    </div>
-                    <div style="font-size:0.9rem;color:#0c4a6e;line-height:2;{_step1_style}">
-                        {_step1_icon} {t("اذهب للإعدادات ← اكتب اسمك واختر عملتك", "Go to Settings → Enter your name and choose your currency")}
-                    </div>
-                    <div style="font-size:0.9rem;color:#0c4a6e;line-height:2;{_step2_style}">
-                        {_step2_icon} {t("اذهب للحساب ← أضف أول معاملة (دخل أو مصروف)", "Go to My Account → Add your first transaction (income or expense)")}
-                    </div>
-                    <div style="font-size:0.9rem;color:#0c4a6e;line-height:2;">
-                        ● {t("بعدها شوف تقريرك بالمحلل المالي 📊", "Then view your report in Financial Analyzer 📊")}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            if st.button(t("تخطي الدليل", "Skip guide"), key="dismiss_welcome_guide"):
-                st.session_state["_welcome_guide_dismissed"] = True
-                st.rerun()
-
     st.markdown("---")
 
     _render_summary_card_styles()

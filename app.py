@@ -291,14 +291,14 @@ def _show_hosted_data_warning(t) -> None:
         st.warning(
             t(
                 "تنبيه مهم: هذه النسخة المستضافة لا تحفظ بياناتك محليًا بشكل مضمون. قبل إدخال أي بيانات مهمة، سجلي دخول السحابة من الإعدادات > السحابة.",
-                "Important: this hosted beta does not keep local data reliably. Before entering important data, sign in to Cloud from Settings > Cloud.",
+                "Important: this hosted version does not keep local data reliably. Before entering important data, sign in to Cloud from Settings > Cloud.",
             )
         )
     elif warning_state == "cloud_setup_required":
         st.info(
             t(
                 "هذه النسخة المستضافة لا تحفظ البيانات محليًا بشكل مضمون، وخدمة السحابة غير مفعلة بعد في بيئة التشغيل الحالية.",
-                "This hosted beta does not keep local data reliably, and Cloud is not configured yet in the current deployment environment.",
+                "This hosted version does not keep local data reliably, and Cloud is not configured yet in the current deployment environment.",
             )
         )
 

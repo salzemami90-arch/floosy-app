@@ -578,13 +578,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "Inline Panel": {"zh": "内嵌面板", "ko": "인라인 패널", "ja": "インラインパネル", "id": "Panel Inline", "ms": "Panel Inline"},
     "This Streamlit version does not support dialog, so an inline form is shown instead.": {"zh": "此Streamlit版本不支持对话框，已改用内嵌表单。", "ko": "이 Streamlit 버전은 대화상자를 지원하지 않아 인라인 양식이 표시됩니다.", "ja": "このStreamlitバージョンはダイアログをサポートしていないため、インラインフォームが表示されます。", "id": "Versi Streamlit ini tidak mendukung dialog, jadi formulir inline ditampilkan.", "ms": "Versi Streamlit ini tidak mendukung dialog, jadi formulir inline ditampilkan."},
 
-    # ── Welcome Guide ─────────────────────────────────────────────────────
-    "Welcome to GoushFi! 🎉": {"zh": "欢迎使用 GoushFi！🎉", "ko": "GoushFi에 오신 것을 환영합니다! 🎉", "ja": "GoushFiへようこそ！🎉", "id": "Selamat datang di GoushFi! 🎉", "ms": "Selamat datang ke GoushFi! 🎉"},
-    "Get started with these simple steps:": {"zh": "按以下简单步骤开始：", "ko": "간단한 단계로 시작하세요:", "ja": "簡単なステップで始めましょう：", "id": "Mulai dengan langkah-langkah sederhana ini:", "ms": "Mulakan dengan langkah-langkah mudah ini:"},
-    "Go to Settings → Enter your name and choose your currency": {"zh": "前往设置 → 输入您的姓名并选择货币", "ko": "설정으로 이동 → 이름을 입력하고 통화를 선택하세요", "ja": "設定へ → 名前を入力し通貨を選択", "id": "Buka Pengaturan → Masukkan nama dan pilih mata uang", "ms": "Pergi ke Tetapan → Masukkan nama dan pilih mata wang"},
-    "Go to My Account → Add your first transaction (income or expense)": {"zh": "前往我的账户 → 添加您的第一笔交易（收入或支出）", "ko": "내 계정으로 이동 → 첫 거래를 추가하세요 (수입 또는 지출)", "ja": "マイアカウントへ → 最初の取引を追加（収入または支出）", "id": "Buka Akun Saya → Tambahkan transaksi pertama (pemasukan atau pengeluaran)", "ms": "Pergi ke Akaun Saya → Tambah transaksi pertama (pendapatan atau perbelanjaan)"},
-    "Then view your report in Financial Analyzer 📊": {"zh": "然后在财务分析器中查看报告 📊", "ko": "그런 다음 재무 분석기에서 보고서를 확인하세요 📊", "ja": "財務アナライザーでレポートを確認 📊", "id": "Lalu lihat laporan di Penganalisis Keuangan 📊", "ms": "Kemudian lihat laporan di Penganalisis Kewangan 📊"},
-    "Skip guide": {"zh": "跳过指南", "ko": "가이드 건너뛰기", "ja": "ガイドをスキップ", "id": "Lewati panduan", "ms": "Langkau panduan"},
 }
 
 
