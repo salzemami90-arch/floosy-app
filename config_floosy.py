@@ -412,6 +412,7 @@ def _apply_language_direction_theme() -> None:
         }}
 
         .flossy-header-title,
+        .flossy-header-tagline,
         h1, h2, h3, h4, h5, h6,
         p,
         label,
@@ -663,18 +664,23 @@ html, body, [class*="css"] {
 }
 
 [data-testid="stAppViewContainer"] {
-    overflow-x: clip;
+    overflow-x: hidden !important;
 }
 
 section[data-testid="stMain"] {
     min-width: 0 !important;
 }
 
+/* Hosted + local: trim Streamlit default top padding on the main column */
+section[data-testid="stMain"] > div {
+    padding-top: 0 !important;
+}
+
 .main .block-container {
     max-width: min(1180px, 100%) !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding-top: 0.75rem !important;
+    padding-top: 0.2rem !important;
     padding-bottom: 2rem !important;
 }
 
@@ -704,17 +710,17 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 
 .flossy-header {
     width: 100%;
-    padding: 16px 22px;
-    margin-top: -0.35rem;
+    padding: 12px 20px;
+    margin-top: -0.55rem;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
     color: #f8fafc;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-height: 90px;
+    gap: 12px;
+    min-height: 84px;
     box-shadow: var(--shadow-soft);
 }
 
@@ -723,7 +729,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
 }
 
 .flossy-header-title {
@@ -732,10 +738,31 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     line-height: 1.06;
 }
 
+.flossy-header-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flossy-header-tagline {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.88;
+    margin-top: 5px;
+    line-height: 1.2;
+}
+
+/* Single source of truth; !important so hosted Streamlit theme CSS cannot override */
+.flossy-header img.flossy-header-logo,
 .flossy-header img {
-    height: 88px;
-    width: auto;
-    border-radius: 12px;
+    height: 68px !important;
+    width: 68px !important;
+    max-height: 68px !important;
+    max-width: 68px !important;
+    object-fit: contain !important;
+    border-radius: 12px !important;
+    flex-shrink: 0;
+    display: block;
 }
 
 div[data-testid="stMetric"] {
@@ -977,6 +1004,7 @@ hr {
         max-width: 100% !important;
         padding-left: 0.9rem !important;
         padding-right: 0.9rem !important;
+        padding-top: 0.2rem !important;
     }
 
     [data-testid="stSidebar"] {
@@ -1030,22 +1058,27 @@ hr {
     .main .block-container {
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
-        padding-top: 0.9rem !important;
+        padding-top: 0.35rem !important;
         padding-bottom: 1.2rem !important;
     }
 
     .flossy-header {
-        min-height: 80px;
-        font-size: 22px;
-        padding: 12px 14px;
+        min-height: 76px;
+        font-size: 21px;
+        padding: 10px 14px;
+        margin-top: -0.45rem;
     }
 
     .flossy-header-inner {
         gap: 10px;
     }
 
+    .flossy-header img.flossy-header-logo,
     .flossy-header img {
-        height: 72px;
+        height: 56px !important;
+        width: 56px !important;
+        max-height: 56px !important;
+        max-width: 56px !important;
     }
 
     [data-testid="stSidebar"] {
