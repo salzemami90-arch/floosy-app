@@ -662,9 +662,19 @@ html, body, [class*="css"] {
     color: var(--text-main);
 }
 
+[data-testid="stAppViewContainer"] {
+    overflow-x: clip;
+}
+
+section[data-testid="stMain"] {
+    min-width: 0 !important;
+}
+
 .main .block-container {
-    max-width: 1180px;
-    padding-top: 1.2rem !important;
+    max-width: min(1180px, 100%) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding-top: 0.75rem !important;
     padding-bottom: 2rem !important;
 }
 
@@ -695,6 +705,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 .flossy-header {
     width: 100%;
     padding: 16px 22px;
+    margin-top: -0.35rem;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
     color: #f8fafc;
@@ -722,7 +733,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 }
 
 .flossy-header img {
-    height: 78px;
+    height: 88px;
     width: auto;
     border-radius: 12px;
 }
@@ -1034,7 +1045,7 @@ hr {
     }
 
     .flossy-header img {
-        height: 62px;
+        height: 72px;
     }
 
     [data-testid="stSidebar"] {

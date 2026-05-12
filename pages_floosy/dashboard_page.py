@@ -254,7 +254,7 @@ def render(month_key: str, month: str, year: int):
     _logo_src = get_builtin_logo_b64()
     logo_html = f"""
     <div style="display:flex;align-items:center;justify-content:center;">
-        <img src="{_logo_src}" alt="GoushFi" style="height:48px;width:48px;border-radius:10px;object-fit:contain;" />
+        <img src="{_logo_src}" alt="GoushFi" style="height:56px;width:56px;border-radius:10px;object-fit:contain;" />
     </div>
     """
 

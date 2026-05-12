@@ -287,14 +287,7 @@ def _show_hosted_data_warning(t) -> None:
     cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
     warning_state = _hosted_data_warning_state(_runtime_url_for_warning(), cloud_client.is_configured, cloud_logged_in)
 
-    if warning_state == "cloud_login_required":
-        st.warning(
-            t(
-                "تنبيه مهم: هذه النسخة المستضافة لا تحفظ بياناتك محليًا بشكل مضمون. قبل إدخال أي بيانات مهمة، سجلي دخول السحابة من الإعدادات > السحابة.",
-                "Important: this hosted version does not keep local data reliably. Before entering important data, sign in to Cloud from Settings > Cloud.",
-            )
-        )
-    elif warning_state == "cloud_setup_required":
+    if warning_state == "cloud_setup_required":
         st.info(
             t(
                 "هذه النسخة المستضافة لا تحفظ البيانات محليًا بشكل مضمون، وخدمة السحابة غير مفعلة بعد في بيئة التشغيل الحالية.",
@@ -317,7 +310,7 @@ def main():
                 background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
                 animation:goushfi-fade 2.2s ease-in-out forwards;
             }}
-            #goushfi-splash img {{height:96px;width:96px;border-radius:18px;margin-bottom:18px;}}
+            #goushfi-splash img {{height:108px;width:108px;border-radius:18px;margin-bottom:18px;}}
             #goushfi-splash .splash-name {{
                 color:#fff;font-size:2rem;font-weight:800;letter-spacing:-0.03em;
             }}
