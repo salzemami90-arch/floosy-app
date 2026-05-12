@@ -51,8 +51,8 @@ default_settings = {
 
 PLAN_DEFINITIONS = {
     "beta_free": {
-        "label_ar": "تجريبي مجاني",
-        "label_en": "Beta Free",
+        "label_ar": "مجاني",
+        "label_en": "Free",
         "features": {
             "account": True,
             "savings": True,

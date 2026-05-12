@@ -9,7 +9,6 @@ from config_floosy import (
     _local_persistence_enabled,
     export_app_state_payload,
     get_builtin_logo_b64,
-    get_logo_bytes,
     get_plan_info,
     import_app_state_payload,
     reset_local_app_data,
@@ -416,12 +415,6 @@ def render():
                 )
                 st.rerun()
             settings["language"] = selected_language
-            uploaded_file = st.file_uploader(
-                t("رفع شعار التطبيق", "Upload App Logo"),
-                type=["png", "jpg", "jpeg"],
-            )
-            if uploaded_file is not None:
-                settings["profile_image"] = uploaded_file.getvalue()
 
         st.session_state.settings = settings
 
@@ -451,15 +444,11 @@ def render():
         st.subheader(t("معاينة", "Preview"))
         col_a, col_b = st.columns([1, 2])
         with col_a:
-            img = get_logo_bytes()
-            if img:
-                st.image(img, width=120)
-            else:
-                _builtin_logo = get_builtin_logo_b64()
-                st.markdown(
-                    f'<img src="{_builtin_logo}" alt="GoushFi" style="width:120px;border-radius:14px;" />',
-                    unsafe_allow_html=True,
-                )
+            _builtin_logo = get_builtin_logo_b64()
+            st.markdown(
+                f'<img src="{_builtin_logo}" alt="GoushFi" style="width:120px;border-radius:14px;" />',
+                unsafe_allow_html=True,
+            )
         with col_b:
             st.write(f"{t('الاسم', 'Name')}: {settings.get('name', '') or '-'}")
             currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
@@ -486,14 +475,14 @@ def render():
         st.subheader(t("خطة الاستخدام الحالية", "Current Plan"))
         st.info(
             t(
-                f"الخطة الحالية: {tier_label} (بدون دفع حالياً).",
-                f"Current plan: {tier_label} (no billing yet).",
+                f"الخطة الحالية: {tier_label}.",
+                f"Current plan: {tier_label}.",
             )
         )
         st.caption(
             t(
-                f"ميزات مفعلة الآن: {enabled_count} / {total_features}. سنفعل الاشتراكات لاحقاً بعد مرحلة التجربة.",
-                f"Enabled features now: {enabled_count} / {total_features}. Billing will be enabled later after beta.",
+                f"ميزات مفعلة الآن: {enabled_count} / {total_features}.",
+                f"Enabled features now: {enabled_count} / {total_features}.",
             )
         )
 
