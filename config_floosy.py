@@ -277,7 +277,7 @@ def sync_browser_preferences_state(
     welcome_done: bool = True,
 ) -> None:
     del name
-    _name_to_code = {v: k for k, v in _ACCEPT_LANG_MAP.items()}
+    _name_to_code = {v: k for k, v in _ACCEPT_LANG_MAP.items() if k != "ms"}
     lang_code = _name_to_code.get(language, "")
 
     try:

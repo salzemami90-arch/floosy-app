@@ -73,11 +73,11 @@ def _card_colors(value: float) -> dict:
     return {"bg": "#FFFBEB", "border": "#F59E0B", "label": "#92400E", "value": "#78350F"}
 
 
-def _render_action_card(title: str, value_text: str, delta_text: str, net_value: float, is_en: bool) -> None:
+def _render_action_card(title: str, value_text: str, delta_text: str, net_value: float, is_ltr: bool) -> None:
     colors = _card_colors(net_value)
-    accent_side = "border-left" if is_en else "border-right"
-    text_dir = "ltr" if is_en else "rtl"
-    text_align = "left" if is_en else "right"
+    accent_side = "border-left" if is_ltr else "border-right"
+    text_dir = "ltr" if is_ltr else "rtl"
+    text_align = "left" if is_ltr else "right"
     st.markdown(
         f"""
         <div style="
@@ -97,6 +97,7 @@ def _render_action_card(title: str, value_text: str, delta_text: str, net_value:
 def render(month_key: str, month: str, year: int):
     _lc = get_lang_code()
     is_en = _lc == "en"
+    is_ltr = _lc != "ar"
     t = make_t()
     _display_months = get_months()
     month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
@@ -112,7 +113,7 @@ def render(month_key: str, month: str, year: int):
     currency = st.session_state.settings.get("default_currency", "د.ك")
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
     currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
+    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_ltr else currency_symbol
 
     repo = SessionStateRepository()
     analyzer = FinancialAnalyzer(repo)
@@ -157,7 +158,7 @@ def render(month_key: str, month: str, year: int):
 
     show_spending_note_on_good = brief_status == "spending_high" and float(brief.get("focus_value", 0.0)) >= 0
     theme = _quick_take_theme("stable" if show_spending_note_on_good else brief_status)
-    border_side = "border-left" if is_en else "border-right"
+    border_side = "border-left" if is_ltr else "border-right"
 
     if show_spending_note_on_good:
         brief_message = t("الوضع المالي تحت السيطرة", "Financial position is under control")
@@ -166,11 +167,11 @@ def render(month_key: str, month: str, year: int):
             "Your 90-day net is still positive, but this month's spending is above usual.",
         )
     else:
-        brief_message = brief["message_en"] if is_en else brief["message_ar"]
-        brief_detail = brief["detail_en"] if is_en else brief["detail_ar"]
+        brief_message = brief["message_en"] if is_ltr else brief["message_ar"]
+        brief_detail = brief["detail_en"] if is_ltr else brief["detail_ar"]
 
-    focus_label = brief["focus_label_en"] if is_en else brief["focus_label_ar"]
-    support_label = brief["support_label_en"] if is_en else brief["support_label_ar"]
+    focus_label = brief["focus_label_en"] if is_ltr else brief["focus_label_ar"]
+    support_label = brief["support_label_en"] if is_ltr else brief["support_label_ar"]
     focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
     support_value = f"{brief.get('support_value', 0.0):,.0f} {currency_view}"
 
@@ -226,7 +227,7 @@ def render(month_key: str, month: str, year: int):
                 value_text=f"{current['net']:,.2f} {currency_view}",
                 delta_text=f"{comparison['net_delta']:+,.2f} ({comparison['net_delta_pct']:+.1f}%)",
                 net_value=current["net"],
-                is_en=is_en,
+                is_ltr=is_ltr,
             )
         with ac2:
             _render_action_card(
@@ -237,7 +238,7 @@ def render(month_key: str, month: str, year: int):
                     f"{coverage['overdue_count']} overdue · {coverage['expected_count']} expected",
                 ),
                 net_value=coverage["net_coverage"],
-                is_en=is_en,
+                is_ltr=is_ltr,
             )
         with ac3:
             _render_action_card(
@@ -248,7 +249,7 @@ def render(month_key: str, month: str, year: int):
                     f"{comparison_90['net_delta']:+,.2f} vs last 90 days",
                 ),
                 net_value=projected_90["net"],
-                is_en=is_en,
+                is_ltr=is_ltr,
             )
         st.markdown("")
 

@@ -178,7 +178,7 @@ def _metric_value_html(value: str) -> str:
     )
 
 
-def _metric_label_html(label: str, tone: str, is_en: bool) -> str:
+def _metric_label_html(label: str, tone: str, is_ltr: bool) -> str:
     icon_map = {
         "remaining": "◎",
         "income": "↗",
@@ -188,19 +188,19 @@ def _metric_label_html(label: str, tone: str, is_en: bool) -> str:
     text = html.escape(label)
     icon_html = f'<span class="floosy-account-summary-card__label-icon" aria-hidden="true">{icon}</span>'
     text_html = f"<span>{text}</span>"
-    return f"{icon_html}{text_html}" if is_en else f"{text_html}{icon_html}"
+    return f"{icon_html}{text_html}" if is_ltr else f"{text_html}{icon_html}"
 
 
-def _render_account_summary_card(label: str, value: str, tone: str, is_en: bool) -> None:
-    direction = "ltr" if is_en else "rtl"
-    align = "left" if is_en else "right"
-    accent_side = "left" if is_en else "right"
+def _render_account_summary_card(label: str, value: str, tone: str, is_ltr: bool) -> None:
+    direction = "ltr" if is_ltr else "rtl"
+    align = "left" if is_ltr else "right"
+    accent_side = "left" if is_ltr else "right"
     accent_html = "" if tone == "remaining" else f'<div class="floosy-account-summary-card__accent" style="{accent_side}:0;"></div>'
     card_markup = (
         f'<div class="floosy-account-summary-card floosy-account-summary-card--{tone}" '
         f'style="direction:{direction};text-align:{align};">'
         f"{accent_html}"
-        f'<div class="floosy-account-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>'
+        f'<div class="floosy-account-summary-card__label">{_metric_label_html(label, tone, is_ltr)}</div>'
         f'<div class="floosy-account-summary-card__value">{_metric_value_html(value)}</div>'
         "</div>"
     )
@@ -866,6 +866,7 @@ def _sync_monthly_item_after_transaction_delete(deleted_tx: dict, recurring_item
 def render(month_key: str, month: str, year: int):
     _lc = get_lang_code()
     is_en = _lc == "en"
+    is_ltr = _lc != "ar"
     t = make_t()
     _display_months = get_months()
     month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
@@ -935,7 +936,7 @@ def render(month_key: str, month: str, year: int):
         t("المتبقي", "Remaining"),
         f"{(total_income - total_expense):,.0f} {currency_view}",
         "remaining",
-        is_en=is_en,
+        is_ltr=is_ltr,
     )
 
     c1, c2 = st.columns(2)
@@ -944,14 +945,14 @@ def render(month_key: str, month: str, year: int):
             t("إجمالي الدخل", "Total Income"),
             f"{total_income:,.0f} {currency_view}",
             "income",
-            is_en=is_en,
+            is_ltr=is_ltr,
         )
     with c2:
         _render_account_summary_card(
             t("إجمالي المصاريف", "Total Expenses"),
             f"{total_expense:,.0f} {currency_view}",
             "expense",
-            is_en=is_en,
+            is_ltr=is_ltr,
         )
 
     st.markdown("---")
@@ -1183,7 +1184,7 @@ def render(month_key: str, month: str, year: int):
     if not active_items:
         st.markdown(
             f"""
-            <div class="floosy-monthly-item-empty" style="direction:{'ltr' if is_en else 'rtl'};text-align:{'left' if is_en else 'right'};">
+            <div class="floosy-monthly-item-empty" style="direction:{'ltr' if is_ltr else 'rtl'};text-align:{'left' if is_ltr else 'right'};">
                 {t("لا توجد عناصر شهرية بعد. ابدأ بإضافة أول عنصر من إدارة العناصر الشهرية.", "No monthly items yet. Start by adding your first item from Manage Monthly Items.")}
             </div>
             """,
@@ -1204,9 +1205,9 @@ def render(month_key: str, month: str, year: int):
             meta_color = str(visual_state["meta"])
             title_color = str(visual_state["title"])
             state_color = str(visual_state["state"])
-            direction = "ltr" if is_en else "rtl"
-            align = "left" if is_en else "right"
-            border_side = "border-left" if is_en else "border-right"
+            direction = "ltr" if is_ltr else "rtl"
+            align = "left" if is_ltr else "right"
+            border_side = "border-left" if is_ltr else "border-right"
             item_currency = _currency_short_label(item.get("currency", currency), is_en)
             day_label = t("يوم الاستلام المتوقع", "Expected receipt day") if is_income else t("يوم الاستحقاق", "Due day")
             oldest_pending_key = _sort_month_keys(pending)[0] if pending else ""
