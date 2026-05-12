@@ -231,7 +231,7 @@ def _currency_short_label(value: str, is_en: bool) -> str:
     symbol = clean_value.split(" - ")[0] if " - " in clean_value else clean_value
     if not is_en:
         return symbol
-    return {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}.get(symbol, symbol)
+    return {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}.get(symbol, symbol)
 
 
 def _category_label(value: str, is_en: bool) -> str:
@@ -916,7 +916,7 @@ def render(month_key: str, month: str, year: int):
     tx_list = load_transactions(month_key)
     currency = st.session_state.settings.get("default_currency", CURRENCY_OPTIONS[0])
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
+    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
     currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
     tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
     tax_codes = [opt["code"] for opt in tax_options]

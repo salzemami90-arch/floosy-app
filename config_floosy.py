@@ -20,6 +20,7 @@ CURRENCY_OPTIONS = [
     "₩ - 원",
     "¥ - 円",
     "Rp - Rupiah",
+    "S$ - SGD",
 ]
 
 FIXED_EXPENSE_CATEGORIES = ["إيجار / قسط", "فواتير"]
@@ -218,7 +219,7 @@ _ACCEPT_LANG_MAP = {
     "ko": "한국어",
     "ja": "日本語",
     "id": "Bahasa Indonesia",
-    "ms": "Bahasa Indonesia",
+    "ms": "Bahasa Melayu",
 }
 
 
@@ -277,7 +278,7 @@ def sync_browser_preferences_state(
     welcome_done: bool = True,
 ) -> None:
     del name
-    _name_to_code = {v: k for k, v in _ACCEPT_LANG_MAP.items() if k != "ms"}
+    _name_to_code = {v: k for k, v in _ACCEPT_LANG_MAP.items()}
     lang_code = _name_to_code.get(language, "")
 
     try:
@@ -1170,6 +1171,19 @@ def get_logo_bytes():
         return settings["profile_image"]
 
     return None
+
+
+_BUILTIN_LOGO_B64: str | None = None
+
+
+def get_builtin_logo_b64() -> str:
+    """Return the built-in GoushFi logo as a base64 data URI (cached)."""
+    global _BUILTIN_LOGO_B64
+    if _BUILTIN_LOGO_B64 is None:
+        logo_path = os.path.join(os.path.dirname(__file__), "goushfi_logo.png")
+        with open(logo_path, "rb") as f:
+            _BUILTIN_LOGO_B64 = base64.b64encode(f.read()).decode()
+    return f"data:image/png;base64,{_BUILTIN_LOGO_B64}"
 
 
 def ensure_month_keys(month_key: str):

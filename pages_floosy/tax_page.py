@@ -30,7 +30,7 @@ def _status_label(status: str, is_en: bool) -> str:
 
 
 def _currency_view(symbol: str, is_en: bool) -> str:
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
+    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
     return currency_map_en.get(symbol, symbol) if is_en else symbol
 
 

@@ -112,7 +112,7 @@ def render(month_key: str, month: str, year: int):
 
     currency = st.session_state.settings.get("default_currency", "د.ك")
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
+    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
     currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_ltr else currency_symbol
 
     repo = SessionStateRepository()

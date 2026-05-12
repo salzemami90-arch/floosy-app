@@ -1,6 +1,6 @@
-# Floosy Beta 2 Context
+# GoushFi Beta 2 Context
 
-Last updated: 2026-05-06
+Last updated: 2026-05-06 (Session 2)
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -55,6 +55,33 @@ When adding future updates:
 - Add the commit hash if available.
 - Summarize the product change, not only the code change.
 - Keep older entries. Do not delete history unless creating a cleaner Beta 3 context file.
+
+### 2026-05-06 (Devin Session 2 — Logo, Languages, Onboarding)
+
+- **Rebranding complete:** Product is now GoushFi everywhere (logo, header, settings, splash screen).
+- **Multi-language i18n system** added via `services/i18n.py`:
+  - Centralized `make_t()` function replaces all lambda `t` definitions across 10+ files.
+  - 450+ translated strings for 7 languages: Arabic, English, Chinese, Korean, Japanese, Indonesian, Malay (Singapore).
+  - Backward-compatible `t(ar, en)` signature — all existing calls work unchanged.
+  - Language lookup falls back to English when translation is missing.
+- **7 supported languages:** العربية (ar), English (en), 中文 (zh), 한국어 (ko), 日本語 (ja), Bahasa Indonesia (id), Bahasa Melayu (ms).
+- **RTL direction** only applies to Arabic. All other languages render LTR. Layout uses `is_ltr = _lc != "ar"` (separate from `is_en`).
+- **New currencies added:** CNY (¥ - 人民币), KRW (₩ - 원), JPY (¥ - 円), IDR (Rp - Rupiah), SGD (S$ - SGD). All currency maps updated across all 7 page files.
+- **Tagline updated** to "Flow · Control · Growth" (consistent across all languages).
+- **GoushFi logo** (`goushfi_logo.png`, 256×256, transparent background):
+  - Replaces the old "G" letter in the dashboard header with actual logo image.
+  - Shows in Settings preview as default when no user-uploaded logo exists.
+  - Used in splash screen on first app load.
+- **Splash screen** added: Shows GoushFi logo + name + tagline on first visit, fades out after ~2 seconds. Only shows once per session.
+- **Welcome Guide** added to dashboard: Shows on first visit if user hasn't set name or added transactions. Guides through 3 steps: set name/currency, add first transaction, view Financial Analyzer. Auto-dismisses when steps completed, or user can click "Skip guide". Translated in all 7 languages.
+- **Bug sweep (PR #15):**
+  - Removed old Floosy logo (blue F) from Settings.
+  - Changed backup filename from `floosy_backup` to `goushfi_backup`.
+  - Extracted 3 duplicated auth helpers to shared `services/cloud_state_helpers.py`.
+  - Fixed stale `_cloud_sync_last_error` not cleared on account switch.
+  - Updated E2E test selectors from "Floosy Settings" to "GoushFi Settings".
+- **Language detection** from browser `Accept-Language` header now supports all 7 language codes (ar, en, zh, ko, ja, id, ms).
+- **Localized month names** added for all languages (used in sidebar month selector).
 
 ### 2026-05-06
 

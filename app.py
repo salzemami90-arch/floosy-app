@@ -8,6 +8,7 @@ from config_floosy import (
     _hosted_data_warning_state,
     ensure_month_keys,
     export_app_state_payload,
+    get_builtin_logo_b64,
     get_month_selection,
     import_app_state_payload,
     init_session_state,
@@ -304,6 +305,38 @@ def _show_hosted_data_warning(t) -> None:
 
 def main():
     st.set_page_config(page_title="GoushFi", layout="wide")
+
+    if not st.session_state.get("_splash_shown"):
+        _splash_logo = get_builtin_logo_b64()
+        st.markdown(
+            f"""
+            <style>
+            #goushfi-splash {{
+                position:fixed;inset:0;z-index:999999;
+                display:flex;flex-direction:column;align-items:center;justify-content:center;
+                background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+                animation:goushfi-fade 2.2s ease-in-out forwards;
+            }}
+            #goushfi-splash img {{height:96px;width:96px;border-radius:18px;margin-bottom:18px;}}
+            #goushfi-splash .splash-name {{
+                color:#fff;font-size:2rem;font-weight:800;letter-spacing:-0.03em;
+            }}
+            #goushfi-splash .splash-tag {{
+                color:rgba(255,255,255,0.6);font-size:0.9rem;margin-top:6px;letter-spacing:0.08em;
+            }}
+            @keyframes goushfi-fade {{
+                0%,60%{{opacity:1}} 100%{{opacity:0;pointer-events:none}}
+            }}
+            </style>
+            <div id="goushfi-splash">
+                <img src="{_splash_logo}" alt="GoushFi" />
+                <div class="splash-name">GoushFi</div>
+                <div class="splash-tag">Flow · Control · Growth</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.session_state["_splash_shown"] = True
 
     # تهيئة عامة (session_state + css إن كانت داخل config_floosy)
     init_session_state()
