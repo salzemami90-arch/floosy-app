@@ -16,6 +16,10 @@ CURRENCY_OPTIONS = [
     "د.إ - درهم إماراتي",
     "$ - دولار أمريكي",
     "€ - يورو",
+    "¥ - 人民币",
+    "₩ - 원",
+    "¥ - 円",
+    "Rp - Rupiah",
 ]
 
 FIXED_EXPENSE_CATEGORIES = ["إيجار / قسط", "فواتير"]
@@ -207,6 +211,17 @@ def _persist_backend() -> str:
     return "json" if raw_backend == "json" else "sqlite"
 
 
+_ACCEPT_LANG_MAP = {
+    "ar": "العربية",
+    "en": "English",
+    "zh": "中文",
+    "ko": "한국어",
+    "ja": "日本語",
+    "id": "Bahasa Indonesia",
+    "ms": "Bahasa Indonesia",
+}
+
+
 def _preferred_language_from_accept_language(header_value: str) -> str:
     raw_value = str(header_value or "").strip().lower()
     if not raw_value:
@@ -214,10 +229,9 @@ def _preferred_language_from_accept_language(header_value: str) -> str:
 
     for part in raw_value.split(","):
         token = part.split(";", 1)[0].strip()
-        if token.startswith("ar"):
-            return "العربية"
-        if token.startswith("en"):
-            return "English"
+        for prefix, lang_name in _ACCEPT_LANG_MAP.items():
+            if token.startswith(prefix):
+                return lang_name
 
     return "العربية"
 
@@ -230,11 +244,7 @@ def _read_browser_preferences_from_query_params() -> dict:
 
     welcome_done = str(query_params.get("f_w", "") or "").strip() == "1"
     lang_code = str(query_params.get("f_lang", "") or "").strip().lower()
-    language = ""
-    if lang_code == "ar":
-        language = "العربية"
-    elif lang_code == "en":
-        language = "English"
+    language = _ACCEPT_LANG_MAP.get(lang_code, "")
 
     return {
         "completed": welcome_done,
@@ -252,7 +262,7 @@ def _apply_browser_query_preferences() -> None:
         return
 
     query_language = str(prefs.get("language", "") or "").strip()
-    if query_language in {"العربية", "English"}:
+    if query_language in set(_ACCEPT_LANG_MAP.values()):
         settings["language"] = query_language
         settings["language_user_selected"] = True
 
@@ -267,11 +277,8 @@ def sync_browser_preferences_state(
     welcome_done: bool = True,
 ) -> None:
     del name
-    lang_code = ""
-    if language == "العربية":
-        lang_code = "ar"
-    elif language == "English":
-        lang_code = "en"
+    _name_to_code = {v: k for k, v in _ACCEPT_LANG_MAP.items() if k != "ms"}
+    lang_code = _name_to_code.get(language, "")
 
     try:
         current_page = str(st.query_params.get("page", "") or "").strip()
@@ -336,7 +343,7 @@ def _apply_browser_language_preference() -> None:
         return
 
     detected_language = _detect_browser_language()
-    if detected_language not in {"العربية", "English"}:
+    if detected_language not in set(_ACCEPT_LANG_MAP.values()):
         return
 
     if settings.get("language") == detected_language:
@@ -351,12 +358,13 @@ def _apply_language_direction_theme() -> None:
     if not isinstance(settings, dict):
         settings = {}
 
-    is_en = settings.get("language") == "English"
-    direction = "ltr" if is_en else "rtl"
-    align = "left" if is_en else "right"
-    header_direction = "row" if is_en else "row-reverse"
+    _rtl_langs = {"العربية"}
+    is_rtl_lang = settings.get("language", "العربية") in _rtl_langs
+    direction = "rtl" if is_rtl_lang else "ltr"
+    align = "right" if is_rtl_lang else "left"
+    header_direction = "row-reverse" if is_rtl_lang else "row"
     sidebar_side_css = ""
-    if not is_en:
+    if is_rtl_lang:
         sidebar_side_css = """
         section[data-testid="stSidebar"],
         [data-testid="stSidebar"],
@@ -1122,9 +1130,10 @@ def get_month_selection(page: str):
     ترجع (month_key, month, year)
     تستخدم الـ sidebar لاختيار الشهر/السنة، ما عدا الإعدادات.
     """
-    lang = st.session_state.get("settings", {}).get("language", "العربية")
-    is_en = lang == "English"
-    t = (lambda ar, en: en if is_en else ar)
+    from services.i18n import make_t, get_months, get_lang_code
+    t = make_t()
+    _lc = get_lang_code()
+    _display_months = get_months()
 
     if page == "settings":
         return None, None, None
@@ -1140,14 +1149,14 @@ def get_month_selection(page: str):
         year_options = list(range(2023, current_year + 3))
         year_default_index = year_options.index(current_year)
 
-        month_options = english_months if is_en else arabic_months
+        month_options = _display_months
         month_selected = st.sidebar.selectbox(t("الشهر", "Month"), month_options, index=current_month_idx)
         year = st.sidebar.selectbox(t("السنة", "Year"), year_options, index=year_default_index)
-        month = arabic_months[english_months.index(month_selected)] if is_en else month_selected
+        month = arabic_months[_display_months.index(month_selected)] if _lc != "ar" else month_selected
     else:
         month = arabic_months[current_month_idx]
         year = current_year
-        month_caption = english_months[current_month_idx] if is_en else month
+        month_caption = _display_months[current_month_idx] if _lc != "ar" else month
         st.sidebar.caption(f"{month_caption} {year}")
 
     month_key = f"{year}-{month}"

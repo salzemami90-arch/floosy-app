@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_saving_totals
+from services.i18n import make_t, get_lang_code, get_months
 from repositories.session_repo import SessionStateRepository
 from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
@@ -136,7 +137,7 @@ def _metric_value_html(value: str) -> str:
     )
 
 
-def _metric_label_html(label: str, tone: str, is_en: bool) -> str:
+def _metric_label_html(label: str, tone: str, is_ltr: bool) -> str:
     icon_map = {
         "balance": "◎",
         "income": "↗",
@@ -149,13 +150,13 @@ def _metric_label_html(label: str, tone: str, is_en: bool) -> str:
     text = html.escape(label)
     icon_html = f'<span class="floosy-summary-card__label-icon" aria-hidden="true">{icon}</span>'
     text_html = f"<span>{text}</span>"
-    return f"{icon_html}{text_html}" if is_en else f"{text_html}{icon_html}"
+    return f"{icon_html}{text_html}" if is_ltr else f"{text_html}{icon_html}"
 
 
-def _render_summary_card(label: str, value: str, tone: str, is_en: bool, featured: bool = False) -> None:
-    direction = "ltr" if is_en else "rtl"
-    align = "left" if is_en else "right"
-    accent_side = "left" if is_en else "right"
+def _render_summary_card(label: str, value: str, tone: str, is_ltr: bool, featured: bool = False) -> None:
+    direction = "ltr" if is_ltr else "rtl"
+    align = "left" if is_ltr else "right"
+    accent_side = "left" if is_ltr else "right"
     tone_class = {
         "balance": "floosy-summary-card--featured",
         "income": "floosy-summary-card--income",
@@ -170,7 +171,7 @@ def _render_summary_card(label: str, value: str, tone: str, is_en: bool, feature
         f'<div class="floosy-summary-card {tone_class}{featured_class}" '
         f'style="direction:{direction};text-align:{align};">'
         f"{accent_html}"
-        f'<div class="floosy-summary-card__label">{_metric_label_html(label, tone, is_en)}</div>'
+        f'<div class="floosy-summary-card__label">{_metric_label_html(label, tone, is_ltr)}</div>'
         f'<div class="floosy-summary-card__value">{_metric_value_html(value)}</div>'
         "</div>"
     )
@@ -225,16 +226,19 @@ def render(month_key: str, month: str, year: int):
 
     settings = st.session_state.settings
     currency = settings.get("default_currency", "د.ك")
-    is_en = settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    is_ltr = _lc != "ar"
+    t = make_t()
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
     currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
-    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
+    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if _lc != "ar" else currency_symbol
+    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=(_lc != "ar"))
     tax_codes = [opt["code"] for opt in tax_options]
     tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
     default_expense_tax_code = next((opt["code"] for opt in tax_options if opt.get("deductible")), tax_codes[0] if tax_codes else "")
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
     def _toast(msg: str, level: str = "success"):
         if hasattr(st, "toast"):
@@ -246,7 +250,7 @@ def render(month_key: str, month: str, year: int):
                 st.success(msg)
 
     # ===== Header (uses CSS from config_floosy.py) =====
-    header_tagline = t("امسك زمام فلوسك بذكاء", "Smart money, in your hands")
+    header_tagline = t("Flow · Control · Growth", "Flow · Control · Growth")
     logo_html = """
     <div style="
         display:flex;
@@ -413,7 +417,7 @@ def render(month_key: str, month: str, year: int):
                 featured_item["label"],
                 featured_item["value"],
                 featured_item["tone"],
-                is_en=is_en,
+                is_ltr=is_ltr,
                 featured=True,
             )
 
@@ -427,7 +431,7 @@ def render(month_key: str, month: str, year: int):
                         item["label"],
                         item["value"],
                         item["tone"],
-                        is_en=is_en,
+                        is_ltr=is_ltr,
                         featured=False,
                     )
 
@@ -436,7 +440,7 @@ def render(month_key: str, month: str, year: int):
     brief_status = str(brief.get("status", "stable") or "stable")
     show_spending_note_on_good = brief_status == "spending_high" and float(brief.get("focus_value", 0.0)) >= 0
     summary_theme = _summary_theme("stable" if show_spending_note_on_good else brief_status)
-    summary_border_side = "border-left" if is_en else "border-right"
+    summary_border_side = "border-left" if is_ltr else "border-right"
 
     st.markdown("### " + t("الملخص الذكي", "Smart Summary"))
     if show_spending_note_on_good:
@@ -446,10 +450,10 @@ def render(month_key: str, month: str, year: int):
             "Your 90-day net is still positive, but this month's spending is above usual.",
         )
     else:
-        brief_message = brief["message_en"] if is_en else brief["message_ar"]
-        brief_detail = brief["detail_en"] if is_en else brief["detail_ar"]
-    focus_label = brief["focus_label_en"] if is_en else brief["focus_label_ar"]
-    support_label = brief["support_label_en"] if is_en else brief["support_label_ar"]
+        brief_message = brief["message_en"] if is_ltr else brief["message_ar"]
+        brief_detail = brief["detail_en"] if is_ltr else brief["detail_ar"]
+    focus_label = brief["focus_label_en"] if is_ltr else brief["focus_label_ar"]
+    support_label = brief["support_label_en"] if is_ltr else brief["support_label_ar"]
     focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
     support_value = f"{brief.get('support_value', 0.0):,.0f} {currency_view}"
 
@@ -487,7 +491,7 @@ def render(month_key: str, month: str, year: int):
         st.session_state["dash_q_category"] = default_quick_form["category"]
         st.session_state["dash_q_note"] = default_quick_form["note"]
 
-    fab_side_css = "left: 22px; right: auto;" if not is_en else "right: 22px; left: auto;"
+    fab_side_css = "left: 22px; right: auto;" if not is_ltr else "right: 22px; left: auto;"
 
     fab_css = """
         <style>
