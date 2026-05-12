@@ -781,7 +781,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     line-height: 1.2;
 }
 
-/* Single source of truth; !important so hosted Streamlit theme CSS cannot override */
+/* Built-in logo: true colors (no blend filters on the image) */
 .flossy-header img.flossy-header-logo,
 .flossy-header img {
     height: 100% !important;
@@ -793,8 +793,6 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     border-radius: 10px !important;
     flex-shrink: 0;
     display: block;
-    /* Solid black in the logo asset picks up the header gradient (screen blend) */
-    mix-blend-mode: screen;
 }
 
 div[data-testid="stMetric"] {
@@ -1255,17 +1253,28 @@ def get_logo_bytes():
     return None
 
 
-_BUILTIN_LOGO_B64: str | None = None
+_BUILTIN_LOGO_DATA_URI: str | None = None
 
 
 def get_builtin_logo_b64() -> str:
     """Return the built-in GoushFi logo as a base64 data URI (cached)."""
-    global _BUILTIN_LOGO_B64
-    if _BUILTIN_LOGO_B64 is None:
+    global _BUILTIN_LOGO_DATA_URI
+    if _BUILTIN_LOGO_DATA_URI is None:
         logo_path = os.path.join(os.path.dirname(__file__), "goushfi_logo.png")
         with open(logo_path, "rb") as f:
-            _BUILTIN_LOGO_B64 = base64.b64encode(f.read()).decode()
-    return f"data:image/png;base64,{_BUILTIN_LOGO_B64}"
+            raw = f.read()
+        if raw.startswith(b"\xff\xd8\xff"):
+            mime = "image/jpeg"
+        elif raw.startswith(b"\x89PNG\r\n\x1a\n"):
+            mime = "image/png"
+        elif raw.startswith((b"GIF87a", b"GIF89a")):
+            mime = "image/gif"
+        elif raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP":
+            mime = "image/webp"
+        else:
+            mime = "image/png"
+        _BUILTIN_LOGO_DATA_URI = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+    return _BUILTIN_LOGO_DATA_URI
 
 
 def ensure_month_keys(month_key: str):
