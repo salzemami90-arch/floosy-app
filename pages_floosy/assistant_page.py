@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import arabic_months, english_months, load_transactions
+from services.i18n import make_t, get_lang_code, get_months
 from repositories.session_repo import SessionStateRepository
 from services.cash_flow_engine import CashFlowEngine
 from services.financial_analyzer import FinancialAnalyzer
@@ -94,9 +95,11 @@ def _render_action_card(title: str, value_text: str, delta_text: str, net_value:
 
 
 def render(month_key: str, month: str, year: int):
-    is_en = st.session_state.settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
     st.title(t("المحلل المالي", "Financial Analyzer"))
     st.caption(

@@ -2,15 +2,17 @@ import streamlit as st
 from datetime import date
 import pandas as pd
 
+from services.i18n import make_t, get_lang_code
+
 
 def render():
-    lang = st.session_state.get("settings", {}).get("language", "العربية")
-    is_en = lang == "English"
-    t = (lambda ar, en: en if is_en else ar)
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
     currency = st.session_state.get("settings", {}).get("default_currency", "د.ك")
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
     currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
+    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if _lc != "ar" else currency_symbol
 
     st.title(t("مستنداتي", "Documents"))
     st.caption(t("إدارة المستندات وتنبيهات التجديد", "Document management and renewal reminders"))

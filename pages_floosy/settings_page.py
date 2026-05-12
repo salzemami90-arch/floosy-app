@@ -16,6 +16,7 @@ from config_floosy import (
     sync_browser_preferences_state,
 )
 from services.cloud_auth_cookie import clear_cloud_auth_cookie, remember_cloud_auth
+from services.i18n import LANGUAGE_NAMES, LANGUAGES, make_t, is_rtl as _is_rtl
 from services.cloud_sync_guard import (
     clear_cloud_sync_guard,
     cloud_sync_pause_reason,
@@ -31,20 +32,27 @@ from services.supabase_sync import SupabaseSyncClient
 KUWAIT_TZ = timezone(timedelta(hours=3), name="Asia/Kuwait")
 
 
-CURRENCY_OPTION_AR_TO_EN = {
-    "د.ك - دينار كويتي": "KWD - Kuwaiti Dinar",
-    "ر.س - ريال سعودي": "SAR - Saudi Riyal",
-    "د.إ - درهم إماراتي": "AED - UAE Dirham",
-    "$ - دولار أمريكي": "USD - US Dollar",
-    "€ - يورو": "EUR - Euro",
+CURRENCY_OPTION_LABELS: dict[str, dict[str, str]] = {
+    "د.ك - دينار كويتي": {"en": "KWD - Kuwaiti Dinar", "zh": "KWD - 科威特第纳尔", "ko": "KWD - 쿠웨이트 디나르", "ja": "KWD - クウェートディナール", "id": "KWD - Dinar Kuwait"},
+    "ر.س - ريال سعودي": {"en": "SAR - Saudi Riyal", "zh": "SAR - 沙特里亚尔", "ko": "SAR - 사우디 리얄", "ja": "SAR - サウジリヤル", "id": "SAR - Riyal Saudi"},
+    "د.إ - درهم إماراتي": {"en": "AED - UAE Dirham", "zh": "AED - 阿联酋迪拉姆", "ko": "AED - UAE 디르함", "ja": "AED - UAEディルハム", "id": "AED - Dirham UEA"},
+    "$ - دولار أمريكي": {"en": "USD - US Dollar", "zh": "USD - 美元", "ko": "USD - 미국 달러", "ja": "USD - 米ドル", "id": "USD - Dolar AS"},
+    "€ - يورو": {"en": "EUR - Euro", "zh": "EUR - 欧元", "ko": "EUR - 유로", "ja": "EUR - ユーロ", "id": "EUR - Euro"},
+    "¥ - 人民币": {"en": "CNY - Chinese Yuan", "zh": "CNY - 人民币", "ko": "CNY - 중국 위안", "ja": "CNY - 中国人民元", "id": "CNY - Yuan Tiongkok"},
+    "₩ - 원": {"en": "KRW - Korean Won", "zh": "KRW - 韩元", "ko": "KRW - 대한민국 원", "ja": "KRW - 韓国ウォン", "id": "KRW - Won Korea"},
+    "¥ - 円": {"en": "JPY - Japanese Yen", "zh": "JPY - 日元", "ko": "JPY - 일본 엔", "ja": "JPY - 日本円", "id": "JPY - Yen Jepang"},
+    "Rp - Rupiah": {"en": "IDR - Indonesian Rupiah", "zh": "IDR - 印尼盾", "ko": "IDR - 인도네시아 루피아", "ja": "IDR - インドネシアルピア", "id": "IDR - Rupiah Indonesia"},
 }
 
 
-def _currency_option_label(value: str, is_en: bool) -> str:
+def _currency_option_label(value: str, lang_code: str) -> str:
     clean_value = str(value or "").strip()
-    if not is_en:
+    if lang_code == "ar":
         return clean_value
-    return CURRENCY_OPTION_AR_TO_EN.get(clean_value, clean_value)
+    labels = CURRENCY_OPTION_LABELS.get(clean_value)
+    if labels:
+        return labels.get(lang_code, labels.get("en", clean_value))
+    return clean_value
 
 
 def _cloud_error_text(error, t) -> str:
@@ -259,8 +267,9 @@ using (auth.uid() = user_id);
 
 def render():
     settings = st.session_state.settings
-    is_en = settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
+    lang_code = LANGUAGES.get(settings.get("language", "العربية"), "ar")
+    is_en = lang_code == "en"
+    t = make_t()
 
     st.title(t("إعدادات GoushFi", "GoushFi Settings"))
     st.caption(
@@ -383,15 +392,16 @@ def render():
                 index=CURRENCY_OPTIONS.index(settings.get("default_currency", CURRENCY_OPTIONS[0]))
                 if settings.get("default_currency", CURRENCY_OPTIONS[0]) in CURRENCY_OPTIONS
                 else 0,
-                format_func=lambda opt: _currency_option_label(opt, is_en),
+                format_func=lambda opt: _currency_option_label(opt, lang_code),
             )
 
         with col2:
             current_language = settings.get("language", "العربية")
+            lang_index = LANGUAGE_NAMES.index(current_language) if current_language in LANGUAGE_NAMES else 0
             selected_language = st.selectbox(
                 t("اللغة", "Language"),
-                ["العربية", "English"],
-                index=0 if current_language == "العربية" else 1,
+                LANGUAGE_NAMES,
+                index=lang_index,
             )
             if selected_language != current_language:
                 settings["language"] = selected_language
@@ -446,7 +456,7 @@ def render():
                 st.write(t("لا يوجد شعار مرفوع.", "No uploaded logo."))
         with col_b:
             st.write(f"{t('الاسم', 'Name')}: {settings.get('name', '') or '-'}")
-            currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), is_en)
+            currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
             st.write(f"{t('العملة', 'Currency')}: {currency_label}")
             st.write(f"{t('اللغة', 'Language')}: {settings.get('language', 'العربية')}")
 
@@ -462,7 +472,7 @@ def render():
         if tier_key not in PLAN_DEFINITIONS:
             tier_key = "beta_free"
         tier_meta = PLAN_DEFINITIONS[tier_key]
-        tier_label = tier_meta["label_en"] if is_en else tier_meta["label_ar"]
+        tier_label = tier_meta["label_en"] if lang_code != "ar" else tier_meta["label_ar"]
         total_features = len(tier_meta.get("features", {}))
         enabled_count = sum(1 for enabled in tier_meta.get("features", {}).values() if enabled)
 

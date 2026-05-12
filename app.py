@@ -33,6 +33,7 @@ from services.cloud_sync_guard import (
     pause_cloud_auto_sync,
     should_keep_local_data_before_auto_import,
 )
+from services.i18n import make_t, get_lang_code, is_rtl as _is_rtl
 from services.supabase_sync import SupabaseSyncClient
 
 
@@ -326,11 +327,10 @@ def main():
         st.code(traceback.format_exc())
         st.stop()
 
-    lang = st.session_state.settings.get("language", "العربية")
-    is_en = lang == "English"
-    t = (lambda ar, en: en if is_en else ar)
-    lang_code = "en" if is_en else "ar"
-    lang_dir = "ltr" if is_en else "rtl"
+    t = make_t()
+    lang_code = get_lang_code()
+    is_en = lang_code == "en"
+    lang_dir = "rtl" if _is_rtl() else "ltr"
 
     st.markdown(
         f"""

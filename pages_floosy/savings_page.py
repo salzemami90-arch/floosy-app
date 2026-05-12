@@ -3,13 +3,16 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 from config_floosy import arabic_months, english_months, get_saving_totals
+from services.i18n import make_t, get_lang_code, get_months
 from services.purchase_goal_service import PurchaseGoalService
 
 
 def render(month_key: str, month: str, year: int):
-    is_en = st.session_state.settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
     st.title(t("التوفير", "Savings"))
     st.caption(f"{month_display} {year}")

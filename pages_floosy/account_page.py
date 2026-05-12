@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import CURRENCY_OPTIONS, add_transaction, arabic_months, english_months, load_transactions
+from services.i18n import make_t, get_lang_code, get_months
 from services.expense_tax_service import ExpenseTaxService
 from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, category_label, localized_all_categories
 
@@ -863,9 +864,11 @@ def _sync_monthly_item_after_transaction_delete(deleted_tx: dict, recurring_item
 
 
 def render(month_key: str, month: str, year: int):
-    is_en = st.session_state.settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
     save_notice = st.session_state.pop("account_save_notice", "")
 
     if save_notice:

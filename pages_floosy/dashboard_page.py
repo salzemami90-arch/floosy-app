@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_saving_totals
+from services.i18n import make_t, get_lang_code, get_months
 from repositories.session_repo import SessionStateRepository
 from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
@@ -225,16 +226,18 @@ def render(month_key: str, month: str, year: int):
 
     settings = st.session_state.settings
     currency = settings.get("default_currency", "د.ك")
-    is_en = settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
     currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
     currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
-    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
+    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if _lc != "ar" else currency_symbol
+    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=(_lc != "ar"))
     tax_codes = [opt["code"] for opt in tax_options]
     tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
     default_expense_tax_code = next((opt["code"] for opt in tax_options if opt.get("deductible")), tax_codes[0] if tax_codes else "")
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
     def _toast(msg: str, level: str = "success"):
         if hasattr(st, "toast"):
@@ -246,7 +249,7 @@ def render(month_key: str, month: str, year: int):
                 st.success(msg)
 
     # ===== Header (uses CSS from config_floosy.py) =====
-    header_tagline = t("امسك زمام فلوسك بذكاء", "Smart money, in your hands")
+    header_tagline = t("Flow · Control · Growth", "Flow · Control · Growth")
     logo_html = """
     <div style="
         display:flex;

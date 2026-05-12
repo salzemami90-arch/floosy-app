@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import arabic_months, english_months
+from services.i18n import make_t, get_lang_code, get_months
 from models.tax_profile import TaxProfile
 from repositories.session_repo import SessionStateRepository
 from services.tax_export_service import TaxExportService
@@ -388,9 +389,11 @@ def _render_tax_settings_panel(t, repo: SessionStateRepository, settings: dict, 
 
 def render(month_key: str, month: str, year: int) -> None:
     settings = st.session_state.settings
-    is_en = settings.get("language") == "English"
-    t = (lambda ar, en: en if is_en else ar)
-    month_display = english_months[arabic_months.index(month)] if (is_en and month in arabic_months) else month
+    _lc = get_lang_code()
+    is_en = _lc == "en"
+    t = make_t()
+    _display_months = get_months()
+    month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
     st.session_state.setdefault("tax_settings_open", False)
     save_notice = st.session_state.pop("tax_settings_saved_notice", "")
