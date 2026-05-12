@@ -1256,6 +1256,51 @@ def get_logo_bytes():
 _BUILTIN_LOGO_DATA_URI: str | None = None
 
 
+def _builtin_logo_raw_data_uri(raw: bytes) -> str:
+    if raw.startswith(b"\xff\xd8\xff"):
+        mime = "image/jpeg"
+    elif raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        mime = "image/png"
+    elif raw.startswith((b"GIF87a", b"GIF89a")):
+        mime = "image/gif"
+    elif raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP":
+        mime = "image/webp"
+    else:
+        mime = "image/png"
+    return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+
+
+def _builtin_logo_data_uri_with_dark_matte_removed(raw: bytes) -> str | None:
+    """Drop near-black letterboxing to transparency; keeps logo colors unchanged."""
+    try:
+        from io import BytesIO
+
+        import numpy as np
+        from PIL import Image
+    except Exception:
+        return None
+
+    try:
+        im = Image.open(BytesIO(raw)).convert("RGBA")
+        arr = np.asarray(im, dtype=np.uint8)
+        r = arr[:, :, 0].astype(np.int16)
+        g = arr[:, :, 1].astype(np.int16)
+        b = arr[:, :, 2].astype(np.int16)
+        mx = np.maximum(np.maximum(r, g), b)
+        mn = np.minimum(np.minimum(r, g), b)
+        chroma = mx - mn
+        # Black / dark-neutral letterbox only; keep saturated logo colors
+        dark_neutral = (chroma < 20) & (mx < 52)
+        arr = arr.copy()
+        arr[:, :, 3] = np.where(dark_neutral, np.uint8(0), arr[:, :, 3])
+        out = Image.fromarray(arr, mode="RGBA")
+        buf = BytesIO()
+        out.save(buf, format="PNG", optimize=True)
+        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
+    except Exception:
+        return None
+
+
 def get_builtin_logo_b64() -> str:
     """Return the built-in GoushFi logo as a base64 data URI (cached)."""
     global _BUILTIN_LOGO_DATA_URI
@@ -1263,17 +1308,8 @@ def get_builtin_logo_b64() -> str:
         logo_path = os.path.join(os.path.dirname(__file__), "goushfi_logo.png")
         with open(logo_path, "rb") as f:
             raw = f.read()
-        if raw.startswith(b"\xff\xd8\xff"):
-            mime = "image/jpeg"
-        elif raw.startswith(b"\x89PNG\r\n\x1a\n"):
-            mime = "image/png"
-        elif raw.startswith((b"GIF87a", b"GIF89a")):
-            mime = "image/gif"
-        elif raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP":
-            mime = "image/webp"
-        else:
-            mime = "image/png"
-        _BUILTIN_LOGO_DATA_URI = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+        processed = _builtin_logo_data_uri_with_dark_matte_removed(raw)
+        _BUILTIN_LOGO_DATA_URI = processed if processed else _builtin_logo_raw_data_uri(raw)
     return _BUILTIN_LOGO_DATA_URI
 
 
