@@ -375,6 +375,8 @@ def _apply_language_direction_theme() -> None:
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
             transition: transform 0.22s ease !important;
+            max-width: min(21rem, 88vw) !important;
+            box-sizing: border-box !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="true"],
@@ -661,14 +663,24 @@ html, body, [class*="css"] {
 .stApp {
     background: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%) !important;
     color: var(--text-main);
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
 }
 
 [data-testid="stAppViewContainer"] {
     overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 section[data-testid="stMain"] {
     min-width: 0 !important;
+    flex: 1 1 auto !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
 }
 
 /* Hosted + local: trim Streamlit default top padding on the main column */
@@ -694,6 +706,8 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     background: linear-gradient(180deg, var(--brand-1), var(--brand-2));
     padding-top: 24px;
     border-right: 1px solid rgba(255,255,255,0.14);
+    max-width: min(21rem, 88vw) !important;
+    box-sizing: border-box !important;
 }
 
 [data-testid="stSidebar"] * {
@@ -736,12 +750,27 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     flex-direction: column;
     line-height: 1.06;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .flossy-header-logo-wrap {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 68px;
+    height: 68px;
+    flex: 0 0 68px;
+    max-width: 68px;
+    max-height: 68px;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: transparent;
+}
+
+.flossy-header-inner > div:last-child {
+    flex: 0 0 auto;
 }
 
 .flossy-header-tagline {
@@ -755,14 +784,17 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 /* Single source of truth; !important so hosted Streamlit theme CSS cannot override */
 .flossy-header img.flossy-header-logo,
 .flossy-header img {
-    height: 68px !important;
-    width: 68px !important;
+    height: 100% !important;
+    width: 100% !important;
     max-height: 68px !important;
     max-width: 68px !important;
     object-fit: contain !important;
-    border-radius: 12px !important;
+    object-position: center !important;
+    border-radius: 10px !important;
     flex-shrink: 0;
     display: block;
+    /* Solid black in the logo asset picks up the header gradient (screen blend) */
+    mix-blend-mode: screen;
 }
 
 div[data-testid="stMetric"] {
@@ -1075,10 +1107,16 @@ hr {
 
     .flossy-header img.flossy-header-logo,
     .flossy-header img {
-        height: 56px !important;
-        width: 56px !important;
         max-height: 56px !important;
         max-width: 56px !important;
+    }
+
+    .flossy-header-logo-wrap {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 56px;
+        max-width: 56px;
+        max-height: 56px;
     }
 
     [data-testid="stSidebar"] {
