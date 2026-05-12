@@ -8,6 +8,7 @@ from config_floosy import (
     PLAN_DEFINITIONS,
     _local_persistence_enabled,
     export_app_state_payload,
+    get_builtin_logo_b64,
     get_logo_bytes,
     get_plan_info,
     import_app_state_payload,
@@ -33,15 +34,16 @@ KUWAIT_TZ = timezone(timedelta(hours=3), name="Asia/Kuwait")
 
 
 CURRENCY_OPTION_LABELS: dict[str, dict[str, str]] = {
-    "د.ك - دينار كويتي": {"en": "KWD - Kuwaiti Dinar", "zh": "KWD - 科威特第纳尔", "ko": "KWD - 쿠웨이트 디나르", "ja": "KWD - クウェートディナール", "id": "KWD - Dinar Kuwait"},
-    "ر.س - ريال سعودي": {"en": "SAR - Saudi Riyal", "zh": "SAR - 沙特里亚尔", "ko": "SAR - 사우디 리얄", "ja": "SAR - サウジリヤル", "id": "SAR - Riyal Saudi"},
-    "د.إ - درهم إماراتي": {"en": "AED - UAE Dirham", "zh": "AED - 阿联酋迪拉姆", "ko": "AED - UAE 디르함", "ja": "AED - UAEディルハム", "id": "AED - Dirham UEA"},
-    "$ - دولار أمريكي": {"en": "USD - US Dollar", "zh": "USD - 美元", "ko": "USD - 미국 달러", "ja": "USD - 米ドル", "id": "USD - Dolar AS"},
-    "€ - يورو": {"en": "EUR - Euro", "zh": "EUR - 欧元", "ko": "EUR - 유로", "ja": "EUR - ユーロ", "id": "EUR - Euro"},
-    "¥ - 人民币": {"en": "CNY - Chinese Yuan", "zh": "CNY - 人民币", "ko": "CNY - 중국 위안", "ja": "CNY - 中国人民元", "id": "CNY - Yuan Tiongkok"},
-    "₩ - 원": {"en": "KRW - Korean Won", "zh": "KRW - 韩元", "ko": "KRW - 대한민국 원", "ja": "KRW - 韓国ウォン", "id": "KRW - Won Korea"},
-    "¥ - 円": {"en": "JPY - Japanese Yen", "zh": "JPY - 日元", "ko": "JPY - 일본 엔", "ja": "JPY - 日本円", "id": "JPY - Yen Jepang"},
-    "Rp - Rupiah": {"en": "IDR - Indonesian Rupiah", "zh": "IDR - 印尼盾", "ko": "IDR - 인도네시아 루피아", "ja": "IDR - インドネシアルピア", "id": "IDR - Rupiah Indonesia"},
+    "د.ك - دينار كويتي": {"en": "KWD - Kuwaiti Dinar", "zh": "KWD - 科威特第纳尔", "ko": "KWD - 쿠웨이트 디나르", "ja": "KWD - クウェートディナール", "id": "KWD - Dinar Kuwait", "ms": "KWD - Dinar Kuwait"},
+    "ر.س - ريال سعودي": {"en": "SAR - Saudi Riyal", "zh": "SAR - 沙特里亚尔", "ko": "SAR - 사우디 리얄", "ja": "SAR - サウジリヤル", "id": "SAR - Riyal Saudi", "ms": "SAR - Riyal Saudi"},
+    "د.إ - درهم إماراتي": {"en": "AED - UAE Dirham", "zh": "AED - 阿联酋迪拉姆", "ko": "AED - UAE 디르함", "ja": "AED - UAEディルハム", "id": "AED - Dirham UEA", "ms": "AED - Dirham UEA"},
+    "$ - دولار أمريكي": {"en": "USD - US Dollar", "zh": "USD - 美元", "ko": "USD - 미국 달러", "ja": "USD - 米ドル", "id": "USD - Dolar AS", "ms": "USD - Dolar AS"},
+    "€ - يورو": {"en": "EUR - Euro", "zh": "EUR - 欧元", "ko": "EUR - 유로", "ja": "EUR - ユーロ", "id": "EUR - Euro", "ms": "EUR - Euro"},
+    "¥ - 人民币": {"en": "CNY - Chinese Yuan", "zh": "CNY - 人民币", "ko": "CNY - 중국 위안", "ja": "CNY - 中国人民元", "id": "CNY - Yuan Tiongkok", "ms": "CNY - Yuan Tiongkok"},
+    "₩ - 원": {"en": "KRW - Korean Won", "zh": "KRW - 韩元", "ko": "KRW - 대한민국 원", "ja": "KRW - 韓国ウォン", "id": "KRW - Won Korea", "ms": "KRW - Won Korea"},
+    "¥ - 円": {"en": "JPY - Japanese Yen", "zh": "JPY - 日元", "ko": "JPY - 일본 엔", "ja": "JPY - 日本円", "id": "JPY - Yen Jepang", "ms": "JPY - Yen Jepang"},
+    "Rp - Rupiah": {"en": "IDR - Indonesian Rupiah", "zh": "IDR - 印尼盾", "ko": "IDR - 인도네시아 루피아", "ja": "IDR - インドネシアルピア", "id": "IDR - Rupiah Indonesia", "ms": "IDR - Rupiah Indonesia"},
+    "S$ - SGD": {"en": "SGD - Singapore Dollar", "zh": "SGD - 新加坡元", "ko": "SGD - 싱가포르 달러", "ja": "SGD - シンガポールドル", "id": "SGD - Dolar Singapura", "ms": "SGD - Dolar Singapura"},
 }
 
 
@@ -453,7 +455,11 @@ def render():
             if img:
                 st.image(img, width=120)
             else:
-                st.write(t("لا يوجد شعار مرفوع.", "No uploaded logo."))
+                _builtin_logo = get_builtin_logo_b64()
+                st.markdown(
+                    f'<img src="{_builtin_logo}" alt="GoushFi" style="width:120px;border-radius:14px;" />',
+                    unsafe_allow_html=True,
+                )
         with col_b:
             st.write(f"{t('الاسم', 'Name')}: {settings.get('name', '') or '-'}")
             currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
