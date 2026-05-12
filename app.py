@@ -21,8 +21,12 @@ from services.cloud_auth_cookie import (
     remember_cloud_auth,
     sync_cloud_auth_browser_storage,
 )
+from services.cloud_state_helpers import (
+    clear_scoped_finance_state as _clear_scoped_finance_state,
+    set_cloud_auth as _set_cloud_auth,
+    set_scope_owner as _set_scope_owner,
+)
 from services.cloud_sync_guard import (
-    clear_cloud_sync_guard,
     cloud_sync_ready_for_user,
     mark_cloud_sync_ready,
     payload_snapshot,
@@ -30,45 +34,6 @@ from services.cloud_sync_guard import (
     should_keep_local_data_before_auto_import,
 )
 from services.supabase_sync import SupabaseSyncClient
-
-
-def _set_cloud_auth(logged_in: bool, email: str = "", user_id: str = "", access_token: str = "", refresh_token: str = "") -> None:
-    st.session_state["cloud_auth"] = {
-        "logged_in": bool(logged_in),
-        "email": email,
-        "user_id": user_id,
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-    }
-    if bool(logged_in) and access_token:
-        st.session_state["_cloud_auth_issued_at"] = datetime.now().isoformat(timespec="seconds")
-    elif not bool(logged_in):
-        st.session_state["_cloud_auth_issued_at"] = ""
-
-
-def _set_scope_owner(user_id: str = "", email: str = "") -> None:
-    scope = st.session_state.get("app_scope")
-    if not isinstance(scope, dict):
-        scope = {}
-    scope["owner_user_id"] = str(user_id or "")
-    scope["owner_email"] = str(email or "")
-    st.session_state["app_scope"] = scope
-
-
-def _clear_scoped_finance_state() -> None:
-    st.session_state["transactions"] = {}
-    st.session_state["savings"] = {}
-    st.session_state["project_data"] = {}
-    st.session_state["recurring"] = {"items": []}
-    st.session_state["documents"] = []
-    st.session_state["mustndaty_documents"] = st.session_state["documents"]
-    st.session_state["invoices"] = []
-    st.session_state["tax_profile"] = {}
-    st.session_state["tax_tags"] = []
-    st.session_state["_persist_last_snapshot"] = ""
-    st.session_state["_cloud_last_snapshot"] = ""
-    st.session_state["_cloud_last_pull_user"] = ""
-    clear_cloud_sync_guard(st.session_state)
 
 
 def _set_cloud_snapshot_now(user_id: str = "") -> None:

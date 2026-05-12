@@ -1155,14 +1155,10 @@ def get_month_selection(page: str):
 
 
 def get_logo_bytes():
-    """ترجع صورة اللوقو: من الإعدادات أو من ملف floosy_logo.png إن وجد."""
+    """Return the user-uploaded logo bytes, or None."""
     settings = st.session_state.settings
     if settings.get("profile_image") is not None:
         return settings["profile_image"]
-
-    if os.path.exists("floosy_logo.png"):
-        with open("floosy_logo.png", "rb") as f:
-            return f.read()
 
     return None
 

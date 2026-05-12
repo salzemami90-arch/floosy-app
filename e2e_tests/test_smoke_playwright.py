@@ -279,7 +279,7 @@ def test_documents_can_add_and_delete_in_arabic(page: Page) -> None:
 
 def test_settings_language_switch_updates_multiple_pages(page: Page) -> None:
     _goto_language(page, "en")
-    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^GoushFi Settings$"))
 
     expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
 
@@ -301,7 +301,7 @@ def test_settings_cloud_status_disabled_then_ready(page: Page) -> None:
         pytest.skip("Configured cloud flow is skipped when running against a no-secrets server.")
 
     _goto_language(page, "en")
-    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^GoushFi Settings$"))
 
     expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
     expect(page.get_by_text(re.compile(r"Cloud is currently disabled\. You can enable it or export your data now\."))).to_be_visible()
@@ -343,7 +343,7 @@ def test_settings_cloud_status_requires_setup_without_secrets(page: Page) -> Non
         pytest.skip("No-secrets cloud flow only runs against a server without Supabase secrets.")
 
     _goto_language(page, "en")
-    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^Floosy Settings$"))
+    _open_settings(page, re.compile(r"^Settings$"), re.compile(r"^GoushFi Settings$"))
 
     expect(page.get_by_text(re.compile(r"Cloud Status Bar: Disabled"))).to_be_visible()
 
