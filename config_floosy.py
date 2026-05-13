@@ -363,7 +363,6 @@ def _apply_language_direction_theme() -> None:
     is_rtl_lang = settings.get("language", "العربية") in _rtl_langs
     direction = "rtl" if is_rtl_lang else "ltr"
     align = "right" if is_rtl_lang else "left"
-    header_direction = "row-reverse" if is_rtl_lang else "row"
     sidebar_side_css = ""
     if is_rtl_lang:
         sidebar_side_css = """
@@ -410,11 +409,10 @@ def _apply_language_direction_theme() -> None:
         }}
 
         .flossy-header-inner {{
-            flex-direction: {header_direction};
+            direction: ltr;
+            flex-direction: row;
         }}
 
-        .flossy-header-title,
-        .flossy-header-tagline,
         h1, h2, h3, h4, h5, h6,
         p,
         label,
@@ -422,6 +420,12 @@ def _apply_language_direction_theme() -> None:
         [data-testid="stMarkdownContainer"],
         [data-testid="stAlert"] {{
             text-align: {align};
+        }}
+
+        .flossy-header-title,
+        .flossy-header-tagline {{
+            direction: ltr;
+            text-align: left;
         }}
 
         [data-testid="stSidebar"] .stRadio,
@@ -456,6 +460,19 @@ def _apply_language_direction_theme() -> None:
         }}
 
         {sidebar_side_css}
+
+        section[data-testid="stSidebar"][aria-expanded="false"],
+        [data-testid="stSidebar"][aria-expanded="false"],
+        .stSidebar[aria-expanded="false"] {{
+            min-width: 0 !important;
+            width: 0 !important;
+            max-width: 0 !important;
+            flex: 0 0 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }}
+
         </style>
         """,
         unsafe_allow_html=True,
@@ -725,7 +742,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 .flossy-header {
     width: 100%;
     padding: 12px 20px;
-    margin-top: -0.55rem;
+    margin-top: -1.05rem;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
     color: #f8fafc;
@@ -758,11 +775,11 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 68px;
-    height: 68px;
-    flex: 0 0 68px;
-    max-width: 68px;
-    max-height: 68px;
+    width: 80px;
+    height: 80px;
+    flex: 0 0 80px;
+    max-width: 80px;
+    max-height: 80px;
     overflow: hidden;
     box-sizing: border-box;
     border-radius: 12px;
@@ -786,8 +803,8 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 .flossy-header img {
     height: 100% !important;
     width: 100% !important;
-    max-height: 68px !important;
-    max-width: 68px !important;
+    max-height: 80px !important;
+    max-width: 80px !important;
     object-fit: contain !important;
     object-position: center !important;
     border-radius: 10px !important;
@@ -1096,7 +1113,7 @@ hr {
         min-height: 76px;
         font-size: 21px;
         padding: 10px 14px;
-        margin-top: -0.45rem;
+        margin-top: -0.85rem;
     }
 
     .flossy-header-inner {
@@ -1105,16 +1122,16 @@ hr {
 
     .flossy-header img.flossy-header-logo,
     .flossy-header img {
-        max-height: 56px !important;
-        max-width: 56px !important;
+        max-height: 65px !important;
+        max-width: 65px !important;
     }
 
     .flossy-header-logo-wrap {
-        width: 56px;
-        height: 56px;
-        flex: 0 0 56px;
-        max-width: 56px;
-        max-height: 56px;
+        width: 65px;
+        height: 65px;
+        flex: 0 0 65px;
+        max-width: 65px;
+        max-height: 65px;
     }
 
     [data-testid="stSidebar"] {
