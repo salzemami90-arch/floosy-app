@@ -1,6 +1,6 @@
 # GoushFi Beta 2 Context
 
-Last updated: 2026-05-06 (Session 2)
+Last updated: 2026-05-13 (GoushFi final polish / hosted UI sync)
 
 Use this file as the official handoff/context file for Floosy Beta 2. If a conversation gets compressed or a new chat starts, read this file first.
 
@@ -20,6 +20,316 @@ For any new Codex/AI conversation:
 - Do not rely only on chat memory; keep important decisions here.
 
 In short: every meaningful change to Floosy should leave a trace in this context file.
+
+---
+
+## Change Log — 2026-05-13: GoushFi Final Polish, Cursor UI Fixes, Hosted Sync
+
+### Current product baseline
+- Final app name: **GoushFi**.
+- Final tagline: **Flow · Control · Growth**.
+- User explicitly confirmed: do not assume old bugs or old project problems unless they are reintroduced during current testing.
+- Devin's heavy engineering work is considered the trusted baseline.
+- Current Codex scope is only final polish, testing, and launch checklist support.
+- Cursor/localhost work is treated as small UI polish and cleanup layered on top of Devin's baseline, not a full rebuild.
+
+### Context from user
+- Devin completed the major PRs and main bug work.
+- Xcode work is considered complete for now.
+- A new Xcode/mobile-related local folder exists, but it is not part of the current hosted Streamlit deploy unless explicitly requested.
+- Cursor had done UI work on localhost, including logo/header polish, but some small adjustments were incomplete or visually off.
+- User wants work handled one item at a time and only after confirming the exact intent.
+
+### UI changes completed
+1. Dashboard header brand layout:
+   - Fixed the dashboard header so `GoushFi` and `Flow · Control · Growth` stay on the left side of the header band.
+   - Kept the built-in GoushFi logo on the right side.
+   - Forced the header's brand row to LTR so Arabic/RTL page direction does not reverse the brand composition.
+   - Kept regular page text and sidebar behavior RTL where appropriate.
+
+2. Header placement and logo size:
+   - Raised the dashboard header upward for tighter first-screen spacing.
+   - Increased the built-in header logo size further per user preference.
+   - Current desktop header logo CSS uses an `80px` logo slot.
+   - Current small-screen header logo CSS uses a `65px` logo slot.
+   - User saw the logo and chose to keep the larger size for now, even though it appears visually strong.
+
+3. Collapsed sidebar layout:
+   - Fixed the collapsed sidebar state so it no longer reserves an empty column.
+   - When `[data-testid="stSidebar"][aria-expanded="false"]`, the sidebar width is forced to zero with:
+     - `min-width: 0`
+     - `width: 0`
+     - `max-width: 0`
+     - `flex: 0 0 0`
+     - `padding: 0`
+     - `border: 0`
+     - `overflow: hidden`
+   - This is intended to let the main page expand when the sidebar is closed.
+
+### Files changed for this polish
+- `config_floosy.py`
+  - Header LTR brand composition in `_apply_language_direction_theme()`.
+  - Header title/tagline left alignment regardless of Arabic page direction.
+  - Collapsed sidebar zero-width behavior.
+  - Header margin and logo slot sizing.
+- Prior Cursor polish already included changes in:
+  - `app.py`
+  - `goushfi_logo.png`
+  - `pages_floosy/dashboard_page.py`
+  - `pages_floosy/settings_page.py`
+  - `requirements.txt`
+
+### Hosted deploy / Git state
+- Local polish branch: `cursor/ui-polish-header-logo-sidebar`.
+- Final hosted branch pushed: `main`.
+- GitHub remote: `origin https://github.com/salzemami90-arch/floosy-app.git`.
+- Commit created for the final local header/sidebar polish:
+  - `26ba297 Polish GoushFi header and sidebar layout`
+- Merge commit pushed to hosted branch:
+  - `f0e9939 Merge GoushFi UI polish for hosted`
+- `origin/main` now points to `f0e9939`.
+- Streamlit hosted URL checked with `curl -I https://goush-beta.streamlit.app/`; it returned HTTP `303` to Streamlit auth, meaning the hosted app endpoint is reachable but may require Streamlit auth/session.
+
+### Merge/conflict note
+- `origin/main` had Devin updates after the Cursor polish branch.
+- Most important Devin update: removal of the old hosted data warning banner from `app.py`.
+- During merge, `app.py` conflicted because the Cursor branch still had hosted warning helper code.
+- Conflict was resolved in favor of Devin's latest behavior:
+  - Do **not** restore the old hosted warning banner.
+  - Keep Devin's removal of that warning.
+  - Keep the Cursor/GoushFi UI polish.
+
+### Verification performed
+- `python3 -m py_compile config_floosy.py pages_floosy/dashboard_page.py`
+- `python3 -m py_compile config_floosy.py`
+- `python3 -m py_compile app.py config_floosy.py pages_floosy/dashboard_page.py pages_floosy/settings_page.py`
+- Browser visual verification on local Streamlit port `8502`:
+  - Header text left, logo right.
+  - Larger logo visible.
+  - Header raised.
+  - Sidebar still visible/open normally.
+- Note: local port `8501` showed an import error during testing, likely because it was an older/running Streamlit process. Port `8502` rendered the current working copy correctly.
+
+### Files intentionally NOT pushed
+- `.streamlit/config.toml`
+  - Has local-only changes:
+    - `fileWatcherType = "auto"`
+    - `runOnSave = true`
+  - These were not included in the hosted merge because they are local development convenience settings.
+- Untracked local paths were not pushed:
+  - `FLOOSY_PRICING_PLANS.md`
+  - `Goush Money Beta/`
+  - `data/`
+  - `mobile-beta/`
+- These should not be assumed deployed or production-ready unless explicitly reviewed and committed later.
+
+### Open follow-up
+- User asked to keep writing everything important into this context file.
+- Next assistant should read this file first before doing any GoushFi work.
+- Continue final polish one item at a time, confirming exact intent before edits when the user is explaining visual/UI issues.
+
+### Follow-up — 2026-05-14: Hosted Sidebar Width
+- After Devin's Settings UX PR, user noticed the hosted sidebar looked wider than localhost.
+- Root cause was not Devin touching sidebar code; `config_floosy.py` still allowed desktop sidebar width up to `21rem`, while smaller/local viewport states looked calmer at `15rem`.
+- Fix direction:
+  - Desktop/sidebar base width is now fixed at `16rem`.
+  - RTL sidebar override is also fixed at `16rem`.
+  - Medium breakpoint remains `15rem`.
+  - Mobile breakpoint remains `13rem`.
+- This is a style-only fix and should not affect Cloud/Settings data logic.
+
+---
+
+## UX Review — 2026-05-13: Settings / Device Data / Cloud Data
+
+### Source
+- Devin/Cursor-style review file downloaded locally:
+  - `/Users/shougwaleedalzemami/Downloads/goushfi_settings_ux_review.md`
+- User context:
+  - Cloud data was deleted two days earlier.
+  - Local/device data was not lost.
+  - User is currently not signed into Cloud.
+  - The app is saving locally, but Settings does not make "saved on this device/browser" obvious enough.
+  - User noticed the Cloud options are visible, but the local-device saving status/option is not clear.
+
+### Main UX diagnosis
+The cloud system is not necessarily broken; the Settings UX does not clearly explain where data lives:
+- Device/browser local save.
+- Cloud backup/sync.
+- Restore from Cloud.
+- Upload current device data to Cloud.
+- Delete Cloud copy.
+- Clear this device/browser data.
+
+### Critical issue
+- The current "تحميل بياناتي / Load My Data" style action can restore from Cloud immediately.
+- This is dangerous because restoring from Cloud can replace all local/device data.
+- Before launch, restoring from Cloud should require a clear confirmation checkbox or equivalent confirmation UI.
+- Suggested concept:
+  - Arabic: `تنبيه: الاستعادة من السحابة ستستبدل كل البيانات على هذا الجهاز بالنسخة السحابية. أي بيانات محلية لم ترفعها للسحابة ستضيع.`
+  - English: `Warning: Restoring from Cloud will replace all data on this device with the cloud copy. Any local data not uploaded to Cloud will be lost.`
+
+### Settings structure recommendation
+Recommended direction before launch:
+- Keep `عام / General` mostly as-is.
+- Merge current `Privacy` and `Cloud` concepts into a clearer data-focused tab such as:
+  - Arabic: `بياناتي`
+  - English: `My Data`
+- The new data tab should contain:
+  1. Large visual status card: where data is saved right now.
+  2. Cloud section: enable Cloud, sign in/out, upload to Cloud, restore from Cloud.
+  3. Device section: clear this device/browser data.
+  4. Backup section: export JSON, restore/import JSON.
+  5. Sensitive/Danger section: delete account / destructive actions.
+
+### Data status card recommendation
+Add a prominent status card near the top of Settings/My Data:
+- Device only:
+  - Arabic: `بياناتك محفوظة على هذا الجهاز فقط. لو مسحت المتصفح أو غيرت جهاز قد تفقد البيانات.`
+  - English: `Your data is saved on this device only. Clearing the browser or switching devices may lose it.`
+- Device + Cloud:
+  - Arabic: `بياناتك محفوظة على هذا الجهاز + نسخة بالسحابة.`
+  - English: `Your data is saved on this device + a cloud copy.`
+- Cloud enabled but not signed in:
+  - Arabic: `السحابة مفعلة لكنك غير مسجل دخول. بياناتك محفوظة على هذا الجهاز حاليًا.`
+  - English: `Cloud is enabled, but you are not signed in. Your data is currently saved on this device.`
+
+### Suggested button label improvements
+- `تحميل بياناتي` should become:
+  - Arabic: `استعادة من السحابة`
+  - English: `Restore from Cloud`
+- `حفظ بياناتي` should become:
+  - Arabic: `رفع للسحابة`
+  - English: `Upload to Cloud`
+- `حذف بياناتي السحابية` should become:
+  - Arabic: `حذف النسخة السحابية`
+  - English: `Delete Cloud Copy`
+- `حذف بيانات هذا الجهاز` should become:
+  - Arabic: `مسح بيانات هذا الجهاز`
+  - English: `Clear This Device Data`
+- `تسجيل خروج` should become:
+  - Arabic: `تسجيل خروج من السحابة`
+  - English: `Sign Out from Cloud`
+
+### Things to preserve
+- Keep deletion confirmation checkboxes.
+- Keep "remember login on this device".
+- Keep last sync timestamp.
+- Keep JSON export/import.
+- Keep forgot-password flow.
+- Keep current main app sections.
+- Keep current usage plan area.
+- Keep destructive actions inside a danger/advanced area.
+- Do not change auto-sync logic unless a concrete bug is proven.
+- Preserve the existing pause/resume cloud sync safety behavior.
+
+### Suggested implementation approach
+- Do not rush a broad Settings rewrite.
+- First implement the highest-risk safety fix:
+  1. Add confirmation before restoring from Cloud.
+- Then implement the clarity layer:
+  2. Add a clear "where your data is saved" status card.
+  3. Rename confusing buttons.
+- Then consider reorganizing tabs:
+  4. Merge Privacy + Cloud into `My Data / بياناتي` only after the smaller changes are verified.
+
+---
+
+## UX Proposal — 2026-05-13: My Data / بياناتي Tab Wireframe
+
+### Source
+- Downloaded local file:
+  - `/Users/shougwaleedalzemami/Downloads/goushfi_my_data_tab_ux.md`
+
+### Proposed full order
+The proposed long-term Settings structure is:
+1. `عام / General`
+2. `بياناتي / My Data`
+3. `حول / About`
+
+The proposed `بياناتي / My Data` tab order from top to bottom:
+1. Status card: `أين بياناتي؟ / Where is my data?`
+2. Cloud section.
+3. This device data section.
+4. Backup JSON section.
+5. Collapsed sensitive/danger zone.
+
+### Status card states
+The top status card should visually answer where the user's data is saved.
+
+1. Device only:
+   - Color concept: light yellow with orange accent.
+   - Arabic message: device/browser is auto-saving; Cloud is not enabled; clearing browser data or switching device may lose data.
+   - English message: data is auto-saved on this browser only; enable Cloud for a safe copy.
+
+2. Cloud enabled but not signed in:
+   - Color concept: light blue with blue accent.
+   - Arabic message: device/browser is auto-saving; Cloud is enabled but user has not signed in yet.
+   - English message: sign in below to start syncing.
+
+3. Device + Cloud connected:
+   - Color concept: light green with green accent.
+   - Arabic message: device/browser auto-save is active; Cloud is connected with email and last sync timestamp.
+   - English message: data is saved on device and Cloud.
+
+### Proposed Cloud section
+Cloud section should include:
+- `تفعيل المزامنة السحابية (اختياري) / Enable Cloud Sync (Optional)`
+- Sign in/sign up/forgot password flow when not signed in.
+- When signed in:
+  - Top action row:
+    - `استعادة من السحابة / Restore from Cloud`
+    - `رفع للسحابة / Upload to Cloud`
+  - Secondary/destructive row:
+    - `تسجيل خروج من السحابة / Sign Out from Cloud`
+    - `حذف النسخة السحابية / Delete Cloud Copy`
+- Delete Cloud Copy remains protected by confirmation and should clarify that local data is not affected.
+
+### Restore from Cloud safety
+The proposal reinforces that Restore from Cloud must not run immediately.
+
+Expected confirmation UI:
+- Arabic: `الاستعادة ستستبدل كل بيانات هذا الجهاز بالنسخة السحابية. أي بيانات محلية لم ترفعها للسحابة ستضيع.`
+- English: `Restoring will replace ALL data on this device with the cloud copy. Any local data not uploaded to cloud will be lost.`
+- Add checkbox:
+  - Arabic: `أفهم وأريد المتابعة`
+  - English: `I understand and want to continue`
+- Restore button should be disabled until confirmation is checked.
+
+### Device section
+`بيانات هذا الجهاز / This Device Data` should explain:
+- It clears data from this browser/device only.
+- Cloud copy, if any, is not affected.
+- Existing confirmation should remain.
+
+### Backup section
+`نسخ احتياطي (JSON) / Backup (JSON)` should contain:
+- Export JSON.
+- Restore/import from JSON.
+- Import from JSON should clearly warn that it replaces current device data and should require confirmation.
+
+### Sensitive section
+Keep as collapsed expander:
+- `منطقة حساسة / Danger Zone`
+- Account deletion remains separate and clearly permanent.
+- Clarify account deletion removes Cloud account/data but does not necessarily clear local device data.
+
+### Minimum pre-launch implementation from proposal
+Recommended minimum now:
+1. Add confirmation checkbox before Restore from Cloud.
+2. Add top `Where is my data? / أين بياناتي؟` status card.
+3. Rename confusing buttons:
+   - `تحميل بياناتي` -> `استعادة من السحابة`
+   - `حفظ بياناتي` -> `رفع للسحابة`
+4. Move Cloud enable toggle into the Cloud area so users do not have to enable Cloud from Privacy and use it elsewhere.
+
+Estimated scope from proposal: about 35 minutes, but still should be implemented carefully and tested because it touches data safety.
+
+### Defer until after launch
+- Full merge of Privacy + Cloud into one `My Data / بياناتي` tab.
+- Direct conflict-resolution buttons for local-vs-cloud differences.
+- New About tab.
+- Larger structural movement of all delete actions into one area.
 
 ### User Rule (2026-05-04)
 

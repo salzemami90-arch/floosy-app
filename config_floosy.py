@@ -374,7 +374,9 @@ def _apply_language_direction_theme() -> None:
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
             transition: transform 0.22s ease !important;
-            max-width: min(21rem, 88vw) !important;
+            min-width: 16rem !important;
+            width: 16rem !important;
+            max-width: min(16rem, 88vw) !important;
             box-sizing: border-box !important;
         }
 
@@ -723,7 +725,9 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     background: linear-gradient(180deg, var(--brand-1), var(--brand-2));
     padding-top: 24px;
     border-right: 1px solid rgba(255,255,255,0.14);
-    max-width: min(21rem, 88vw) !important;
+    min-width: 16rem !important;
+    width: 16rem !important;
+    max-width: min(16rem, 88vw) !important;
     box-sizing: border-box !important;
 }
 
@@ -1056,6 +1060,7 @@ hr {
 
     [data-testid="stSidebar"] {
         min-width: 15rem !important;
+        width: 15rem !important;
         max-width: 15rem !important;
     }
 
@@ -1136,6 +1141,7 @@ hr {
 
     [data-testid="stSidebar"] {
         min-width: 13rem !important;
+        width: 13rem !important;
         max-width: 13rem !important;
     }
 
