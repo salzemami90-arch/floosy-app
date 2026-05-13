@@ -267,7 +267,7 @@ def main():
                 background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
                 animation:goushfi-fade 2.2s ease-in-out forwards;
             }}
-            #goushfi-splash img {{height:96px;width:96px;border-radius:18px;margin-bottom:18px;}}
+            #goushfi-splash img {{height:108px;width:108px;border-radius:18px;margin-bottom:18px;}}
             #goushfi-splash .splash-name {{
                 color:#fff;font-size:2rem;font-weight:800;letter-spacing:-0.03em;
             }}

@@ -253,8 +253,8 @@ def render(month_key: str, month: str, year: int):
     header_tagline = t("Flow · Control · Growth", "Flow · Control · Growth")
     _logo_src = get_builtin_logo_b64()
     logo_html = f"""
-    <div style="display:flex;align-items:center;justify-content:center;">
-        <img src="{_logo_src}" alt="GoushFi" style="height:48px;width:48px;border-radius:10px;object-fit:contain;" />
+    <div class="flossy-header-logo-wrap">
+        <img class="flossy-header-logo" src="{_logo_src}" alt="GoushFi" />
     </div>
     """
 
@@ -264,7 +264,7 @@ def render(month_key: str, month: str, year: int):
             <div class="flossy-header-inner">
                 <div class="flossy-header-title">
                     <span>GoushFi</span>
-                    <span style="font-size:0.82rem;font-weight:600;opacity:0.86;margin-top:8px;">{header_tagline}</span>
+                    <span class="flossy-header-tagline">{header_tagline}</span>
                 </div>
                 <div>{logo_html}</div>
             </div>

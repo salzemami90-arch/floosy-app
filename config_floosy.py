@@ -363,7 +363,6 @@ def _apply_language_direction_theme() -> None:
     is_rtl_lang = settings.get("language", "العربية") in _rtl_langs
     direction = "rtl" if is_rtl_lang else "ltr"
     align = "right" if is_rtl_lang else "left"
-    header_direction = "row-reverse" if is_rtl_lang else "row"
     sidebar_side_css = ""
     if is_rtl_lang:
         sidebar_side_css = """
@@ -375,6 +374,8 @@ def _apply_language_direction_theme() -> None:
             border-right: none !important;
             border-left: 1px solid rgba(255,255,255,0.14) !important;
             transition: transform 0.22s ease !important;
+            max-width: min(21rem, 88vw) !important;
+            box-sizing: border-box !important;
         }
 
         section[data-testid="stSidebar"][aria-expanded="true"],
@@ -408,10 +409,10 @@ def _apply_language_direction_theme() -> None:
         }}
 
         .flossy-header-inner {{
-            flex-direction: {header_direction};
+            direction: ltr;
+            flex-direction: row;
         }}
 
-        .flossy-header-title,
         h1, h2, h3, h4, h5, h6,
         p,
         label,
@@ -419,6 +420,12 @@ def _apply_language_direction_theme() -> None:
         [data-testid="stMarkdownContainer"],
         [data-testid="stAlert"] {{
             text-align: {align};
+        }}
+
+        .flossy-header-title,
+        .flossy-header-tagline {{
+            direction: ltr;
+            text-align: left;
         }}
 
         [data-testid="stSidebar"] .stRadio,
@@ -453,6 +460,19 @@ def _apply_language_direction_theme() -> None:
         }}
 
         {sidebar_side_css}
+
+        section[data-testid="stSidebar"][aria-expanded="false"],
+        [data-testid="stSidebar"][aria-expanded="false"],
+        .stSidebar[aria-expanded="false"] {{
+            min-width: 0 !important;
+            width: 0 !important;
+            max-width: 0 !important;
+            flex: 0 0 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }}
+
         </style>
         """,
         unsafe_allow_html=True,
@@ -660,11 +680,36 @@ html, body, [class*="css"] {
 .stApp {
     background: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%) !important;
     color: var(--text-main);
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+section[data-testid="stMain"] {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Hosted + local: trim Streamlit default top padding on the main column */
+section[data-testid="stMain"] > div {
+    padding-top: 0 !important;
 }
 
 .main .block-container {
-    max-width: 1180px;
-    padding-top: 1.2rem !important;
+    max-width: min(1180px, 100%) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding-top: 0.2rem !important;
     padding-bottom: 2rem !important;
 }
 
@@ -678,6 +723,8 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     background: linear-gradient(180deg, var(--brand-1), var(--brand-2));
     padding-top: 24px;
     border-right: 1px solid rgba(255,255,255,0.14);
+    max-width: min(21rem, 88vw) !important;
+    box-sizing: border-box !important;
 }
 
 [data-testid="stSidebar"] * {
@@ -694,16 +741,17 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 
 .flossy-header {
     width: 100%;
-    padding: 16px 22px;
+    padding: 12px 20px;
+    margin-top: -1.05rem;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
     color: #f8fafc;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-height: 90px;
+    gap: 12px;
+    min-height: 84px;
     box-shadow: var(--shadow-soft);
 }
 
@@ -712,19 +760,56 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
 }
 
 .flossy-header-title {
     display: flex;
     flex-direction: column;
     line-height: 1.06;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
-.flossy-header img {
-    height: 78px;
-    width: auto;
+.flossy-header-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    flex: 0 0 80px;
+    max-width: 80px;
+    max-height: 80px;
+    overflow: hidden;
+    box-sizing: border-box;
     border-radius: 12px;
+    background: transparent;
+}
+
+.flossy-header-inner > div:last-child {
+    flex: 0 0 auto;
+}
+
+.flossy-header-tagline {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.88;
+    margin-top: 5px;
+    line-height: 1.2;
+}
+
+/* Built-in logo: true colors (no blend filters on the image) */
+.flossy-header img.flossy-header-logo,
+.flossy-header img {
+    height: 100% !important;
+    width: 100% !important;
+    max-height: 80px !important;
+    max-width: 80px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    border-radius: 10px !important;
+    flex-shrink: 0;
+    display: block;
 }
 
 div[data-testid="stMetric"] {
@@ -966,6 +1051,7 @@ hr {
         max-width: 100% !important;
         padding-left: 0.9rem !important;
         padding-right: 0.9rem !important;
+        padding-top: 0.2rem !important;
     }
 
     [data-testid="stSidebar"] {
@@ -1019,22 +1105,33 @@ hr {
     .main .block-container {
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
-        padding-top: 0.9rem !important;
+        padding-top: 0.35rem !important;
         padding-bottom: 1.2rem !important;
     }
 
     .flossy-header {
-        min-height: 80px;
-        font-size: 22px;
-        padding: 12px 14px;
+        min-height: 76px;
+        font-size: 21px;
+        padding: 10px 14px;
+        margin-top: -0.85rem;
     }
 
     .flossy-header-inner {
         gap: 10px;
     }
 
+    .flossy-header img.flossy-header-logo,
     .flossy-header img {
-        height: 62px;
+        max-height: 65px !important;
+        max-width: 65px !important;
+    }
+
+    .flossy-header-logo-wrap {
+        width: 65px;
+        height: 65px;
+        flex: 0 0 65px;
+        max-width: 65px;
+        max-height: 65px;
     }
 
     [data-testid="stSidebar"] {
@@ -1173,17 +1270,64 @@ def get_logo_bytes():
     return None
 
 
-_BUILTIN_LOGO_B64: str | None = None
+_BUILTIN_LOGO_DATA_URI: str | None = None
+
+
+def _builtin_logo_raw_data_uri(raw: bytes) -> str:
+    if raw.startswith(b"\xff\xd8\xff"):
+        mime = "image/jpeg"
+    elif raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        mime = "image/png"
+    elif raw.startswith((b"GIF87a", b"GIF89a")):
+        mime = "image/gif"
+    elif raw.startswith(b"RIFF") and len(raw) > 12 and raw[8:12] == b"WEBP":
+        mime = "image/webp"
+    else:
+        mime = "image/png"
+    return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+
+
+def _builtin_logo_data_uri_with_dark_matte_removed(raw: bytes) -> str | None:
+    """Drop near-black letterboxing to transparency; keeps logo colors unchanged."""
+    try:
+        from io import BytesIO
+
+        import numpy as np
+        from PIL import Image
+    except Exception:
+        return None
+
+    try:
+        im = Image.open(BytesIO(raw)).convert("RGBA")
+        arr = np.asarray(im, dtype=np.uint8)
+        r = arr[:, :, 0].astype(np.int16)
+        g = arr[:, :, 1].astype(np.int16)
+        b = arr[:, :, 2].astype(np.int16)
+        mx = np.maximum(np.maximum(r, g), b)
+        mn = np.minimum(np.minimum(r, g), b)
+        chroma = mx - mn
+        # Black / dark-neutral letterbox only; keep saturated logo colors
+        dark_neutral = (chroma < 20) & (mx < 52)
+        arr = arr.copy()
+        arr[:, :, 3] = np.where(dark_neutral, np.uint8(0), arr[:, :, 3])
+        out = Image.fromarray(arr, mode="RGBA")
+        buf = BytesIO()
+        out.save(buf, format="PNG", optimize=True)
+        return f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
+    except Exception:
+        return None
 
 
 def get_builtin_logo_b64() -> str:
     """Return the built-in GoushFi logo as a base64 data URI (cached)."""
-    global _BUILTIN_LOGO_B64
-    if _BUILTIN_LOGO_B64 is None:
+    global _BUILTIN_LOGO_DATA_URI
+    if _BUILTIN_LOGO_DATA_URI is None:
         logo_path = os.path.join(os.path.dirname(__file__), "goushfi_logo.png")
         with open(logo_path, "rb") as f:
-            _BUILTIN_LOGO_B64 = base64.b64encode(f.read()).decode()
-    return f"data:image/png;base64,{_BUILTIN_LOGO_B64}"
+            raw = f.read()
+        processed = _builtin_logo_data_uri_with_dark_matte_removed(raw)
+        _BUILTIN_LOGO_DATA_URI = processed if processed else _builtin_logo_raw_data_uri(raw)
+    return _BUILTIN_LOGO_DATA_URI
 
 
 def ensure_month_keys(month_key: str):

@@ -446,7 +446,7 @@ def render():
         with col_a:
             _builtin_logo = get_builtin_logo_b64()
             st.markdown(
-                f'<img src="{_builtin_logo}" alt="GoushFi" style="width:120px;border-radius:14px;" />',
+                f'<img src="{_builtin_logo}" alt="GoushFi" style="width:132px;border-radius:14px;" />',
                 unsafe_allow_html=True,
             )
         with col_b:
@@ -454,13 +454,6 @@ def render():
             currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
             st.write(f"{t('العملة', 'Currency')}: {currency_label}")
             st.write(f"{t('اللغة', 'Language')}: {settings.get('language', 'العربية')}")
-
-        st.caption(
-            t(
-                "إدارة الالتزامات والمدخول الشهري داخل صفحة الحساب من زر الإعدادات.",
-                "Monthly items are managed inside the Account page from the settings button.",
-            )
-        )
 
         plan_info = get_plan_info()
         tier_key = str(plan_info.get("tier", "beta_free")).strip().lower()
