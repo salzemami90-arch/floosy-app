@@ -273,12 +273,6 @@ def render():
     t = make_t()
 
     st.title(t("إعدادات GoushFi", "GoushFi Settings"))
-    st.caption(
-        t(
-            "كل الإعدادات هنا مرتبة: عام وسحابة.",
-            "All settings are organized here: General and Cloud.",
-        )
-    )
 
     cloud_sync_enabled = bool(settings.get("cloud_sync_enabled", False))
     last_sync_raw = str(settings.get("cloud_last_sync_at", "") or "").strip()
