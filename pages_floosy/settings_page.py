@@ -1,4 +1,5 @@
 import json
+import html
 from datetime import datetime, timedelta, timezone
 
 import streamlit as st
@@ -7,8 +8,8 @@ from config_floosy import (
     CURRENCY_OPTIONS,
     PLAN_DEFINITIONS,
     _local_persistence_enabled,
+    delete_local_persistent_copy,
     export_app_state_payload,
-    get_builtin_logo_b64,
     get_plan_info,
     import_app_state_payload,
     reset_local_app_data,
@@ -266,13 +267,142 @@ using (auth.uid() = user_id);
     )
 
 
+def _render_settings_shell_css() -> None:
+    st.markdown(
+        """
+        <style>
+        .goushfi-settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin: 10px 0 18px 0;
+        }
+        .goushfi-settings-card {
+            border: 1px solid rgba(15,23,42,0.10);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.82);
+            padding: 14px 14px 12px 14px;
+            min-height: 96px;
+            box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+        }
+        .goushfi-settings-card-title {
+            font-size: 1.02rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        .goushfi-settings-card-caption {
+            color: #64748b;
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+        .goushfi-settings-section-kicker {
+            color: #64748b;
+            font-weight: 700;
+            font-size: 0.88rem;
+            margin-bottom: 2px;
+        }
+        .goushfi-profile-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid rgba(15,23,42,0.10);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(15,95,140,0.10), rgba(18,149,107,0.12));
+            padding: 16px;
+            margin: 8px 0 18px 0;
+            box-shadow: 0 10px 24px rgba(15,23,42,0.07);
+        }
+        .goushfi-profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 72px;
+            background: linear-gradient(135deg, #0f5f8c, #12956b);
+            color: #fff;
+            font-size: 1.75rem;
+            font-weight: 800;
+            box-shadow: 0 8px 18px rgba(15,95,140,0.24);
+        }
+        .goushfi-profile-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .goushfi-profile-meta {
+            color: #475569;
+            font-size: 0.92rem;
+            margin-top: 4px;
+            line-height: 1.55;
+        }
+        .goushfi-settings-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px 14px;
+            margin-top: 12px;
+        }
+        .goushfi-settings-summary-item {
+            border-top: 1px solid rgba(15,23,42,0.08);
+            padding-top: 8px;
+            min-width: 0;
+        }
+        .goushfi-settings-summary-label {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .goushfi-settings-summary-value {
+            color: #0f172a;
+            font-size: 0.92rem;
+            font-weight: 800;
+            word-break: break-word;
+        }
+        .goushfi-profile-fields {
+            margin-top: 8px;
+        }
+        @media (max-width: 760px) {
+            .goushfi-settings-grid {
+                grid-template-columns: 1fr;
+            }
+            .goushfi-profile-card {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .goushfi-settings-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _open_settings_section(section_key: str) -> None:
+    st.session_state["settings_view"] = section_key
+    st.rerun()
+
+
 def render():
     settings = st.session_state.settings
     lang_code = LANGUAGES.get(settings.get("language", "العربية"), "ar")
     is_en = lang_code == "en"
     t = make_t()
 
+    _render_settings_shell_css()
     st.title(t("إعدادات GoushFi", "GoushFi Settings"))
+    settings_view = str(st.session_state.get("settings_view", "home") or "home")
+
+    section_labels = {
+        "profile": t("الملف الشخصي", "Profile"),
+        "data": t("البيانات والمزامنة", "Data & Sync"),
+        "appearance": t("العرض", "Display"),
+        "about": t("حول GoushFi", "About GoushFi"),
+    }
 
     cloud_sync_enabled = bool(settings.get("cloud_sync_enabled", False))
     last_sync_raw = str(settings.get("cloud_last_sync_at", "") or "").strip()
@@ -284,21 +414,39 @@ def render():
     cloud_client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
     cloud_auth = st.session_state.get("cloud_auth", {})
     cloud_logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
-
-    # --- "Where is my data?" status card ---
-    st.markdown("---")
-    if not cloud_sync_enabled:
-        device_line = t("الجهاز: محفوظة تلقائيًا على هذا المتصفح", "Device: Auto-saved on this browser")
-        cloud_line = t("السحابة: غير مفعّلة", "Cloud: Not enabled")
-        warning_line = t(
-            "لو مسحت بيانات المتصفح أو غيّرت جهاز، بياناتك تضيع. فعّل السحابة عشان تحفظ نسخة آمنة.",
-            "If you clear browser data or switch devices, your data will be lost. Enable cloud for a safe copy.",
+    device_save_available = bool(_local_persistence_enabled())
+    device_save_enabled = bool(settings.get("device_save_enabled", True)) and device_save_available
+    if not device_save_available:
+        device_storage_line = t(
+            "الجهاز: حفظ نسخة دائمة غير متاح في هذه البيئة",
+            "Device: Permanent device save is not available in this environment",
         )
+    else:
+        device_storage_line = (
+            t("الجهاز: حفظ نسخة على هذا الجهاز مفعّل", "Device: Saving a copy on this device is on")
+            if device_save_enabled
+            else t("الجهاز: حفظ نسخة على هذا الجهاز مطفأ", "Device: Saving a copy on this device is off")
+        )
+
+    # --- Save & sync status card ---
+    if not cloud_sync_enabled:
+        device_line = device_storage_line
+        cloud_line = t("السحابة: غير مفعّلة", "Cloud: Not enabled")
+        if device_save_enabled:
+            warning_line = t(
+                "بياناتك محفوظة على هذا الجهاز فقط. فعّل السحابة إذا تبي نسخة احتياطية آمنة.",
+                "Your data is saved on this device only. Enable cloud if you want a safe backup copy.",
+            )
+        else:
+            warning_line = t(
+                "لا توجد نسخة دائمة حاليًا. فعّل حفظ الجهاز أو السحابة قبل إدخال بيانات مهمة.",
+                "No permanent copy is active right now. Enable device save or cloud before entering important data.",
+            )
         status_bg = "#fffbeb"
         status_border = "#f59e0b"
         status_text = "#92400e"
     elif not cloud_client.is_configured:
-        device_line = t("الجهاز: محفوظة تلقائيًا على هذا المتصفح", "Device: Auto-saved on this browser")
+        device_line = device_storage_line
         cloud_line = t("السحابة: مفعّلة — غير متاحة في هذه البيئة", "Cloud: Enabled — not available in this environment")
         warning_line = t(
             "السحابة مفعلة، لكنها غير متاحة في هذه البيئة حاليًا.",
@@ -308,94 +456,140 @@ def render():
         status_border = "#f97316"
         status_text = "#9a3412"
     elif cloud_logged_in:
-        device_line = t("الجهاز: محفوظة تلقائيًا على هذا المتصفح", "Device: Auto-saved on this browser")
+        device_line = device_storage_line
         cloud_line = t(
             f"السحابة: متصلة ({cloud_auth.get('email', '')})",
             f"Cloud: Connected ({cloud_auth.get('email', '')})",
         )
-        warning_line = t("بياناتك بأمان — محفوظة على الجهاز والسحابة.", "Your data is safe — saved on device and cloud.")
+        warning_line = (
+            t("بياناتك بأمان — محفوظة على الجهاز والسحابة.", "Your data is safe — saved on device and cloud.")
+            if device_save_enabled
+            else t("بياناتك محفوظة في السحابة، ولا يتم حفظ نسخة دائمة على هذا الجهاز.", "Your data is saved in cloud, and no permanent copy is saved on this device.")
+        )
         status_bg = "#ecfdf5"
         status_border = "#10b981"
         status_text = "#065f46"
     else:
-        device_line = t("الجهاز: محفوظة تلقائيًا على هذا المتصفح", "Device: Auto-saved on this browser")
+        device_line = device_storage_line
         cloud_line = t("السحابة: مفعّلة — لم يتم تسجيل الدخول بعد", "Cloud: Enabled — not signed in yet")
-        warning_line = t(
-            "سجّل دخول من تبويب السحابة عشان تبدأ المزامنة.",
-            "Sign in from the Cloud tab to start syncing.",
-        )
+        if device_save_enabled:
+            warning_line = t(
+                "سجّل دخول عشان تبدأ المزامنة. إلى ذلك الوقت، نسخة الجهاز مفعّلة.",
+                "Sign in to start syncing. Until then, device save is on.",
+            )
+        else:
+            warning_line = t(
+                "سجّل دخول أو فعّل حفظ الجهاز قبل إدخال بيانات مهمة.",
+                "Sign in or enable device save before entering important data.",
+            )
         status_bg = "#eff6ff"
         status_border = "#2563eb"
         status_text = "#1d4ed8"
 
-    _sync_badge = ""
-    if cloud_sync_enabled and cloud_logged_in:
-        _sync_badge = f"""<div style="
-            background:rgba(255,255,255,0.65);
-            border:1px solid rgba(15,23,42,0.08);
-            border-radius:999px;
-            padding:6px 10px;
-            font-size:0.84rem;
-            font-weight:700;
-            white-space:nowrap;
-        ">{t("آخر مزامنة", "Last Sync")}: {last_sync_label}</div>"""
+    if cloud_logged_in:
+        cloud_status_summary = t("متصلة", "Connected")
+    elif cloud_sync_enabled:
+        cloud_status_summary = t("بانتظار تسجيل الدخول", "Waiting for sign-in")
+    else:
+        cloud_status_summary = t("غير مفعّلة", "Not enabled")
+
+    if settings_view == "home":
+        profile_name = str(st.session_state.get("settings_profile_name", settings.get("name", "")) or "").strip()
+        display_name = profile_name or t("بدون اسم حتى الآن", "No name yet")
+        avatar_initial = (display_name.strip()[:1] or "G").upper()
+        currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
+        language_label = str(settings.get("language", "العربية") or "العربية")
+        email_label = str(cloud_auth.get("email", "") or "-").strip() or "-"
+        st.markdown(
+            f"""
+            <div class="goushfi-profile-card">
+                <div class="goushfi-profile-avatar">{html.escape(avatar_initial)}</div>
+                <div style="flex:1;min-width:0;">
+                    <div class="goushfi-profile-name">{html.escape(display_name)}</div>
+                    <div class="goushfi-profile-meta">{html.escape(t("ملخص الإعدادات", "Settings Summary"))}</div>
+                    <div class="goushfi-settings-summary-grid">
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("الاسم", "Name"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(display_name)}</div>
+                        </div>
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("اللغة", "Language"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(language_label)}</div>
+                        </div>
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("العملة", "Currency"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(currency_label)}</div>
+                        </div>
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("الإيميل", "Email"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(email_label)}</div>
+                        </div>
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("حالة السحابة", "Cloud Status"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(cloud_status_summary)}</div>
+                        </div>
+                        <div class="goushfi-settings-summary-item">
+                            <div class="goushfi-settings-summary-label">{html.escape(t("آخر مزامنة", "Last Sync"))}</div>
+                            <div class="goushfi-settings-summary-value">{html.escape(last_sync_label)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button(section_labels["profile"], use_container_width=True, key="settings_open_profile"):
+                _open_settings_section("profile")
+            st.caption(t("الاسم، اللغة، والعملة.", "Name, language, and currency."))
+            if st.button(section_labels["appearance"], use_container_width=True, key="settings_open_appearance"):
+                _open_settings_section("appearance")
+            st.caption(t("إظهار بطاقات الصفحة الرئيسية وتفضيلات العرض.", "Home card visibility and display preferences."))
+        with c2:
+            if st.button(section_labels["data"], use_container_width=True, key="settings_open_data"):
+                _open_settings_section("data")
+            st.caption(t("حالة الحفظ، السحابة، بيانات الجهاز، والنسخ الاحتياطي.", "Save status, Cloud, device data, and backup."))
+            if st.button(section_labels["about"], use_container_width=True, key="settings_open_about"):
+                _open_settings_section("about")
+            st.caption(t("الخطة الحالية، معلومات التطبيق، والسياسات.", "Current plan, app information, and policies."))
+        return
+
+    if settings_view not in section_labels:
+        settings_view = "home"
+        st.session_state["settings_view"] = "home"
+        st.rerun()
+
+    if st.button(t("رجوع إلى الإعدادات", "Back to Settings"), key="settings_back_btn"):
+        _open_settings_section("home")
 
     st.markdown(
         f"""
-        <div style="
-            background:{status_bg};
-            border:1px solid {status_border};
-            border-right:6px solid {status_border};
-            border-radius:12px;
-            padding:10px 12px;
-            margin:6px 0 10px 0;
-            color:{status_text};
-        ">
-            <div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
-                <div>
-                    <div style="font-weight:800;font-size:1.05rem;margin-bottom:6px;">{t("أين بياناتي؟", "Where is my data?")}</div>
-                    <div style="font-size:0.92rem;">💾 {device_line}</div>
-                    <div style="font-size:0.92rem;margin-top:2px;">☁️ {cloud_line}</div>
-                    <div style="font-size:0.85rem;margin-top:6px;opacity:0.85;">{warning_line}</div>
-                </div>
-                {_sync_badge}
-            </div>
-        </div>
+        <div class="goushfi-settings-section-kicker">{t("الإعدادات", "Settings")}</div>
+        <h3 style="margin-top:0;">{section_labels[settings_view]}</h3>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stTabs"] button[role="tab"] {
-            font-weight: 700;
-            border-radius: 10px;
-            padding: 8px 14px;
-        }
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-            background: rgba(18,149,107,0.12);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    if settings_view == "data":
+        with st.container(border=True):
+            st.markdown(f"**{t('حالة الحفظ والمزامنة', 'Save & Sync Status')}**")
+            st.write(device_line)
+            st.write(cloud_line)
+            if cloud_sync_enabled and cloud_logged_in:
+                st.caption(f"{t('آخر مزامنة', 'Last Sync')}: {last_sync_label}")
+            st.caption(warning_line)
 
-    tab_general, tab_cloud = st.tabs(
-        [
-            t("عام", "General"),
-            t("السحابة", "Cloud"),
-        ]
-    )
-
-    with tab_general:
-        st.subheader(t("الملف العام", "General Profile"))
+    if settings_view == "profile":
+        st.subheader(t("معلومات الملف", "Profile Details"))
         col1, col2 = st.columns(2)
 
         with col1:
             settings["name"] = st.text_input(
                 t("اسم المستخدم / المنشأة", "User / Business Name"),
                 value=settings.get("name", ""),
+                key="settings_profile_name",
             )
             settings["default_currency"] = st.selectbox(
                 t("العملة الافتراضية", "Default Currency"),
@@ -428,43 +622,34 @@ def render():
 
         st.session_state.settings = settings
 
-        st.markdown("---")
-        st.subheader(t("إظهار بطاقات الداشبورد", "Dashboard Card Visibility"))
+    if settings_view == "appearance":
+        with st.container(border=True):
+            st.markdown(f"**{t('بطاقات الصفحة الرئيسية', 'Home Cards')}**")
+            st.caption(t("البطاقات الظاهرة في الصفحة الرئيسية.", "Cards shown on the home page."))
 
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            settings["show_status_account"] = st.checkbox(
-                t("بطاقة الحساب", "Account Card"),
-                value=bool(settings.get("show_status_account", True)),
-            )
-        with c2:
-            settings["show_status_saving"] = st.checkbox(
-                t("بطاقة التوفير", "Savings Card"),
-                value=bool(settings.get("show_status_saving", True)),
-            )
-        with c3:
-            settings["show_status_project"] = st.checkbox(
-                t("بطاقة المشاريع", "Projects Card"),
-                value=bool(settings.get("show_status_project", True)),
-            )
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                settings["show_status_account"] = st.toggle(
+                    t("الحساب", "Account"),
+                    value=bool(settings.get("show_status_account", True)),
+                    key="settings_show_status_account_toggle",
+                )
+            with c2:
+                settings["show_status_saving"] = st.toggle(
+                    t("التوفير", "Savings"),
+                    value=bool(settings.get("show_status_saving", True)),
+                    key="settings_show_status_saving_toggle",
+                )
+            with c3:
+                settings["show_status_project"] = st.toggle(
+                    t("المشاريع", "Projects"),
+                    value=bool(settings.get("show_status_project", True)),
+                    key="settings_show_status_project_toggle",
+                )
 
         st.session_state.settings = settings
 
-        st.markdown("---")
-        st.subheader(t("معاينة", "Preview"))
-        col_a, col_b = st.columns([1, 2])
-        with col_a:
-            _builtin_logo = get_builtin_logo_b64()
-            st.markdown(
-                f'<img src="{_builtin_logo}" alt="GoushFi" style="width:132px;border-radius:14px;" />',
-                unsafe_allow_html=True,
-            )
-        with col_b:
-            st.write(f"{t('الاسم', 'Name')}: {settings.get('name', '') or '-'}")
-            currency_label = _currency_option_label(settings.get("default_currency", CURRENCY_OPTIONS[0]), lang_code)
-            st.write(f"{t('العملة', 'Currency')}: {currency_label}")
-            st.write(f"{t('اللغة', 'Language')}: {settings.get('language', 'العربية')}")
-
+    if settings_view == "about":
         plan_info = get_plan_info()
         tier_key = str(plan_info.get("tier", "beta_free")).strip().lower()
         if tier_key not in PLAN_DEFINITIONS:
@@ -474,34 +659,96 @@ def render():
         total_features = len(tier_meta.get("features", {}))
         enabled_count = sum(1 for enabled in tier_meta.get("features", {}).values() if enabled)
 
-        st.markdown("---")
-        st.subheader(t("خطة الاستخدام الحالية", "Current Plan"))
-        st.info(
-            t(
-                f"الخطة الحالية: {tier_label}.",
-                f"Current plan: {tier_label}.",
+        with st.container(border=True):
+            st.markdown("### GoushFi")
+            st.caption("Flow · Control · Growth")
+            st.write(
+                t(
+                    "مساحة شخصية لتنظيم الحسابات، التوفير، المستندات، والفواتير.",
+                    "A personal space for accounts, savings, documents, and invoices.",
+                )
             )
-        )
-        st.caption(
-            t(
-                f"ميزات مفعلة الآن: {enabled_count} / {total_features}.",
-                f"Enabled features now: {enabled_count} / {total_features}.",
+
+            version_col, plan_col, features_col = st.columns(3)
+            with version_col:
+                st.caption(t("الإصدار", "Version"))
+                st.markdown("**Beta 1.0**")
+            with plan_col:
+                st.caption(t("الخطة الحالية", "Current Plan"))
+                st.markdown(f"**{tier_label}**")
+            with features_col:
+                st.caption(t("الميزات المفعلة", "Enabled Features"))
+                st.markdown(f"**{enabled_count} / {total_features}**")
+
+    if settings_view == "data":
+        with st.container(border=True):
+            st.markdown(f"**{t('طريقة الحفظ', 'Save Method')}**")
+            st.caption(
+                t(
+                    "اختر وين يحتفظ GoushFi بنسخة من بياناتك. يمكن تشغيل الجهاز والسحابة معًا.",
+                    "Choose where GoushFi keeps a copy of your data. Device and cloud can both be on.",
+                )
             )
-        )
 
-    with tab_cloud:
-        # --- Cloud sync toggle (moved here from old Privacy tab) ---
-        st.subheader(t("السحابة", "Cloud"))
+            save_col, cloud_col = st.columns(2)
+            with save_col:
+                device_save_current = bool(settings.get("device_save_enabled", True))
+                device_save_choice = st.checkbox(
+                    t("حفظ نسخة على هذا الجهاز", "Save a copy on this device"),
+                    value=device_save_current and device_save_available,
+                    disabled=not device_save_available,
+                    help=t(
+                        "إذا أوقفته، لن يحتفظ التطبيق بنسخة دائمة على هذا الجهاز. استخدم السحابة لحفظ بياناتك.",
+                        "When off, the app will not keep a permanent copy on this device. Use cloud to keep your data.",
+                    ),
+                    key="settings_device_save_enabled",
+                )
+            with cloud_col:
+                cloud_sync_enabled = st.checkbox(
+                    t("تفعيل المزامنة السحابية", "Enable Cloud Sync"),
+                    value=bool(settings.get("cloud_sync_enabled", False)),
+                    help=t(
+                        "اختياري. عند تسجيل الدخول، يمكن حفظ نسخة سحابية واستعادتها من جهاز آخر.",
+                        "Optional. After sign-in, you can keep a cloud copy and restore it on another device.",
+                    ),
+                    key="settings_cloud_sync_enabled",
+                )
 
-        cloud_sync_enabled = st.checkbox(
-            t("تفعيل المزامنة السحابية (اختياري)", "Enable Cloud Sync (Optional)"),
-            value=bool(settings.get("cloud_sync_enabled", False)),
-            help=t(
-                "إذا كانت مغلقة، تبقى بياناتك محلية على هذا الجهاز فقط.",
-                "When off, your data stays local on this device only.",
-            ),
-            key="settings_cloud_sync_enabled",
-        )
+            if not device_save_available:
+                st.caption(
+                    t(
+                        "حفظ نسخة دائمة على الجهاز غير مفعّل في هذه البيئة. استخدم السحابة للنسخة الدائمة.",
+                        "Permanent device save is not enabled in this environment. Use cloud for the permanent copy.",
+                    )
+                )
+            elif device_save_choice != device_save_current:
+                settings["device_save_enabled"] = device_save_choice
+                st.session_state.settings = settings
+                if device_save_choice:
+                    save_persistent_state()
+                    st.success(t("تم تفعيل حفظ نسخة على هذا الجهاز.", "Device save is now on."))
+                else:
+                    delete_local_persistent_copy()
+                    st.warning(
+                        t(
+                            "تم إيقاف حفظ الجهاز وحذف النسخة المحلية المحفوظة. بيانات الجلسة الحالية ما زالت مفتوحة الآن.",
+                            "Device save is now off and the saved local copy was deleted. Current session data is still open for now.",
+                        )
+                    )
+            elif device_save_choice:
+                st.caption(
+                    t(
+                        "بيانات الحسابات عادة صغيرة، وحفظ الجهاز يساعدك تكمل حتى قبل تسجيل الدخول.",
+                        "Account data is usually small, and device save lets you continue before signing in.",
+                    )
+                )
+            elif not cloud_logged_in:
+                st.warning(
+                    t(
+                        "حفظ الجهاز مطفأ والسحابة غير متصلة. لا تدخل بيانات مهمة قبل تفعيل واحد منهم.",
+                        "Device save is off and cloud is not connected. Do not enter important data before enabling one of them.",
+                    )
+                )
 
         if cloud_sync_enabled != bool(settings.get("cloud_sync_enabled", False)):
             settings["cloud_sync_enabled"] = cloud_sync_enabled
@@ -512,558 +759,557 @@ def render():
 
         cloud_auth = st.session_state.get("cloud_auth", {})
 
-        if not cloud_sync_enabled:
-            st.caption(
-                t(
-                    "السحابة غير مفعّلة. بياناتك محفوظة على هذا الجهاز فقط.",
-                    "Cloud is not enabled. Your data is saved on this device only.",
-                )
-            )
-            if bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token")):
-                if st.button(t("تسجيل خروج من السحابة", "Sign Out from Cloud"), key="cloud_signout_disabled_btn"):
-                    _set_cloud_auth(False)
-                    st.session_state["_cloud_remember_login"] = False
-                    clear_cloud_auth_cookie()
-                    st.session_state["_cloud_browser_storage_clear_requested"] = True
-                    st.session_state["_cloud_last_pull_user"] = ""
-                    st.success(t("تم تسجيل الخروج.", "Signed out."))
-                    st.rerun()
-        else:
-            client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
-
-            if not client.is_configured:
-                st.info(
+        with st.expander(t("حساب السحابة", "Cloud Account"), expanded=False):
+            if not cloud_sync_enabled:
+                st.caption(
                     t(
-                        "السحابة غير متاحة في هذه البيئة حاليًا.",
-                        "Cloud is not available in this environment right now.",
+                        "السحابة غير مفعّلة. فعّلها إذا تبي نسخة محفوظة خارج هذا الجهاز.",
+                        "Cloud is not enabled. Turn it on if you want a copy saved outside this device.",
                     )
                 )
-                with st.expander(t("إعداد متقدم للمطورين", "Advanced setup for developers"), expanded=False):
-                    st.caption(
-                        t(
-                            "لبيئة النشر فقط: أضف مفاتيح ربط السحابة في secrets أو متغيرات البيئة.",
-                            "Deployment only: add cloud connection keys in secrets or environment variables.",
-                        )
-                    )
-                    st.caption("Required keys: SUPABASE_URL and SUPABASE_ANON_KEY")
-                    _render_cloud_sql_setup(t)
+                if bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token")):
+                    if st.button(t("تسجيل خروج من السحابة", "Sign Out from Cloud"), key="cloud_signout_disabled_btn"):
+                        _set_cloud_auth(False)
+                        st.session_state["_cloud_remember_login"] = False
+                        clear_cloud_auth_cookie()
+                        st.session_state["_cloud_browser_storage_clear_requested"] = True
+                        st.session_state["_cloud_last_pull_user"] = ""
+                        st.success(t("تم تسجيل الخروج.", "Signed out."))
+                        st.rerun()
             else:
-                logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
+                client = SupabaseSyncClient.from_runtime(getattr(st, "secrets", None))
 
-                if logged_in:
-                    st.success(
+                if not client.is_configured:
+                    st.info(
                         t(
-                            f"مسجل دخول: {cloud_auth.get('email', '')}",
-                            f"Signed in: {cloud_auth.get('email', '')}",
+                            "السحابة غير متاحة في هذه البيئة حاليًا.",
+                            "Cloud is not available in this environment right now.",
                         )
                     )
-                    _render_cloud_sync_pause_notice(t)
-
-                    r1c1, r1c2 = st.columns(2)
-                    with r1c1:
-                        cloud_restore_confirm = st.checkbox(
+                    with st.expander(t("إعداد متقدم للمطورين", "Advanced setup for developers"), expanded=False):
+                        st.caption(
                             t(
-                                "أفهم أن الاستعادة تستبدل بيانات الجهاز",
-                                "I understand restore replaces device data",
-                            ),
-                            key="cloud_restore_confirm",
+                                "لبيئة النشر فقط: أضف مفاتيح ربط السحابة في secrets أو متغيرات البيئة.",
+                                "Deployment only: add cloud connection keys in secrets or environment variables.",
+                            )
                         )
-                        if st.button(
-                            t("استعادة من السحابة", "Restore from Cloud"),
-                            use_container_width=True,
-                            key="cloud_load_btn",
-                            disabled=not cloud_restore_confirm,
-                        ):
-                            cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
-                            if refresh_error:
-                                cloud_error = _cloud_error_text(refresh_error, t)
-                                st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
-                                st.stop()
-                            pull = client.fetch_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
-                            if not pull.get("ok"):
-                                cloud_error = _cloud_error_text(pull.get("error", ""), t)
-                                pause_cloud_auto_sync(
-                                    st.session_state,
-                                    cloud_auth.get("user_id", ""),
-                                    reason="pull_failed_after_sign_in",
-                                )
-                                st.error(t(f"تعذر تحميل البيانات: {cloud_error}", f"Load failed: {cloud_error}"))
-                            elif pull.get("data") is None:
-                                _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
-                                pause_cloud_auto_sync(
-                                    st.session_state,
-                                    cloud_auth.get("user_id", ""),
-                                    reason="cloud_empty_after_sign_in",
-                                )
-                                st.session_state["_cloud_last_snapshot"] = ""
-                                st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
-                                save_persistent_state()
-                                st.info(
-                                    t(
-                                        "لا توجد بيانات محفوظة في السحابة حتى الآن. بيانات هذا الجهاز بقيت كما هي.",
-                                        "No cloud data was found yet. This device kept its current local data.",
-                                    )
-                                )
-                            else:
-                                import_app_state_payload(pull.get("data"))
-                                _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
-                                st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
-                                st.session_state["_cloud_sync_last_error"] = ""
-                                mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
-                                _mark_cloud_sync_now()
-                                _sync_snapshot_from_state()
-                                save_persistent_state()
-                                st.success(t("تم استعادة بياناتك من السحابة.", "Your data was restored from cloud."))
-                                st.rerun()
+                        st.caption("Required keys: SUPABASE_URL and SUPABASE_ANON_KEY")
+                        _render_cloud_sql_setup(t)
+                else:
+                    logged_in = bool(cloud_auth.get("logged_in")) and bool(cloud_auth.get("access_token"))
 
-                    with r1c2:
-                        if st.button(t("رفع للسحابة", "Upload to Cloud"), use_container_width=True, key="cloud_save_btn"):
-                            payload = export_app_state_payload()
-                            if not payload_has_meaningful_data(payload):
-                                st.warning(
-                                    t(
-                                        "لا توجد بيانات كافية لرفعها. تأكد من وجود معاملات أو التزامات قبل رفعها إلى السحابة.",
-                                        "No meaningful data to upload. Make sure you have transactions or items before uploading to cloud.",
-                                    )
-                                )
-                            else:
+                    if logged_in:
+                        st.success(
+                            t(
+                                f"مسجل دخول: {cloud_auth.get('email', '')}",
+                                f"Signed in: {cloud_auth.get('email', '')}",
+                            )
+                        )
+                        _render_cloud_sync_pause_notice(t)
+
+                        r1c1, r1c2 = st.columns(2)
+                        with r1c1:
+                            cloud_restore_confirm = st.checkbox(
+                                t(
+                                    "أفهم أن الاستعادة تستبدل بيانات الجهاز",
+                                    "I understand restore replaces device data",
+                                ),
+                                key="cloud_restore_confirm",
+                            )
+                            if st.button(
+                                t("استعادة من السحابة", "Restore from Cloud"),
+                                use_container_width=True,
+                                key="cloud_load_btn",
+                                disabled=not cloud_restore_confirm,
+                            ):
                                 cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
                                 if refresh_error:
                                     cloud_error = _cloud_error_text(refresh_error, t)
                                     st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
                                     st.stop()
-                                push = client.upsert_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""), payload)
-                                if push.get("ok"):
+                                pull = client.fetch_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
+                                if not pull.get("ok"):
+                                    cloud_error = _cloud_error_text(pull.get("error", ""), t)
+                                    pause_cloud_auto_sync(
+                                        st.session_state,
+                                        cloud_auth.get("user_id", ""),
+                                        reason="pull_failed_after_sign_in",
+                                    )
+                                    st.error(t(f"تعذر تحميل البيانات: {cloud_error}", f"Load failed: {cloud_error}"))
+                                elif pull.get("data") is None:
                                     _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
+                                    pause_cloud_auto_sync(
+                                        st.session_state,
+                                        cloud_auth.get("user_id", ""),
+                                        reason="cloud_empty_after_sign_in",
+                                    )
+                                    st.session_state["_cloud_last_snapshot"] = ""
+                                    st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
+                                    save_persistent_state()
+                                    st.info(
+                                        t(
+                                            "لا توجد بيانات محفوظة في السحابة حتى الآن. بيانات هذا الجهاز بقيت كما هي.",
+                                            "No cloud data was found yet. This device kept its current local data.",
+                                        )
+                                    )
+                                else:
+                                    import_app_state_payload(pull.get("data"))
+                                    _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
+                                    st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
                                     st.session_state["_cloud_sync_last_error"] = ""
                                     mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
                                     _mark_cloud_sync_now()
                                     _sync_snapshot_from_state()
                                     save_persistent_state()
-                                    st.success(t("تم رفع بياناتك للسحابة.", "Your data was uploaded to cloud."))
-                                else:
-                                    cloud_error = _cloud_error_text(push.get("error", ""), t)
-                                    st.error(t(f"تعذر الرفع: {cloud_error}", f"Upload failed: {cloud_error}"))
+                                    st.success(t("تم استعادة بياناتك من السحابة.", "Your data was restored from cloud."))
+                                    st.rerun()
 
-                    r2c1, r2c2 = st.columns(2)
-                    with r2c1:
-                        if st.button(t("تسجيل خروج من السحابة", "Sign Out from Cloud"), use_container_width=True, key="cloud_signout_btn"):
-                            _set_cloud_auth(False)
-                            st.session_state["_cloud_remember_login"] = False
-                            clear_cloud_auth_cookie()
-                            st.session_state["_cloud_browser_storage_clear_requested"] = True
-                            st.session_state["_cloud_last_pull_user"] = ""
-                            clear_cloud_sync_guard(st.session_state)
-                            st.success(t("تم تسجيل الخروج.", "Signed out."))
-                            st.rerun()
-
-                    with r2c2:
-                        delete_confirm = st.checkbox(
-                            t("تأكيد حذف النسخة السحابية", "Confirm Delete Cloud Copy"),
-                            key="cloud_delete_confirm",
-                        )
-                        if st.button(
-                            t("حذف النسخة السحابية", "Delete Cloud Copy"),
-                            use_container_width=True,
-                            key="cloud_delete_btn",
-                            disabled=not delete_confirm,
-                        ):
-                            cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
-                            if refresh_error:
-                                cloud_error = _cloud_error_text(refresh_error, t)
-                                st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
-                                st.stop()
-                            delete_res = client.delete_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
-                            if delete_res.get("ok"):
-                                st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
-                                st.session_state["_cloud_last_snapshot"] = ""
-                                pause_cloud_auto_sync(
-                                    st.session_state,
-                                    cloud_auth.get("user_id", ""),
-                                    reason="cloud_deleted_until_manual_save",
-                                )
-                                _sync_snapshot_from_state()
-                                st.success(t("تم حذف النسخة السحابية بالكامل.", "Cloud copy was deleted."))
-                                st.info(
-                                    t(
-                                        "لن يتم رفع البيانات تلقائيًا بعد الحذف. إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر رفع للسحابة.",
-                                        "Auto upload is paused after deletion. If you want to create a new cloud copy, use Upload to Cloud.",
+                        with r1c2:
+                            if st.button(t("رفع للسحابة", "Upload to Cloud"), use_container_width=True, key="cloud_save_btn"):
+                                payload = export_app_state_payload()
+                                if not payload_has_meaningful_data(payload):
+                                    st.warning(
+                                        t(
+                                            "لا توجد بيانات كافية لرفعها. تأكد من وجود معاملات أو التزامات قبل رفعها إلى السحابة.",
+                                            "No meaningful data to upload. Make sure you have transactions or items before uploading to cloud.",
+                                        )
                                     )
-                                )
-                                st.rerun()
-                            else:
-                                cloud_error = _cloud_error_text(delete_res.get("error", ""), t)
-                                st.error(t(f"تعذر حذف البيانات: {cloud_error}", f"Delete failed: {cloud_error}"))
+                                else:
+                                    cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                                    if refresh_error:
+                                        cloud_error = _cloud_error_text(refresh_error, t)
+                                        st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                                        st.stop()
+                                    push = client.upsert_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""), payload)
+                                    if push.get("ok"):
+                                        _set_scope_owner(cloud_auth.get("user_id", ""), cloud_auth.get("email", ""))
+                                        st.session_state["_cloud_sync_last_error"] = ""
+                                        mark_cloud_sync_ready(st.session_state, cloud_auth.get("user_id", ""))
+                                        _mark_cloud_sync_now()
+                                        _sync_snapshot_from_state()
+                                        save_persistent_state()
+                                        st.success(t("تم رفع بياناتك للسحابة.", "Your data was uploaded to cloud."))
+                                    else:
+                                        cloud_error = _cloud_error_text(push.get("error", ""), t)
+                                        st.error(t(f"تعذر الرفع: {cloud_error}", f"Upload failed: {cloud_error}"))
 
-                    st.caption(
-                        t(
-                            "الحذف يشمل النسخة السحابية فقط. بيانات هذا الجهاز لن تتأثر.",
-                            "This deletes the cloud copy only. Data on this device is not affected.",
-                        )
-                    )
-
-                    with st.expander(t("منطقة حساسة", "Danger Zone"), expanded=False):
-                        st.warning(
-                            t(
-                                "حذف الحساب بالكامل نهائي ويشمل حساب السحابة وبياناته.",
-                                "Permanent account deletion removes your cloud account and cloud data.",
-                            )
-                        )
-
-                        delete_account_confirm = st.checkbox(
-                            t("أفهم أن حذف الحساب نهائي", "I understand account deletion is permanent"),
-                            key="cloud_delete_account_confirm",
-                        )
-
-                        if st.button(
-                            t("حذف الحساب بالكامل", "Delete Account Permanently"),
-                            use_container_width=True,
-                            key="cloud_delete_account_btn",
-                            disabled=not delete_account_confirm,
-                        ):
-                            cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
-                            if refresh_error:
-                                cloud_error = _cloud_error_text(refresh_error, t)
-                                st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
-                                st.stop()
-                            data_delete_res = client.delete_user_data(
-                                cloud_auth.get("user_id", ""),
-                                cloud_auth.get("access_token", ""),
-                            )
-                            account_delete_res = client.delete_current_user(cloud_auth.get("access_token", ""))
-
-                            if account_delete_res.get("ok"):
+                        r2c1, r2c2 = st.columns(2)
+                        with r2c1:
+                            if st.button(t("تسجيل خروج من السحابة", "Sign Out from Cloud"), use_container_width=True, key="cloud_signout_btn"):
                                 _set_cloud_auth(False)
                                 st.session_state["_cloud_remember_login"] = False
                                 clear_cloud_auth_cookie()
                                 st.session_state["_cloud_browser_storage_clear_requested"] = True
-                                _set_scope_owner("", "")
-                                st.session_state["_cloud_last_snapshot"] = ""
                                 st.session_state["_cloud_last_pull_user"] = ""
                                 clear_cloud_sync_guard(st.session_state)
-                                st.success(
-                                    t(
-                                        "تم حذف الحساب السحابي بالكامل.",
-                                        "Cloud account deleted permanently.",
-                                    )
-                                )
+                                st.success(t("تم تسجيل الخروج.", "Signed out."))
                                 st.rerun()
 
-                            account_error = str(account_delete_res.get("error", ""))
-                            data_error = str(data_delete_res.get("error", ""))
-                            account_error_display = _cloud_error_text(account_error, t)
-                            data_error_display = _cloud_error_text(data_error, t)
-                            if data_delete_res.get("ok"):
-                                st.warning(
-                                    t(
-                                        f"تم حذف البيانات السحابية لكن حذف الحساب فشل: {account_error_display}",
-                                        f"Cloud data deleted, but account deletion failed: {account_error_display}",
-                                    )
-                                )
-                            else:
-                                st.error(
-                                    t(
-                                        f"تعذر حذف الحساب: {account_error_display} | وتعذر حذف البيانات: {data_error_display}",
-                                        f"Account deletion failed: {account_error_display} | Data deletion failed: {data_error_display}",
-                                    )
-                                )
-
-                else:
-                    mode = st.selectbox(
-                        t("العملية", "Action"),
-                        [
-                            t("تسجيل دخول", "Sign In"),
-                            t("إنشاء حساب", "Sign Up"),
-                            t("نسيت كلمة المرور", "Forgot Password"),
-                        ],
-                        key="cloud_auth_mode",
-                    )
-                    is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
-                    is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
-
-                    email = st.text_input(t("الإيميل", "Email"), type="default", key="cloud_auth_email")
-                    password = ""
-                    confirm_password = ""
-                    if not is_reset_mode:
-                        password = st.text_input(t("كلمة المرور", "Password"), type="password", key="cloud_auth_password")
-                    if is_sign_up_mode:
-                        confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password", key="cloud_auth_confirm_password")
-                    remember_login = False
-                    if not is_reset_mode:
-                        remember_login = st.checkbox(
-                            t("تذكر تسجيل الدخول على هذا الجهاز", "Remember sign-in on this device"),
-                            value=True,
-                            key="cloud_remember_login",
-                        )
-                        st.caption(
-                            t(
-                                "عند التفعيل، يبقى تسجيل الدخول محفوظًا على هذا المتصفح. استخدم تسجيل الخروج لإزالته.",
-                                "When enabled, sign-in stays saved on this browser. Use Sign Out to remove it.",
+                        with r2c2:
+                            delete_confirm = st.checkbox(
+                                t("تأكيد حذف النسخة السحابية", "Confirm Delete Cloud Copy"),
+                                key="cloud_delete_confirm",
                             )
-                        )
-                    submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
-                    submit = st.button(submit_label, use_container_width=True, key="cloud_auth_submit")
-
-                    if submit:
-                        clean_email = email.strip().lower()
-                        if not clean_email:
-                            st.warning(t("يرجى إدخال البريد الإلكتروني.", "Please enter your email."))
-                        elif is_reset_mode:
-                            reset_res = client.request_password_reset(clean_email)
-                            if reset_res.get("ok"):
-                                st.success(
-                                    t(
-                                        "إذا كان الإيميل مسجلًا، سيتم إرسال رابط استعادة كلمة المرور. يرجى مراجعة البريد والـ Spam.",
-                                        "If the email is registered, a password reset link will be sent. Check your inbox and spam folder.",
+                            if st.button(
+                                t("حذف النسخة السحابية", "Delete Cloud Copy"),
+                                use_container_width=True,
+                                key="cloud_delete_btn",
+                                disabled=not delete_confirm,
+                            ):
+                                cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                                if refresh_error:
+                                    cloud_error = _cloud_error_text(refresh_error, t)
+                                    st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                                    st.stop()
+                                delete_res = client.delete_user_data(cloud_auth.get("user_id", ""), cloud_auth.get("access_token", ""))
+                                if delete_res.get("ok"):
+                                    st.session_state["_cloud_last_pull_user"] = cloud_auth.get("user_id", "")
+                                    st.session_state["_cloud_last_snapshot"] = ""
+                                    pause_cloud_auto_sync(
+                                        st.session_state,
+                                        cloud_auth.get("user_id", ""),
+                                        reason="cloud_deleted_until_manual_save",
                                     )
-                                )
-                                st.caption(
-                                    t(
-                                        "إذا لم يصل الإيميل، حاول مرة أخرى أو تواصل مع الدعم.",
-                                        "If the email does not arrive, try again or contact support.",
-                                    )
-                                )
-                            else:
-                                cloud_error = _cloud_error_text(reset_res.get("error", ""), t)
-                                st.error(t(f"تعذر إرسال رابط الاستعادة: {cloud_error}", f"Could not send reset link: {cloud_error}"))
-                        elif not password:
-                            st.warning(t("يرجى إدخال البريد الإلكتروني وكلمة المرور.", "Please enter email and password."))
-                        elif is_sign_up_mode and password != confirm_password:
-                            st.warning(t("كلمتا المرور غير متطابقتين.", "Passwords do not match."))
-                        elif is_sign_up_mode and len(password) < 6:
-                            st.warning(t("كلمة المرور يجب أن تكون 6 أحرف على الأقل.", "Password must be at least 6 characters."))
-                        else:
-                            if mode == t("إنشاء حساب", "Sign Up"):
-                                auth_res = client.sign_up(clean_email, password)
-                            else:
-                                auth_res = client.sign_in(clean_email, password)
-
-                            if not auth_res.get("ok"):
-                                cloud_error = _cloud_error_text(auth_res.get("error", ""), t)
-                                st.error(t(f"فشل العملية: {cloud_error}", f"Action failed: {cloud_error}"))
-                            else:
-                                access_token = str(auth_res.get("access_token") or "")
-                                refresh_token = str(auth_res.get("refresh_token") or "")
-                                user_obj = auth_res.get("user") if isinstance(auth_res.get("user"), dict) else {}
-
-                                if not access_token:
+                                    _sync_snapshot_from_state()
+                                    st.success(t("تم حذف النسخة السحابية بالكامل.", "Cloud copy was deleted."))
                                     st.info(
                                         t(
-                                            "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، يرجى مراجعة البريد والـ Spam ثم تسجيل الدخول.",
-                                            "Account created. If email confirmation is enabled, check your inbox and spam folder, then sign in.",
+                                            "لن يتم رفع البيانات تلقائيًا بعد الحذف. إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر رفع للسحابة.",
+                                            "Auto upload is paused after deletion. If you want to create a new cloud copy, use Upload to Cloud.",
+                                        )
+                                    )
+                                    st.rerun()
+                                else:
+                                    cloud_error = _cloud_error_text(delete_res.get("error", ""), t)
+                                    st.error(t(f"تعذر حذف البيانات: {cloud_error}", f"Delete failed: {cloud_error}"))
+
+                        st.caption(
+                            t(
+                                "الحذف يشمل النسخة السحابية فقط. بيانات هذا الجهاز لن تتأثر.",
+                                "This deletes the cloud copy only. Data on this device is not affected.",
+                            )
+                        )
+
+                        with st.expander(t("منطقة حساسة", "Danger Zone"), expanded=False):
+                            st.warning(
+                                t(
+                                    "حذف الحساب بالكامل نهائي ويشمل حساب السحابة وبياناته.",
+                                    "Permanent account deletion removes your cloud account and cloud data.",
+                                )
+                            )
+
+                            delete_account_confirm = st.checkbox(
+                                t("أفهم أن حذف الحساب نهائي", "I understand account deletion is permanent"),
+                                key="cloud_delete_account_confirm",
+                            )
+
+                            if st.button(
+                                t("حذف الحساب بالكامل", "Delete Account Permanently"),
+                                use_container_width=True,
+                                key="cloud_delete_account_btn",
+                                disabled=not delete_account_confirm,
+                            ):
+                                cloud_auth, refresh_error = _refresh_cloud_auth_for_manual_action(client)
+                                if refresh_error:
+                                    cloud_error = _cloud_error_text(refresh_error, t)
+                                    st.error(t(f"تعذر تحديث الجلسة: {cloud_error}", f"Could not refresh session: {cloud_error}"))
+                                    st.stop()
+                                data_delete_res = client.delete_user_data(
+                                    cloud_auth.get("user_id", ""),
+                                    cloud_auth.get("access_token", ""),
+                                )
+                                account_delete_res = client.delete_current_user(cloud_auth.get("access_token", ""))
+
+                                if account_delete_res.get("ok"):
+                                    _set_cloud_auth(False)
+                                    st.session_state["_cloud_remember_login"] = False
+                                    clear_cloud_auth_cookie()
+                                    st.session_state["_cloud_browser_storage_clear_requested"] = True
+                                    _set_scope_owner("", "")
+                                    st.session_state["_cloud_last_snapshot"] = ""
+                                    st.session_state["_cloud_last_pull_user"] = ""
+                                    clear_cloud_sync_guard(st.session_state)
+                                    st.success(
+                                        t(
+                                            "تم حذف الحساب السحابي بالكامل.",
+                                            "Cloud account deleted permanently.",
+                                        )
+                                    )
+                                    st.rerun()
+
+                                account_error = str(account_delete_res.get("error", ""))
+                                data_error = str(data_delete_res.get("error", ""))
+                                account_error_display = _cloud_error_text(account_error, t)
+                                data_error_display = _cloud_error_text(data_error, t)
+                                if data_delete_res.get("ok"):
+                                    st.warning(
+                                        t(
+                                            f"تم حذف البيانات السحابية لكن حذف الحساب فشل: {account_error_display}",
+                                            f"Cloud data deleted, but account deletion failed: {account_error_display}",
                                         )
                                     )
                                 else:
-                                    user_id = str(user_obj.get("id") or "")
-                                    if not user_id:
-                                        user_res = client.get_user(access_token)
-                                        if user_res.get("ok") and isinstance(user_res.get("user"), dict):
-                                            user_id = str(user_res["user"].get("id") or "")
-
-                                    if not user_id:
-                                        st.error(t("تعذر التحقق من الحساب. يرجى المحاولة مرة أخرى.", "Could not verify your account. Please try again."))
-                                    else:
-                                        scope = _get_app_scope()
-                                        previous_owner = str(scope.get("owner_user_id") or "")
-                                        if previous_owner and previous_owner != user_id:
-                                            _clear_scoped_finance_state()
-                                            st.info(
-                                                t(
-                                                    "تم تبديل الحساب. تم فتح مساحة بيانات محلية مستقلة لهذا المستخدم.",
-                                                    "Account switched. A separate local data scope has been opened for this user.",
-                                                )
-                                            )
-
-                                        _set_cloud_auth(
-                                            True,
-                                            email=clean_email,
-                                            user_id=user_id,
-                                            access_token=access_token,
-                                            refresh_token=refresh_token,
+                                    st.error(
+                                        t(
+                                            f"تعذر حذف الحساب: {account_error_display} | وتعذر حذف البيانات: {data_error_display}",
+                                            f"Account deletion failed: {account_error_display} | Data deletion failed: {data_error_display}",
                                         )
-                                        st.session_state["_cloud_remember_login"] = bool(remember_login)
-                                        if not remember_login:
-                                            clear_cloud_auth_cookie()
-                                            st.session_state["_cloud_browser_storage_clear_requested"] = True
-                                        _set_scope_owner(user_id, clean_email)
+                                    )
 
-                                        local_payload = export_app_state_payload()
-                                        pull = client.fetch_user_data(user_id, access_token)
-                                        remote_payload = pull.get("data") if isinstance(pull.get("data"), dict) else None
-                                        post_login_message = ""
-                                        post_login_caption = ""
-                                        post_login_message_type = "info"
-                                        if pull.get("ok") and remote_payload is not None:
-                                            if should_keep_local_data_before_auto_import(local_payload, remote_payload):
+                    else:
+                        mode = st.selectbox(
+                            t("حساب السحابة", "Cloud Account"),
+                            [
+                                t("تسجيل دخول", "Sign In"),
+                                t("إنشاء حساب", "Sign Up"),
+                                t("نسيت كلمة المرور", "Forgot Password"),
+                            ],
+                            key="cloud_auth_mode",
+                        )
+                        is_sign_up_mode = mode == t("إنشاء حساب", "Sign Up")
+                        is_reset_mode = mode == t("نسيت كلمة المرور", "Forgot Password")
+
+                        email = st.text_input(t("الإيميل", "Email"), type="default", key="cloud_auth_email")
+                        password = ""
+                        confirm_password = ""
+                        if not is_reset_mode:
+                            password = st.text_input(t("كلمة المرور", "Password"), type="password", key="cloud_auth_password")
+                        if is_sign_up_mode:
+                            confirm_password = st.text_input(t("تأكيد كلمة المرور", "Confirm Password"), type="password", key="cloud_auth_confirm_password")
+                        remember_login = False
+                        if not is_reset_mode:
+                            remember_login = st.checkbox(
+                                t("تذكر تسجيل الدخول على هذا الجهاز", "Remember sign-in on this device"),
+                                value=True,
+                                key="cloud_remember_login",
+                            )
+                            st.caption(
+                                t(
+                                    "عند التفعيل، يبقى تسجيل الدخول محفوظًا على هذا المتصفح. استخدم تسجيل الخروج لإزالته.",
+                                    "When enabled, sign-in stays saved on this browser. Use Sign Out to remove it.",
+                                )
+                            )
+                        submit_label = t("إرسال رابط الاستعادة", "Send Reset Link") if is_reset_mode else t("متابعة", "Continue")
+                        submit = st.button(submit_label, use_container_width=True, key="cloud_auth_submit")
+
+                        if submit:
+                            clean_email = email.strip().lower()
+                            if not clean_email:
+                                st.warning(t("يرجى إدخال البريد الإلكتروني.", "Please enter your email."))
+                            elif is_reset_mode:
+                                reset_res = client.request_password_reset(clean_email)
+                                if reset_res.get("ok"):
+                                    st.success(
+                                        t(
+                                            "إذا كان الإيميل مسجلًا، سيتم إرسال رابط استعادة كلمة المرور. يرجى مراجعة البريد والـ Spam.",
+                                            "If the email is registered, a password reset link will be sent. Check your inbox and spam folder.",
+                                        )
+                                    )
+                                    st.caption(
+                                        t(
+                                            "إذا لم يصل الإيميل، حاول مرة أخرى أو تواصل مع الدعم.",
+                                            "If the email does not arrive, try again or contact support.",
+                                        )
+                                    )
+                                else:
+                                    cloud_error = _cloud_error_text(reset_res.get("error", ""), t)
+                                    st.error(t(f"تعذر إرسال رابط الاستعادة: {cloud_error}", f"Could not send reset link: {cloud_error}"))
+                            elif not password:
+                                st.warning(t("يرجى إدخال البريد الإلكتروني وكلمة المرور.", "Please enter email and password."))
+                            elif is_sign_up_mode and password != confirm_password:
+                                st.warning(t("كلمتا المرور غير متطابقتين.", "Passwords do not match."))
+                            elif is_sign_up_mode and len(password) < 6:
+                                st.warning(t("كلمة المرور يجب أن تكون 6 أحرف على الأقل.", "Password must be at least 6 characters."))
+                            else:
+                                if mode == t("إنشاء حساب", "Sign Up"):
+                                    auth_res = client.sign_up(clean_email, password)
+                                else:
+                                    auth_res = client.sign_in(clean_email, password)
+
+                                if not auth_res.get("ok"):
+                                    cloud_error = _cloud_error_text(auth_res.get("error", ""), t)
+                                    st.error(t(f"تعذر تنفيذ الطلب: {cloud_error}", f"Request failed: {cloud_error}"))
+                                else:
+                                    access_token = str(auth_res.get("access_token") or "")
+                                    refresh_token = str(auth_res.get("refresh_token") or "")
+                                    user_obj = auth_res.get("user") if isinstance(auth_res.get("user"), dict) else {}
+
+                                    if not access_token:
+                                        st.info(
+                                            t(
+                                                "تم إنشاء الحساب. إذا كان التحقق عبر البريد الإلكتروني مفعّلًا، يرجى مراجعة البريد والـ Spam ثم تسجيل الدخول.",
+                                                "Account created. If email confirmation is enabled, check your inbox and spam folder, then sign in.",
+                                            )
+                                        )
+                                    else:
+                                        user_id = str(user_obj.get("id") or "")
+                                        if not user_id:
+                                            user_res = client.get_user(access_token)
+                                            if user_res.get("ok") and isinstance(user_res.get("user"), dict):
+                                                user_id = str(user_res["user"].get("id") or "")
+
+                                        if not user_id:
+                                            st.error(t("تعذر التحقق من الحساب. يرجى المحاولة مرة أخرى.", "Could not verify your account. Please try again."))
+                                        else:
+                                            scope = _get_app_scope()
+                                            previous_owner = str(scope.get("owner_user_id") or "")
+                                            if previous_owner and previous_owner != user_id:
+                                                _clear_scoped_finance_state()
+                                                st.info(
+                                                    t(
+                                                        "تم تبديل الحساب. تم فتح مساحة بيانات محلية مستقلة لهذا المستخدم.",
+                                                        "Account switched. A separate local data scope has been opened for this user.",
+                                                    )
+                                                )
+
+                                            _set_cloud_auth(
+                                                True,
+                                                email=clean_email,
+                                                user_id=user_id,
+                                                access_token=access_token,
+                                                refresh_token=refresh_token,
+                                            )
+                                            st.session_state["_cloud_remember_login"] = bool(remember_login)
+                                            if not remember_login:
+                                                clear_cloud_auth_cookie()
+                                                st.session_state["_cloud_browser_storage_clear_requested"] = True
+                                            _set_scope_owner(user_id, clean_email)
+
+                                            local_payload = export_app_state_payload()
+                                            pull = client.fetch_user_data(user_id, access_token)
+                                            remote_payload = pull.get("data") if isinstance(pull.get("data"), dict) else None
+                                            post_login_message = ""
+                                            post_login_caption = ""
+                                            post_login_message_type = "info"
+                                            if pull.get("ok") and remote_payload is not None:
+                                                if should_keep_local_data_before_auto_import(local_payload, remote_payload):
+                                                    pause_cloud_auto_sync(
+                                                        st.session_state,
+                                                        user_id,
+                                                        reason="local_cloud_conflict_after_sign_in",
+                                                    )
+                                                    st.session_state["_cloud_last_snapshot"] = payload_snapshot(remote_payload)
+                                                    st.session_state["_cloud_last_pull_user"] = user_id
+                                                    save_persistent_state()
+                                                    post_login_message_type = "warning"
+                                                    post_login_message = t(
+                                                        "تم تسجيل الدخول، لكن وجدنا بيانات محلية مختلفة عن نسخة السحابة. أبقينا بيانات هذا الجهاز كما هي. استخدم استعادة من السحابة إذا أردت استبدالها بنسخة السحابة، أو رفع للسحابة إذا أردت رفع الحالية.",
+                                                        "Signed in, but we found local data that differs from the cloud copy. This device kept its current local data. Use Restore from Cloud to replace it with the cloud copy, or Upload to Cloud to upload the current local data.",
+                                                    )
+                                                else:
+                                                    import_app_state_payload(remote_payload)
+                                                    _set_scope_owner(user_id, clean_email)
+                                                    st.session_state["_cloud_last_pull_user"] = user_id
+                                                    mark_cloud_sync_ready(st.session_state, user_id)
+                                                    _mark_cloud_sync_now()
+                                                    _sync_snapshot_from_state()
+                                                    save_persistent_state()
+                                                    post_login_message_type = "success"
+                                                    post_login_message = t("تم تسجيل الدخول وتحميل بياناتك.", "Signed in and data loaded.")
+
+                                            elif pull.get("ok") and pull.get("data") is None:
+                                                _set_scope_owner(user_id, clean_email)
+                                                st.session_state["_cloud_last_pull_user"] = user_id
+                                                st.session_state["_cloud_last_snapshot"] = ""
                                                 pause_cloud_auto_sync(
                                                     st.session_state,
                                                     user_id,
-                                                    reason="local_cloud_conflict_after_sign_in",
+                                                    reason="cloud_empty_after_sign_in",
                                                 )
-                                                st.session_state["_cloud_last_snapshot"] = payload_snapshot(remote_payload)
-                                                st.session_state["_cloud_last_pull_user"] = user_id
+                                                save_persistent_state()
+                                                post_login_message_type = "info"
+                                                post_login_message = t(
+                                                    "تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حاليًا، وبيانات هذا الجهاز بقيت كما هي.",
+                                                    "Signed in. No cloud data exists yet, and this device kept its current local data.",
+                                                )
+                                                post_login_caption = t(
+                                                    "إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر رفع للسحابة.",
+                                                    "If you want to create a new cloud copy, use Upload to Cloud.",
+                                                )
+                                            else:
+                                                pause_cloud_auto_sync(
+                                                    st.session_state,
+                                                    user_id,
+                                                    reason="pull_failed_after_sign_in",
+                                                )
                                                 save_persistent_state()
                                                 post_login_message_type = "warning"
                                                 post_login_message = t(
-                                                    "تم تسجيل الدخول، لكن وجدنا بيانات محلية مختلفة عن نسخة السحابة. أبقينا بيانات هذا الجهاز كما هي. استخدم استعادة من السحابة إذا أردت استبدالها بنسخة السحابة، أو رفع للسحابة إذا أردت رفع الحالية.",
-                                                    "Signed in, but we found local data that differs from the cloud copy. This device kept its current local data. Use Restore from Cloud to replace it with the cloud copy, or Upload to Cloud to upload the current local data.",
+                                                    "تم تسجيل الدخول، لكن تعذر تحميل البيانات السحابية الآن. أبقينا بيانات هذا الجهاز كما هي.",
+                                                    "Signed in, but failed to load cloud data now. This device kept its current local data.",
                                                 )
-                                            else:
-                                                import_app_state_payload(remote_payload)
-                                                _set_scope_owner(user_id, clean_email)
-                                                st.session_state["_cloud_last_pull_user"] = user_id
-                                                mark_cloud_sync_ready(st.session_state, user_id)
-                                                _mark_cloud_sync_now()
-                                                _sync_snapshot_from_state()
-                                                save_persistent_state()
-                                                post_login_message_type = "success"
-                                                post_login_message = t("تم تسجيل الدخول وتحميل بياناتك.", "Signed in and data loaded.")
 
-                                        elif pull.get("ok") and pull.get("data") is None:
-                                            _set_scope_owner(user_id, clean_email)
-                                            st.session_state["_cloud_last_pull_user"] = user_id
-                                            st.session_state["_cloud_last_snapshot"] = ""
-                                            pause_cloud_auto_sync(
-                                                st.session_state,
-                                                user_id,
-                                                reason="cloud_empty_after_sign_in",
-                                            )
-                                            save_persistent_state()
-                                            post_login_message_type = "info"
-                                            post_login_message = t(
-                                                "تم تسجيل الدخول. لا توجد بيانات محفوظة في السحابة حاليًا، وبيانات هذا الجهاز بقيت كما هي.",
-                                                "Signed in. No cloud data exists yet, and this device kept its current local data.",
-                                            )
-                                            post_login_caption = t(
-                                                "إذا رغبت في إنشاء نسخة سحابية جديدة، استخدم زر رفع للسحابة.",
-                                                "If you want to create a new cloud copy, use Upload to Cloud.",
-                                            )
-                                        else:
-                                            pause_cloud_auto_sync(
-                                                st.session_state,
-                                                user_id,
-                                                reason="pull_failed_after_sign_in",
-                                            )
-                                            save_persistent_state()
-                                            post_login_message_type = "warning"
-                                            post_login_message = t(
-                                                "تم تسجيل الدخول، لكن تعذر تحميل البيانات السحابية الآن. أبقينا بيانات هذا الجهاز كما هي.",
-                                                "Signed in, but failed to load cloud data now. This device kept its current local data.",
-                                            )
+                                            if post_login_message:
+                                                if post_login_message_type == "success":
+                                                    st.success(post_login_message)
+                                                elif post_login_message_type == "warning":
+                                                    st.warning(post_login_message)
+                                                else:
+                                                    st.info(post_login_message)
+                                            if post_login_caption:
+                                                st.caption(post_login_caption)
 
-                                        if post_login_message:
-                                            if post_login_message_type == "success":
-                                                st.success(post_login_message)
-                                            elif post_login_message_type == "warning":
-                                                st.warning(post_login_message)
-                                            else:
-                                                st.info(post_login_message)
-                                        if post_login_caption:
-                                            st.caption(post_login_caption)
+                                            if remember_login:
+                                                st.session_state["_cloud_cookie_restore_checked"] = False
+                                                reload_after_write = not bool(_local_persistence_enabled())
+                                                remember_cloud_auth(
+                                                    clean_email,
+                                                    user_id,
+                                                    refresh_token,
+                                                    reload_after_write=reload_after_write,
+                                                )
+                                                if reload_after_write:
+                                                    st.stop()
 
-                                        if remember_login:
-                                            st.session_state["_cloud_cookie_restore_checked"] = False
-                                            reload_after_write = not bool(_local_persistence_enabled())
-                                            remember_cloud_auth(
-                                                clean_email,
-                                                user_id,
-                                                refresh_token,
-                                                reload_after_write=reload_after_write,
-                                            )
-                                            if reload_after_write:
-                                                st.stop()
-
-                                        st.rerun()
+                                            st.rerun()
 
         # --- Device Data section (below cloud, always visible) ---
-        st.markdown("---")
-        st.subheader(t("بيانات هذا الجهاز", "This Device Data"))
-        st.caption(
-            t(
-                "يمسح كل البيانات من هذا المتصفح فقط. النسخة السحابية (إن وجدت) لن تتأثر.",
-                "Clears all data from this browser only. Cloud copy (if any) will not be affected.",
-            )
-        )
-
-        local_delete_confirm = st.checkbox(
-            t("تأكيد مسح بيانات الجهاز", "Confirm Clear Device Data"),
-            key="local_delete_confirm",
-        )
-
-        if st.button(
-            t("مسح بيانات هذا الجهاز", "Clear This Device Data"),
-            use_container_width=True,
-            key="local_delete_btn",
-            disabled=not local_delete_confirm,
-        ):
-            reset_local_app_data()
-            st.success(t("تم مسح بيانات هذا الجهاز.", "This device data was cleared."))
-            st.info(
+        with st.expander(t("بيانات هذا الجهاز", "This Device Data"), expanded=False):
+            st.caption(
                 t(
-                    "لاستعادة البيانات، استخدم النسخة السحابية أو ملف النسخة الاحتياطية (JSON).",
-                    "To restore data, use the cloud copy or a backup file (JSON).",
+                    "يمسح كل البيانات من هذا المتصفح فقط. النسخة السحابية (إن وجدت) لن تتأثر.",
+                    "Clears all data from this browser only. Cloud copy (if any) will not be affected.",
                 )
             )
-            st.rerun()
+
+            local_delete_confirm = st.checkbox(
+                t("تأكيد مسح بيانات الجهاز", "Confirm Clear Device Data"),
+                key="local_delete_confirm",
+            )
+
+            if st.button(
+                t("مسح بيانات هذا الجهاز", "Clear This Device Data"),
+                use_container_width=True,
+                key="local_delete_btn",
+                disabled=not local_delete_confirm,
+            ):
+                reset_local_app_data()
+                st.success(t("تم مسح بيانات هذا الجهاز.", "This device data was cleared."))
+                st.info(
+                    t(
+                        "لاستعادة البيانات، استخدم النسخة السحابية أو ملف النسخة الاحتياطية (JSON).",
+                        "To restore data, use the cloud copy or a backup file (JSON).",
+                    )
+                )
+                st.rerun()
 
         # --- Backup section ---
-        st.markdown("---")
-        st.subheader(t("نسخ احتياطي (JSON)", "Backup (JSON)"))
-        st.caption(
-            t(
-                "ملف JSON يحتوي كل بياناتك. يمكنك استخدامه لنقل البيانات لجهاز آخر أو كنسخة أمان.",
-                "A JSON file containing all your data. Use it to transfer data to another device or as a safety backup.",
+        with st.expander(t("نسخ احتياطي (JSON)", "Backup (JSON)"), expanded=False):
+            st.caption(
+                t(
+                    "ملف JSON يحتوي كل بياناتك. يمكنك استخدامه لنقل البيانات لجهاز آخر أو كنسخة أمان.",
+                    "A JSON file containing all your data. Use it to transfer data to another device or as a safety backup.",
+                )
             )
-        )
-        backup_name, backup_bytes = _build_backup_file()
+            backup_name, backup_bytes = _build_backup_file()
 
-        st.download_button(
-            label=t("تصدير بياناتي", "Export My Data"),
-            data=backup_bytes,
-            file_name=backup_name,
-            mime="application/json",
-            use_container_width=True,
-            key="settings_backup_download_btn",
-        )
-        st.caption(
-            t(
-                "مكان الحفظ يعتمد على إعدادات المتصفح (غالبًا مجلد Downloads).",
-                "Save location depends on your browser settings (usually Downloads).",
+            st.download_button(
+                label=t("تصدير بياناتي", "Export My Data"),
+                data=backup_bytes,
+                file_name=backup_name,
+                mime="application/json",
+                use_container_width=True,
+                key="settings_backup_download_btn",
             )
-        )
+            st.caption(
+                t(
+                    "مكان الحفظ يعتمد على إعدادات المتصفح (غالبًا مجلد Downloads).",
+                    "Save location depends on your browser settings (usually Downloads).",
+                )
+            )
 
-        restore_file = st.file_uploader(
-            t("اختيار ملف بيانات JSON", "Choose JSON Data File"),
-            type=["json"],
-            key="settings_restore_file",
-            help=t(
-                "تنبيه: الاسترجاع يستبدل البيانات الحالية على هذا الجهاز.",
-                "Warning: restore replaces current data on this device.",
-            ),
-        )
+            restore_file = st.file_uploader(
+                t("اختيار ملف بيانات JSON", "Choose JSON Data File"),
+                type=["json"],
+                key="settings_restore_file",
+                help=t(
+                    "تنبيه: الاسترجاع يستبدل البيانات الحالية على هذا الجهاز.",
+                    "Warning: restore replaces current data on this device.",
+                ),
+            )
 
-        restore_confirm = st.checkbox(
-            t("أفهم أن الاسترجاع يستبدل البيانات الحالية", "I understand restore replaces current data"),
-            key="settings_restore_confirm",
-        )
+            restore_confirm = st.checkbox(
+                t("أفهم أن الاسترجاع يستبدل البيانات الحالية", "I understand restore replaces current data"),
+                key="settings_restore_confirm",
+            )
 
-        if st.button(
-            t("استرجاع النسخة الآن", "Restore Backup Now"),
-            use_container_width=True,
-            key="settings_restore_btn",
-            disabled=(restore_file is None or not restore_confirm),
-        ):
-            raw_bytes = restore_file.getvalue() if restore_file is not None else b""
-            try:
-                loaded = json.loads(raw_bytes.decode("utf-8-sig"))
-            except Exception:
-                st.error(t("الملف غير صالح JSON.", "Invalid JSON file."))
-            else:
-                if not isinstance(loaded, dict):
-                    st.error(t("محتوى النسخة غير صالح.", "Backup content is invalid."))
+            if st.button(
+                t("استرجاع النسخة الآن", "Restore Backup Now"),
+                use_container_width=True,
+                key="settings_restore_btn",
+                disabled=(restore_file is None or not restore_confirm),
+            ):
+                raw_bytes = restore_file.getvalue() if restore_file is not None else b""
+                try:
+                    loaded = json.loads(raw_bytes.decode("utf-8-sig"))
+                except Exception:
+                    st.error(t("الملف غير صالح JSON.", "Invalid JSON file."))
                 else:
-                    import_app_state_payload(loaded)
-                    save_persistent_state()
-                    _sync_snapshot_from_state()
-                    st.success(t("تم استرجاع النسخة بنجاح.", "Backup restored successfully."))
-                    st.rerun()
+                    if not isinstance(loaded, dict):
+                        st.error(t("محتوى النسخة غير صالح.", "Backup content is invalid."))
+                    else:
+                        import_app_state_payload(loaded)
+                        save_persistent_state()
+                        _sync_snapshot_from_state()
+                        st.success(t("تم استرجاع النسخة بنجاح.", "Backup restored successfully."))
+                        st.rerun()

@@ -138,6 +138,83 @@ In short: every meaningful change to Floosy should leave a trace in this context
   - Mobile breakpoint remains `13rem`.
 - This is a style-only fix and should not affect Cloud/Settings data logic.
 
+### Follow-up — 2026-05-14: Settings Page Navigation Redesign Draft
+- User wanted to rethink Settings as something closer to iPhone-style settings, but without making users depend on a hidden profile/avatar entry point.
+- Agreed direction:
+  - Sidebar `الإعدادات / Settings` remains the obvious main entry.
+  - Future profile image/avatar can become a shortcut, not the only way to enter Settings.
+  - Settings should feel like sections/pages that open inside the app.
+- Implemented local draft in `pages_floosy/settings_page.py`:
+  - Main Settings screen with section buttons:
+    - `الملف الشخصي / Profile`
+    - `البيانات والمزامنة / Data & Sync`
+    - `العرض / Display`
+    - `حول GoushFi / About GoushFi`
+  - Each section opens inside the same Streamlit Settings page with `رجوع إلى الإعدادات / Back to Settings`.
+  - Existing Cloud logic was not rewritten.
+  - Existing restore/upload/delete confirmations remain.
+  - `أين بياناتي؟ / Where is my data?` was renamed to the more formal:
+    - `حالة الحفظ والمزامنة / Save & Sync Status`
+  - Save & Sync status card now appears in `البيانات والمزامنة / Data & Sync`, not on every Settings subpage.
+- Profile section follow-up:
+  - Added a profile summary card at the top of `الملف الشخصي / Profile`.
+  - The card currently uses a generated circular initial avatar, not an uploaded photo yet.
+  - It shows current profile display name, language, and currency.
+  - Renamed the old preview area to `ملخص الملف الشخصي / Profile Summary`.
+  - Moved profile summary out of `العرض / Display`; Display now stays focused on dashboard card visibility.
+- Display section follow-up:
+  - User decided to postpone the deeper Data & Sync redesign and work on `العرض / Display` first.
+  - Display now contains a single bordered `بطاقات الصفحة الرئيسية / Home Cards` panel.
+  - The old scattered card checkboxes were changed to compact toggles for `الحساب / Account`, `التوفير / Savings`, and `المشاريع / Projects`.
+  - No profile preview remains inside Display.
+- Settings summary follow-up:
+  - User wanted the profile-style card to live on the main Settings page as a general settings summary.
+  - Main Settings now shows a top summary card with generated avatar/initial plus:
+    - `الاسم / Name`
+    - `اللغة / Language`
+    - `العملة / Currency`
+    - `الإيميل / Email`
+    - `حالة السحابة / Cloud Status`
+    - `آخر مزامنة / Last Sync`
+  - The `الملف الشخصي / Profile` section is now focused on editing profile fields only.
+- About section follow-up:
+  - User chose `Beta 1.0` for the visible app version.
+  - `حول GoushFi / About GoushFi` now shows a simple product identity card:
+    - `GoushFi`
+    - `Flow · Control · Growth`
+    - short neutral app description
+    - `Beta 1.0`
+    - current plan
+    - enabled feature count
+- Data & Sync device-save follow-up:
+  - User wanted saving on the device to be an explicit option, not an invisible automatic behavior.
+  - Added `device_save_enabled` to Settings defaults.
+  - `البيانات والمزامنة / Data & Sync` now includes `حفظ نسخة على هذا الجهاز / Save a copy on this device`.
+  - Turning it off deletes the saved local persistent copy without clearing the current open session.
+  - `save_persistent_state()` now skips local writes when `device_save_enabled` is false.
+  - The status card now states whether device save is on/off/unavailable, plus Cloud status.
+- Data & Sync layout follow-up:
+  - User felt the Data & Sync section needed clearer visual order.
+  - Top order is now:
+    1. `حالة الحفظ والمزامنة / Save & Sync Status`
+    2. `طريقة الحفظ / Save Method` with side-by-side choices:
+       - `حفظ نسخة على هذا الجهاز / Save a copy on this device`
+       - `تفعيل المزامنة السحابية / Enable Cloud Sync`
+    3. Collapsed action sections stacked vertically:
+       - `حساب السحابة / Cloud Account`
+       - `بيانات هذا الجهاز / This Device Data`
+       - `نسخ احتياطي (JSON) / Backup (JSON)`
+  - The old `العملية / Action` label in the Cloud sign-in form was renamed to `حساب السحابة / Cloud Account`.
+  - Device-data clearing and JSON backup/restore content now appears only after opening its section.
+- Removed the disk/cloud emoji from the Data & Sync status card so the section reads more formally.
+- Removed the extra divider spacing between `حساب السحابة / Cloud Account` and `بيانات هذا الجهاز / This Device Data`, so the action sections read as one stacked list.
+- Settings final local QA:
+  - `py_compile` passed for `app.py`, `config_floosy.py`, and `pages_floosy/settings_page.py`.
+  - Browser QA passed for the four Settings sections: Profile, Display, Data & Sync, About.
+  - Data & Sync collapsed sections open correctly; `مسح بيانات هذا الجهاز / Clear This Device Data` remains disabled until confirmation.
+  - Mobile viewport check at 390px showed no horizontal overflow for the Data & Sync section.
+- This is a UX/navigation draft and should be visually reviewed before pushing to hosted if not already pushed.
+
 ---
 
 ## UX Review — 2026-05-13: Settings / Device Data / Cloud Data

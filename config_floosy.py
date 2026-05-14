@@ -45,6 +45,7 @@ default_settings = {
     "show_status_account": True,
     "show_status_saving": True,
     "show_status_project": True,
+    "device_save_enabled": True,
     "cloud_sync_enabled": False,
     "cloud_last_sync_at": "",
 }
@@ -179,6 +180,19 @@ def reset_local_app_data() -> None:
             pass
 
     delete_sqlite_payload(PERSIST_SQLITE_FILE)
+
+
+def delete_local_persistent_copy() -> None:
+    """Delete the saved local copy without clearing the current session."""
+    for path in [PERSIST_FILE, PERSIST_FILE + ".tmp"]:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+    delete_sqlite_payload(PERSIST_SQLITE_FILE)
+    st.session_state["_persist_last_snapshot"] = ""
 
 
 def _encode_for_json(value):
@@ -619,6 +633,10 @@ def save_persistent_state() -> None:
     if not _local_persistence_enabled():
         return
 
+    settings = st.session_state.get("settings", {})
+    if isinstance(settings, dict) and settings.get("device_save_enabled") is False:
+        return
+
     payload = export_app_state_payload()
     payload["_meta"] = {
         "saved_at": datetime.now().isoformat(timespec="seconds"),
@@ -653,7 +671,7 @@ def save_persistent_state() -> None:
 
 def init_session_state():
     """تجهيز session_state."""
-    # Theme: خلفية بيضاء + كروت ناعمة + هيدر فلوسي
+    # Theme: خلفية بيضاء + كروت ناعمة + هيدر GoushFi
     st.markdown(
         """
         <style>
