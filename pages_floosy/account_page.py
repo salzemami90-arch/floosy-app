@@ -876,42 +876,13 @@ def render(month_key: str, month: str, year: int):
         st.success(save_notice)
 
     st.session_state.setdefault("account_templates_open", False)
+    st.session_state.setdefault("account_edit_item_id", "")
 
-    def _close_templates_panel():
+    def _close_templates_panel() -> None:
         st.session_state["account_templates_open"] = False
-    st.markdown(
-        """
-        <style>
-        div.st-key-account_templates_toggle_top button {
-            min-height: 42px;
-            border-radius: 12px;
-            padding: 0.45rem 0.9rem !important;
-            font-size: 14px;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    title_col, action_col = st.columns([5, 2])
-    with title_col:
-        st.title(t("الحساب", "Account"))
-        st.caption(f"{month_display} {year}")
-    with action_col:
-        if st.button(
-            t("إخفاء العناصر الشهرية", "Hide Monthly Items")
-            if st.session_state["account_templates_open"]
-            else t("إدارة العناصر الشهرية", "Manage Monthly Items"),
-            key="account_templates_toggle_top",
-            help=t("إضافة أو تعديل الالتزامات والدخل الشهري", "Add or edit monthly commitments and income"),
-            use_container_width=True,
-        ):
-            st.session_state["account_templates_open"] = not bool(st.session_state.get("account_templates_open", False))
-            st.rerun()
+
+    st.title(t("الحساب", "Account"))
+    st.caption(f"{month_display} {year}")
 
     tx_list = load_transactions(month_key)
     currency = st.session_state.settings.get("default_currency", CURRENCY_OPTIONS[0])
@@ -962,10 +933,132 @@ def render(month_key: str, month: str, year: int):
         if isinstance(item, dict):
             _ensure_item_id(item)
 
+    _render_monthly_items_styles()
     st.markdown(f"### {t('الالتزامات والدخل الشهري', 'Monthly Commitments and Income')}")
 
     def _render_templates_manager():
         st.caption(t("إدارة الالتزامات والدخل (إضافة، تعديل، حذف)", "Manage commitments and income (add, edit, delete)"))
+
+        def _render_item_edit_form(item: dict, item_index: int, item_key: str) -> None:
+            safe_key = item_key.replace("-", "_")
+            type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
+            current_type_label = _tx_type_label(item.get("type", "مصروف"), is_en)
+            type_index = type_options.index(current_type_label) if current_type_label in type_options else 0
+            current_currency = item.get("currency", currency)
+            currency_index = CURRENCY_OPTIONS.index(current_currency) if current_currency in CURRENCY_OPTIONS else 0
+
+            with st.form(f"account_edit_template_form_{safe_key}", clear_on_submit=False):
+                e1, e2 = st.columns(2)
+                with e1:
+                    new_name = st.text_input(
+                        t("اسم العنصر", "Item Name"),
+                        value=str(item.get("name", "") or ""),
+                        key=f"acct_tpl_name_{safe_key}",
+                    )
+                    new_type_label = st.selectbox(
+                        t("النوع", "Type"),
+                        type_options,
+                        index=type_index,
+                        key=f"acct_tpl_type_{safe_key}",
+                    )
+                    new_category = st.text_input(
+                        t("التصنيف", "Category"),
+                        value=str(item.get("category", t("أخرى", "Other")) or t("أخرى", "Other")),
+                        key=f"acct_tpl_cat_{safe_key}",
+                    )
+                    new_currency = st.selectbox(
+                        t("العملة", "Currency"),
+                        CURRENCY_OPTIONS,
+                        index=currency_index,
+                        format_func=lambda opt: _currency_option_label(opt, is_en),
+                        key=f"acct_tpl_currency_{safe_key}",
+                    )
+                with e2:
+                    new_amount = st.number_input(
+                        t("المبلغ", "Amount"),
+                        min_value=0.0,
+                        value=float(item.get("amount", 0.0)),
+                        step=1.0,
+                        key=f"acct_tpl_amt_{safe_key}",
+                    )
+                    _edit_day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if new_type_label == t("دخل", "Income") else t("يوم الاستحقاق", "Due Payment Day")
+                    new_day = st.number_input(
+                        _edit_day_label,
+                        min_value=1,
+                        max_value=31,
+                        value=int(item.get("day", 1)),
+                        step=1,
+                        key=f"acct_tpl_day_{safe_key}",
+                    )
+                    new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{safe_key}")
+                    new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{safe_key}")
+
+                _edit_not_set_label = t("غير محدد", "Not set")
+                _edit_lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), month_key)
+                _edit_lookback_labels = [_edit_not_set_label] + [_month_label_from_key(mk, is_en) for mk in reversed(_edit_lookback_keys)]
+                _edit_lookback_values = [""] + list(reversed(_edit_lookback_keys))
+                _current_lpm = str(item.get("last_paid_month") or "").strip()
+                if _current_lpm and _current_lpm not in _edit_lookback_values:
+                    _edit_lookback_labels.append(_month_label_from_key(_current_lpm, is_en))
+                    _edit_lookback_values.append(_current_lpm)
+                _edit_lpm_default = _edit_lookback_values.index(_current_lpm) if _current_lpm in _edit_lookback_values else 0
+                new_last_confirmed_idx = st.selectbox(
+                    t("آخر شهر مؤكد", "Last confirmed month"),
+                    range(len(_edit_lookback_labels)),
+                    index=_edit_lpm_default,
+                    format_func=lambda idx: _edit_lookback_labels[idx],
+                    key=f"acct_tpl_lpm_{safe_key}",
+                )
+                _edit_selected_lpm = _edit_lookback_values[new_last_confirmed_idx]
+
+                current_example_label = _entitlement_date_label(month_key, int(new_day or 1), is_en)
+                last_paid_date_text = str(item.get("last_paid_date") or "").strip() or "-"
+                st.caption(
+                    " | ".join(
+                        [
+                            f"{t('مثال الشهر الحالي', 'Current month example')}: {current_example_label or '-'}",
+                            f"{t('آخر تاريخ دفع/استلام', 'Last payment/receipt date')}: {last_paid_date_text}",
+                        ]
+                    )
+                )
+
+                save_col, cancel_col, delete_col = st.columns(3)
+                with save_col:
+                    save_edit = st.form_submit_button(t("حفظ", "Save"), use_container_width=True)
+                with cancel_col:
+                    cancel_edit = st.form_submit_button(t("إلغاء", "Cancel"), use_container_width=True)
+                with delete_col:
+                    delete_item = st.form_submit_button(t("حذف", "Delete"), use_container_width=True)
+
+            if cancel_edit:
+                st.session_state["account_edit_item_id"] = ""
+                st.rerun()
+
+            if delete_item:
+                if 0 <= item_index < len(recurring_items):
+                    recurring_items.pop(item_index)
+                st.session_state["account_edit_item_id"] = ""
+                st.success(t("تم حذف العنصر.", "Item deleted."))
+                st.rerun()
+
+            if save_edit:
+                if not str(new_name).strip() or float(new_amount) <= 0:
+                    st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
+                else:
+                    item["name"] = str(new_name).strip()
+                    item["type"] = "مصروف" if new_type_label == t("مصروف", "Expense") else "دخل"
+                    item["category"] = str(new_category).strip() or t("أخرى", "Other")
+                    item["currency"] = new_currency
+                    item["amount"] = float(new_amount)
+                    item["day"] = int(new_day)
+                    item["active"] = bool(new_active)
+                    item["is_variable"] = bool(new_variable)
+                    if _edit_selected_lpm != _current_lpm:
+                        item["last_paid_month"] = _edit_selected_lpm
+                        item["pending_entitlements"] = []
+                    st.session_state["account_edit_item_id"] = ""
+                    st.success(t("تم تعديل العنصر.", "Item updated."))
+                    st.rerun()
 
         with st.form("account_add_template_form", clear_on_submit=True):
             t1, t2 = st.columns(2)
@@ -1002,16 +1095,18 @@ def render(month_key: str, month: str, year: int):
                 format_func=lambda i: _lookback_labels[i],
             )
             _selected_last_paid = _lookback_values[last_confirmed_idx]
-            st.caption(t(
-                "إذا كان هذا العنصر نشطاً من قبل، اختر آخر شهر استلمته أو دفعته. جوشفي ستضع الأشهر التالية كبانتظار التأكيد.",
-                "If this item was already active, select the last month you received/paid it. GoushFi will mark all following months as pending.",
-            ))
+            st.caption(
+                t(
+                    "إذا كان هذا العنصر نشطاً من قبل، اختر آخر شهر استلمته أو دفعته. جوشفي ستضع الأشهر التالية كبانتظار التأكيد.",
+                    "If this item was already active, select the last month you received/paid it. GoushFi will mark all following months as pending.",
+                )
+            )
 
             add_btn = st.form_submit_button(t("إضافة عنصر جديد", "Add New Item"), use_container_width=True)
 
             if add_btn:
                 if not name.strip() or amount <= 0:
-                        st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
+                    st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
                 else:
                     recurring_items.append(
                         {
@@ -1037,126 +1132,51 @@ def render(month_key: str, month: str, year: int):
             st.info(t("لا توجد عناصر مدخلة.", "No saved items yet."))
             return
 
+        header_name, header_amount, header_action = st.columns([3, 2, 1])
+        header_name.caption(t("اسم العنصر", "Item Name"))
+        header_amount.caption(t("المبلغ", "Amount"))
+        header_action.caption(t("تعديل", "Edit"))
+
+        selected_item = None
+        selected_index = -1
+        selected_key = ""
         for i, item in enumerate(recurring_items):
-            state = t("نشط", "Active") if item.get("active", True) else t("متوقف", "Paused")
+            if not isinstance(item, dict):
+                continue
+            item_key = _ensure_item_id(item)
+            safe_key = item_key.replace("-", "_")
+            item_name = str(item.get("name") or t("بدون اسم", "Untitled"))
+            item_amount = float(item.get("amount", 0.0) or 0.0)
+            item_currency = _currency_short_label(item.get("currency", currency), is_en)
             item_type_label = _tx_type_label(item.get("type", ""), is_en)
-            st.markdown(f"**{item.get('name','بدون اسم')}** • {item_type_label} • {state}")
+            state = t("نشط", "Active") if item.get("active", True) else t("متوقف", "Paused")
 
-            type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
-            current_type_label = _tx_type_label(item.get("type", "مصروف"), is_en)
-            type_index = type_options.index(current_type_label) if current_type_label in type_options else 0
-            current_currency = item.get("currency", currency)
-            currency_index = CURRENCY_OPTIONS.index(current_currency) if current_currency in CURRENCY_OPTIONS else 0
-
-            e1, e2 = st.columns(2)
-            with e1:
-                new_name = st.text_input(
-                    t("اسم العنصر", "Item Name"),
-                    value=str(item.get("name", "") or ""),
-                    key=f"acct_tpl_name_{i}",
-                )
-            with e2:
-                new_type_label = st.selectbox(
-                    t("النوع", "Type"),
-                    type_options,
-                    index=type_index,
-                    key=f"acct_tpl_type_{i}",
-                )
-
-            e3, e4 = st.columns(2)
-            with e3:
-                new_category = st.text_input(
-                    t("التصنيف", "Category"),
-                    value=str(item.get("category", t("أخرى", "Other")) or t("أخرى", "Other")),
-                    key=f"acct_tpl_cat_{i}",
-                )
-            with e4:
-                new_currency = st.selectbox(
-                    t("العملة", "Currency"),
-                    CURRENCY_OPTIONS,
-                    index=currency_index,
-                    format_func=lambda opt: _currency_option_label(opt, is_en),
-                    key=f"acct_tpl_currency_{i}",
-                )
-
-            e5, e6, e7, e8 = st.columns(4)
-            with e5:
-                new_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, value=float(item.get("amount", 0.0)), step=1.0, key=f"acct_tpl_amt_{i}")
-            with e6:
-                _edit_day_label = t("يوم الاستلام المتوقع", "Expected Receipt Day") if new_type_label == t("دخل", "Income") else t("يوم الاستحقاق", "Due Payment Day")
-                new_day = st.number_input(_edit_day_label, min_value=1, max_value=31, value=int(item.get("day", 1)), step=1, key=f"acct_tpl_day_{i}")
-            with e7:
-                new_active = st.checkbox(t("فعال", "Active"), value=bool(item.get("active", True)), key=f"acct_tpl_active_{i}")
-            with e8:
-                new_variable = st.checkbox(t("متغير", "Variable"), value=bool(item.get("is_variable", False)), key=f"acct_tpl_var_{i}")
-
-            _edit_not_set_label = t("غير محدد", "Not set")
-            _edit_lookback_keys = _month_keys_between(_shift_month_key(month_key, -12), month_key)
-            _edit_lookback_labels = [_edit_not_set_label] + [_month_label_from_key(mk, is_en) for mk in reversed(_edit_lookback_keys)]
-            _edit_lookback_values = [""] + list(reversed(_edit_lookback_keys))
-            _current_lpm = str(item.get("last_paid_month") or "").strip()
-            if _current_lpm and _current_lpm not in _edit_lookback_values:
-                _edit_lookback_labels.append(_month_label_from_key(_current_lpm, is_en))
-                _edit_lookback_values.append(_current_lpm)
-            _edit_lpm_default = _edit_lookback_values.index(_current_lpm) if _current_lpm in _edit_lookback_values else 0
-            new_last_confirmed_idx = st.selectbox(
-                t("آخر شهر مؤكد", "Last confirmed month"),
-                range(len(_edit_lookback_labels)),
-                index=_edit_lpm_default,
-                format_func=lambda idx: _edit_lookback_labels[idx],
-                key=f"acct_tpl_lpm_{i}",
-            )
-            _edit_selected_lpm = _edit_lookback_values[new_last_confirmed_idx]
-            st.caption(t(
-                "اختر آخر شهر تم دفعه أو استلامه لهذا العنصر. الأشهر التالية ستصبح بانتظار التأكيد.",
-                "Select the last month this item was paid/received. Following months will become pending.",
-            ))
-
-            current_example_label = _entitlement_date_label(month_key, int(new_day or 1), is_en)
-            last_paid_date_text = str(item.get("last_paid_date") or "").strip() or "-"
-            timeline_bits = [
-                f"{t('مثال الشهر الحالي', 'Current month example')}: {current_example_label or '-'}",
-                f"{t('آخر تاريخ دفع/استلام', 'Last payment/receipt date')}: {last_paid_date_text}",
-            ]
-            st.caption(" | ".join(timeline_bits))
-
-            a1, a2 = st.columns(2)
-            with a1:
-                if st.button(t("تعديل", "Edit"), key=f"acct_tpl_update_{i}", use_container_width=True):
-                    if not str(new_name).strip() or float(new_amount) <= 0:
-                        st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
-                    else:
-                        item["name"] = str(new_name).strip()
-                        item["type"] = "مصروف" if new_type_label == t("مصروف", "Expense") else "دخل"
-                        item["category"] = str(new_category).strip() or t("أخرى", "Other")
-                        item["currency"] = new_currency
-                        item["amount"] = float(new_amount)
-                        item["day"] = int(new_day)
-                        item["active"] = bool(new_active)
-                        item["is_variable"] = bool(new_variable)
-                        if _edit_selected_lpm != _current_lpm:
-                            item["last_paid_month"] = _edit_selected_lpm
-                            item["pending_entitlements"] = []
-                        st.success(t("تم تعديل العنصر.", "Item updated."))
-                        st.rerun()
-            with a2:
-                if st.button(t("حذف", "Delete"), key=f"acct_tpl_delete_{i}", use_container_width=True):
-                    recurring_items.pop(i)
-                    st.success(t("تم حذف العنصر.", "Item deleted."))
+            name_col, amount_col, action_col = st.columns([3, 2, 1])
+            with name_col:
+                st.markdown(f"**{html.escape(item_name)}**")
+                st.caption(f"{item_type_label} • {state}")
+            with amount_col:
+                st.markdown(f"**{item_amount:,.0f} {item_currency}**")
+            with action_col:
+                if st.button(t("تعديل", "Edit"), key=f"acct_tpl_edit_open_{safe_key}", use_container_width=True):
+                    st.session_state["account_edit_item_id"] = item_key
                     st.rerun()
 
-            st.markdown("---")
+            if str(st.session_state.get("account_edit_item_id") or "") == item_key:
+                selected_item = item
+                selected_index = i
+                selected_key = item_key
 
-    if st.session_state["account_templates_open"]:
-        st.markdown(f"#### {t('إدارة العناصر الشهرية', 'Monthly Items')}")
-        _render_templates_manager()
-        if st.button(
-            t("إغلاق إدارة العناصر الشهرية", "Close Monthly Items"),
-            key="close_templates_inline_btn",
-            use_container_width=True,
-        ):
-            st.session_state["account_templates_open"] = False
-            st.rerun()
+        if selected_item is not None:
+            if hasattr(st, "dialog"):
+                @st.dialog(t("تعديل العنصر", "Edit Item"))
+                def _show_edit_item_dialog():
+                    _render_item_edit_form(selected_item, selected_index, selected_key)
+
+                _show_edit_item_dialog()
+            else:
+                with st.expander(t("تعديل العنصر", "Edit Item"), expanded=True):
+                    _render_item_edit_form(selected_item, selected_index, selected_key)
 
     active_items = [item for item in recurring_items if item.get("active", True)]
     for item in active_items:
@@ -1179,18 +1199,7 @@ def render(month_key: str, month: str, year: int):
     with rc2:
         st.metric(t("إجمالي الدخل المتوقع غير المستلم", "Total Expected Income Not Received"), f"{expected_incomes_total:,.0f} {currency_view}")
 
-    _render_monthly_items_styles()
-
-    if not active_items:
-        st.markdown(
-            f"""
-            <div class="floosy-monthly-item-empty" style="direction:{'ltr' if is_ltr else 'rtl'};text-align:{'left' if is_ltr else 'right'};">
-                {t("لا توجد عناصر شهرية بعد. ابدأ بإضافة أول عنصر من إدارة العناصر الشهرية.", "No monthly items yet. Start by adding your first item from Manage Monthly Items.")}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
+    if active_items:
         for idx, item in enumerate(active_items):
             pending = item.get("pending_entitlements", [])
             pay_form_key = f"open_pay_form_{idx}"
@@ -1220,7 +1229,8 @@ def render(month_key: str, month: str, year: int):
             latest_paid_date_value = str(item.get("last_paid_date") or "").strip()
             if not latest_paid_date_value and latest_confirmed_tx:
                 latest_paid_date_value = str(latest_confirmed_tx.get("date") or "").strip()
-            latest_paid_date_label = _ltr_token(_parse_iso_date(latest_paid_date_value).strftime("%Y-%m-%d")) if _parse_iso_date(latest_paid_date_value) else ""
+            parsed_latest_paid_date = _parse_iso_date(latest_paid_date_value)
+            latest_paid_date_label = _ltr_token(parsed_latest_paid_date.strftime("%Y-%m-%d")) if parsed_latest_paid_date else ""
             due_summary = ""
             if oldest_pending_label or oldest_due_label:
                 due_summary = (
@@ -1235,15 +1245,15 @@ def render(month_key: str, month: str, year: int):
                 )
             amount_text = f"{float(item.get('amount', 0.0)):,.0f} {item_currency}"
             meta_rows = [
-                f'<div class="floosy-monthly-item-meta" style="color:{meta_color};">{var_txt} | {day_label}: {item.get("day", 1)}</div>'
+                f'<div class="floosy-monthly-item-meta" style="color:{meta_color};">{html.escape(var_txt)} | {html.escape(day_label)}: {item.get("day", 1)}</div>'
             ]
             if due_summary:
                 meta_rows.append(
-                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:3px;">{due_summary}</div>'
+                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:3px;">{html.escape(due_summary)}</div>'
                 )
             if payment_summary:
                 meta_rows.append(
-                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:2px;">{payment_summary}</div>'
+                    f'<div class="floosy-monthly-item-meta" style="color:{meta_color};margin-top:2px;">{html.escape(payment_summary)}</div>'
                 )
             meta_html = "".join(meta_rows)
 
@@ -1251,10 +1261,10 @@ def render(month_key: str, month: str, year: int):
                 f"""
                 <div class="floosy-monthly-item-card" style="background:{card_background}; {border_side}:6px solid {border}; direction:{direction}; text-align:{align};">
                     <div class="floosy-monthly-item-head">
-                        <div class="floosy-monthly-item-name" style="color:{title_color};">{item.get('name',t('بدون اسم','Untitled'))}</div>
-                        <div class="floosy-monthly-item-amount">{amount_text}</div>
+                        <div class="floosy-monthly-item-name" style="color:{title_color};">{html.escape(str(item.get('name') or t('بدون اسم', 'Untitled')))}</div>
+                        <div class="floosy-monthly-item-amount">{html.escape(amount_text)}</div>
                     </div>
-                    <div class="floosy-monthly-item-state" style="color:{state_color};">{state_txt}</div>
+                    <div class="floosy-monthly-item-state" style="color:{state_color};">{html.escape(state_txt)}</div>
                     {meta_html}
                 </div>
                 """,
@@ -1390,6 +1400,9 @@ def render(month_key: str, month: str, year: int):
                         st.session_state[f"pay_proof_nonce_{idx}"] = int(st.session_state.get(f"pay_proof_nonce_{idx}", 0)) + 1
                         st.success(t("تم تسجيل المعاملة في الحساب.", "Transaction recorded in account."))
                         st.rerun()
+
+    with st.expander(t("إدارة العناصر الشهرية", "Manage Monthly Items"), expanded=bool(st.session_state.get("account_templates_open", False))):
+        _render_templates_manager()
 
     st.divider()
 
