@@ -681,7 +681,10 @@ class FinancialAnalyzer:
             message_en = "Amounts need follow-up"
             detail_ar = f"توجد عناصر مفتوحة أو متأخرة بقيمة {follow_up_total:,.2f} {currency_symbol_ar}."
             detail_en = f"Open or overdue items total {follow_up_total:,.2f} {currency_symbol_en}."
-        elif project_impact["personal_net_after_support"] < 0:
+        elif (
+            project_impact["project_deficit_this_month"] > 0
+            and project_impact["personal_net_after_support"] < 0
+        ):
             status = "project_pressure"
             message_ar = "المشاريع تضغط على الحساب الشخصي"
             message_en = "Projects are pressuring the personal account"

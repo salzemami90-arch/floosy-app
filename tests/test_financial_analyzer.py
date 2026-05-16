@@ -162,6 +162,47 @@ class FinancialAnalyzerTests(unittest.TestCase):
         self.assertEqual(brief["status"], "note_pattern")
         self.assertIn("Starbucks", brief["message_en"])
 
+    def test_dashboard_brief_does_not_blame_empty_project_for_personal_expense(self):
+        analyzer = FinancialAnalyzer(_FakeRepo())
+        session_state = {
+            "transactions": {
+                "2026-مايو": [
+                    {"type": "مصروف", "amount": 6.0, "currency": "د.ك - دينار كويتي", "category": "مبيعات"}
+                ]
+            },
+            "recurring": {
+                "items": [
+                    {
+                        "name": "راتب",
+                        "type": "دخل",
+                        "amount": 100.0,
+                        "currency": "د.ك - دينار كويتي",
+                        "day": 25,
+                        "active": True,
+                        "last_paid_month": "",
+                    }
+                ]
+            },
+            "documents": [],
+            "project_data": {
+                "2026-مايو": {
+                    "projects": {
+                        "ورز": {"project_type": "تجاري", "transactions": []}
+                    }
+                }
+            },
+            "savings": {},
+        }
+
+        brief = analyzer.dashboard_brief(
+            session_state,
+            "2026-مايو",
+            "د.ك - دينار كويتي",
+        )
+
+        self.assertNotEqual(brief["status"], "project_pressure")
+        self.assertNotIn("Projects", brief["message_en"])
+
 
 if __name__ == "__main__":
     unittest.main()
