@@ -6,7 +6,8 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import arabic_months, english_months
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import currency_short_label
+from services.i18n import format_i18n, make_t, get_lang_code, get_months
 from models.tax_profile import TaxProfile
 from repositories.session_repo import SessionStateRepository
 from services.tax_export_service import TaxExportService
@@ -19,6 +20,7 @@ STATUS_ORDER = ["draft", "sent", "paid", "cancelled"]
 
 
 def _status_label(status: str, is_en: bool) -> str:
+    t = make_t()
     labels = {
         "draft": ("مسودة", "Draft"),
         "sent": ("مرسلة", "Sent"),
@@ -26,12 +28,7 @@ def _status_label(status: str, is_en: bool) -> str:
         "cancelled": ("ملغاة", "Cancelled"),
     }
     ar, en = labels.get(status, labels["draft"])
-    return en if is_en else ar
-
-
-def _currency_view(symbol: str, is_en: bool) -> str:
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    return currency_map_en.get(symbol, symbol) if is_en else symbol
+    return t(ar, en)
 
 
 def _safe_float(raw_value, fallback=0.0) -> float:
@@ -458,9 +455,10 @@ def _render_add_invoice_form(
                 )
         else:
             st.caption(
-                t(
-                    f"النسبة المستخدمة: {effective_tax_rate:.3f}% | شامل الضريبة: {'نعم' if effective_include_tax else 'لا'}",
-                    f"Tax rate: {effective_tax_rate:.3f}% | Amount includes tax: {'yes' if effective_include_tax else 'no'}",
+                format_i18n(
+                    "invoice_tax_rate_caption",
+                    rate=effective_tax_rate,
+                    includes_tax=t("نعم", "Yes") if effective_include_tax else t("لا", "No"),
                 )
             )
 
@@ -524,9 +522,9 @@ def _render_add_invoice_form(
             }
             created = service.create_invoice(payload)
             st.session_state["tax_add_invoice_open"] = False
-            st.session_state["tax_invoice_notice"] = t(
-                f"تم حفظ الفاتورة {created.invoice_number}.",
-                f"Invoice {created.invoice_number} saved.",
+            st.session_state["tax_invoice_notice"] = format_i18n(
+                "invoice_saved",
+                number=created.invoice_number,
             )
             st.rerun()
 
@@ -625,9 +623,10 @@ def _render_edit_invoice_form(
                 e_include = bool(inherited_edit["prices_include_tax"])
                 e_tax_source = "project" if inherited_edit.get("source") == "project" else "global"
                 st.caption(
-                    t(
-                        f"النسبة المستخدمة: {e_tax_rate:.3f}% | شامل الضريبة: {'نعم' if e_include else 'لا'}",
-                        f"Tax rate: {e_tax_rate:.3f}% | Amount includes tax: {'yes' if e_include else 'no'}",
+                    format_i18n(
+                        "invoice_tax_rate_caption",
+                        rate=e_tax_rate,
+                        includes_tax=t("نعم", "Yes") if e_include else t("لا", "No"),
                     )
                 )
             else:
@@ -635,9 +634,11 @@ def _render_edit_invoice_form(
                 e_include = bool(getattr(selected_inv, "prices_include_tax", False))
                 e_tax_source = stored_source
                 st.caption(
-                    t(
-                        f"تم الحفاظ على إعداد الفاتورة: {e_tax_rate:.3f}% | شامل الضريبة: {'نعم' if e_include else 'لا'} | المصدر: {_tax_source_label(e_tax_source, t)}",
-                        f"Invoice tax kept as-is: {e_tax_rate:.3f}% | Amount includes tax: {'yes' if e_include else 'no'} | Source: {_tax_source_label(e_tax_source, t)}",
+                    format_i18n(
+                        "invoice_tax_kept",
+                        rate=e_tax_rate,
+                        includes_tax=t("نعم", "Yes") if e_include else t("لا", "No"),
+                        source=_tax_source_label(e_tax_source, t),
                     )
                 )
 
@@ -700,9 +701,9 @@ def _render_edit_invoice_form(
         ok, updated = service.update_invoice(selected_idx, payload)
         if ok:
             st.session_state["tax_edit_invoice_idx"] = None
-            st.session_state["tax_invoice_notice"] = t(
-                f"تم تحديث الفاتورة {updated.invoice_number if updated else ''}.",
-                f"Invoice {updated.invoice_number if updated else ''} updated.",
+            st.session_state["tax_invoice_notice"] = format_i18n(
+                "invoice_updated",
+                number=updated.invoice_number if updated else "",
             )
             st.rerun()
         st.error(t("تعذر حفظ التعديل.", "Could not save changes."))
@@ -768,7 +769,7 @@ def render(month_key: str, month: str, year: int) -> None:
     service = InvoiceTaxService(repo)
     default_currency = settings.get("default_currency", "د.ك")
     currency_symbol = default_currency.split(" - ")[0] if " - " in default_currency else default_currency
-    currency_view = _currency_view(currency_symbol, is_en)
+    currency_view = currency_short_label(default_currency, _lc)
 
     st.markdown(
         """
@@ -792,9 +793,10 @@ def render(month_key: str, month: str, year: int) -> None:
 
     st.title(t("الفواتير والضرائب", "Invoices and Tax"))
     st.caption(
-        t(
-            f"إضافة الفواتير ومراجعة الضريبة لشهر {month_display} {year}",
-            f"Add invoices and review tax for {month_display} {year}",
+        format_i18n(
+            "tax_page_month_caption",
+            month=month_display,
+            year=year,
         )
     )
 
@@ -850,9 +852,11 @@ def render(month_key: str, month: str, year: int) -> None:
     st.markdown("---")
 
     st.caption(
-        t(
-            f"أساس التقرير: {'نقدي' if report.get('basis') == 'cash' else 'استحقاق'} | مفتوح غير مسدد: {report['totals'].get('outstanding_open_total', 0.0):,.2f} {currency_view}",
-            f"Basis: {report.get('basis', 'cash').title()} | Open outstanding: {report['totals'].get('outstanding_open_total', 0.0):,.2f} {currency_view}",
+        format_i18n(
+            "tax_basis_summary",
+            basis=t("نقدي", "Cash") if report.get("basis") == "cash" else t("استحقاق", "Accrual"),
+            amount=float(report["totals"].get("outstanding_open_total", 0.0) or 0.0),
+            currency=currency_view,
         )
     )
 
@@ -941,9 +945,10 @@ def render(month_key: str, month: str, year: int) -> None:
 
     if st.session_state.get("tax_reports_open", False):
         st.caption(
-            t(
-                f"ملخص شهر {month_display} {year} والتصدير في مكان واحد.",
-                f"{month_display} {year} summary and exports in one place.",
+            format_i18n(
+                "tax_reports_month_caption",
+                month=month_display,
+                year=year,
             )
         )
 
@@ -962,9 +967,12 @@ def render(month_key: str, month: str, year: int) -> None:
 
         if tax_basis_mode == "net_profit":
             st.info(
-                t(
-                    f"الاحتساب الحالي على صافي الربح: {estimate['income']:,.2f} دخل - {estimate['expense']:,.2f} مصروف = {estimate['net_profit']:,.2f} {currency_view}.",
-                    f"Current estimate uses net profit: {estimate['income']:,.2f} income - {estimate['expense']:,.2f} expense = {estimate['net_profit']:,.2f} {currency_view}.",
+                format_i18n(
+                    "tax_estimate_net_profit",
+                    income=float(estimate["income"]),
+                    expense=float(estimate["expense"]),
+                    net=float(estimate["net_profit"]),
+                    currency=currency_view,
                 )
             )
         else:
@@ -974,17 +982,19 @@ def render(month_key: str, month: str, year: int) -> None:
                 else t("الإجمالي قبل الضريبة", "Invoice Subtotal")
             )
             st.info(
-                t(
-                    f"الاحتساب الحالي على الفواتير/المبيعات. الأساس المستخدم: {invoice_base_label} = {estimate['basis_amount']:,.2f} {currency_view}.",
-                    f"Current estimate uses invoices/sales. Base used: {invoice_base_label} = {estimate['basis_amount']:,.2f} {currency_view}.",
+                format_i18n(
+                    "tax_estimate_invoice",
+                    base=invoice_base_label,
+                    amount=float(estimate["basis_amount"]),
+                    currency=currency_view,
                 )
             )
 
         if report["counts"].get("overdue_open", 0) > 0:
             st.warning(
-                t(
-                    f"يوجد {report['counts']['overdue_open']} فاتورة مفتوحة متأخرة الاستحقاق.",
-                    f"There are {report['counts']['overdue_open']} open overdue invoice(s).",
+                format_i18n(
+                    "overdue_open_invoices",
+                    count=report["counts"]["overdue_open"],
                 )
             )
 

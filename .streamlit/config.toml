@@ -1,6 +1,9 @@
 [server]
 headless = true
 maxUploadSize = 25
+# "auto" uses Watchdog on macOS when installed (see requirements.txt); more reliable than poll on Desktop.
+fileWatcherType = "auto"
+runOnSave = true
 
 [browser]
 gatherUsageStats = false

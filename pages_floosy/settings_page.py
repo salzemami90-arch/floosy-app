@@ -17,6 +17,7 @@ from config_floosy import (
     sync_browser_preferences_state,
 )
 from services.cloud_auth_cookie import clear_cloud_auth_cookie, remember_cloud_auth
+from services.currency_localization import currency_option_label
 from services.i18n import LANGUAGE_NAMES, LANGUAGES, make_t, is_rtl as _is_rtl
 from services.cloud_sync_guard import (
     clear_cloud_sync_guard,
@@ -33,28 +34,8 @@ from services.supabase_sync import SupabaseSyncClient
 KUWAIT_TZ = timezone(timedelta(hours=3), name="Asia/Kuwait")
 
 
-CURRENCY_OPTION_LABELS: dict[str, dict[str, str]] = {
-    "د.ك - دينار كويتي": {"en": "KWD - Kuwaiti Dinar", "zh": "KWD - 科威特第纳尔", "ko": "KWD - 쿠웨이트 디나르", "ja": "KWD - クウェートディナール", "id": "KWD - Dinar Kuwait", "ms": "KWD - Dinar Kuwait"},
-    "ر.س - ريال سعودي": {"en": "SAR - Saudi Riyal", "zh": "SAR - 沙特里亚尔", "ko": "SAR - 사우디 리얄", "ja": "SAR - サウジリヤル", "id": "SAR - Riyal Saudi", "ms": "SAR - Riyal Saudi"},
-    "د.إ - درهم إماراتي": {"en": "AED - UAE Dirham", "zh": "AED - 阿联酋迪拉姆", "ko": "AED - UAE 디르함", "ja": "AED - UAEディルハム", "id": "AED - Dirham UEA", "ms": "AED - Dirham UEA"},
-    "$ - دولار أمريكي": {"en": "USD - US Dollar", "zh": "USD - 美元", "ko": "USD - 미국 달러", "ja": "USD - 米ドル", "id": "USD - Dolar AS", "ms": "USD - Dolar AS"},
-    "€ - يورو": {"en": "EUR - Euro", "zh": "EUR - 欧元", "ko": "EUR - 유로", "ja": "EUR - ユーロ", "id": "EUR - Euro", "ms": "EUR - Euro"},
-    "¥ - 人民币": {"en": "CNY - Chinese Yuan", "zh": "CNY - 人民币", "ko": "CNY - 중국 위안", "ja": "CNY - 中国人民元", "id": "CNY - Yuan Tiongkok", "ms": "CNY - Yuan Tiongkok"},
-    "₩ - 원": {"en": "KRW - Korean Won", "zh": "KRW - 韩元", "ko": "KRW - 대한민국 원", "ja": "KRW - 韓国ウォン", "id": "KRW - Won Korea", "ms": "KRW - Won Korea"},
-    "¥ - 円": {"en": "JPY - Japanese Yen", "zh": "JPY - 日元", "ko": "JPY - 일본 엔", "ja": "JPY - 日本円", "id": "JPY - Yen Jepang", "ms": "JPY - Yen Jepang"},
-    "Rp - Rupiah": {"en": "IDR - Indonesian Rupiah", "zh": "IDR - 印尼盾", "ko": "IDR - 인도네시아 루피아", "ja": "IDR - インドネシアルピア", "id": "IDR - Rupiah Indonesia", "ms": "IDR - Rupiah Indonesia"},
-    "S$ - SGD": {"en": "SGD - Singapore Dollar", "zh": "SGD - 新加坡元", "ko": "SGD - 싱가포르 달러", "ja": "SGD - シンガポールドル", "id": "SGD - Dolar Singapura", "ms": "SGD - Dolar Singapura"},
-}
-
-
 def _currency_option_label(value: str, lang_code: str) -> str:
-    clean_value = str(value or "").strip()
-    if lang_code == "ar":
-        return clean_value
-    labels = CURRENCY_OPTION_LABELS.get(clean_value)
-    if labels:
-        return labels.get(lang_code, labels.get("en", clean_value))
-    return clean_value
+    return currency_option_label(value, lang_code)
 
 
 def _cloud_error_text(error, t) -> str:
@@ -271,98 +252,191 @@ def _render_settings_shell_css() -> None:
     st.markdown(
         """
         <style>
+        section[data-testid="stMain"] .stMainBlockContainer.block-container,
+        section[data-testid="stMain"] .block-container {
+            max-width: min(1240px, 100%) !important;
+            padding-top: 0 !important;
+            padding-left: clamp(1rem, 2.2vw, 2rem) !important;
+            padding-right: clamp(1rem, 2.2vw, 2rem) !important;
+        }
+        section[data-testid="stMain"] div[data-testid="stVerticalBlock"] {
+            gap: 0.72rem;
+        }
+        section[data-testid="stMain"] h1 {
+            margin-top: 0 !important;
+            margin-bottom: 0.18rem !important;
+            font-size: 1.86rem !important;
+            line-height: 1.08 !important;
+            letter-spacing: 0 !important;
+            max-width: 100% !important;
+            overflow-wrap: anywhere !important;
+            padding-inline: 0.32rem !important;
+            box-sizing: border-box !important;
+        }
+        section[data-testid="stMain"] h2,
+        section[data-testid="stMain"] h3 {
+            margin-top: 0.35rem !important;
+            margin-bottom: 0.35rem !important;
+            line-height: 1.18 !important;
+            letter-spacing: 0 !important;
+        }
+        section[data-testid="stMain"] h3 {
+            font-size: 1.38rem !important;
+        }
+        section[data-testid="stMain"] p,
+        section[data-testid="stMain"] .stCaption,
+        section[data-testid="stMain"] [data-testid="stCaptionContainer"] {
+            line-height: 1.48;
+        }
         .goushfi-settings-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-            margin: 10px 0 18px 0;
+            gap: 10px;
+            margin: 8px 0 14px 0;
         }
         .goushfi-settings-card {
             border: 1px solid rgba(15,23,42,0.10);
             border-radius: 14px;
             background: rgba(255,255,255,0.82);
-            padding: 14px 14px 12px 14px;
-            min-height: 96px;
-            box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+            padding: 13px 14px 11px 14px;
+            min-height: 90px;
+            box-shadow: 0 8px 20px rgba(15,23,42,0.045);
         }
         .goushfi-settings-card-title {
-            font-size: 1.02rem;
+            font-size: 0.98rem;
             font-weight: 800;
             color: #0f172a;
             margin-bottom: 4px;
         }
         .goushfi-settings-card-caption {
             color: #64748b;
-            font-size: 0.88rem;
+            font-size: 0.84rem;
             line-height: 1.45;
         }
         .goushfi-settings-section-kicker {
             color: #64748b;
             font-weight: 700;
-            font-size: 0.88rem;
-            margin-bottom: 2px;
+            font-size: 0.78rem;
+            margin-bottom: 0;
         }
         .goushfi-profile-card {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
             border: 1px solid rgba(15,23,42,0.10);
             border-radius: 16px;
             background: linear-gradient(135deg, rgba(15,95,140,0.10), rgba(18,149,107,0.12));
-            padding: 16px;
-            margin: 8px 0 18px 0;
-            box-shadow: 0 10px 24px rgba(15,23,42,0.07);
+            padding: 15px;
+            margin: 6px 0 14px 0;
+            box-shadow: 0 10px 22px rgba(15,23,42,0.055);
         }
         .goushfi-profile-avatar {
-            width: 72px;
-            height: 72px;
+            width: 66px;
+            height: 66px;
             border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex: 0 0 72px;
+            flex: 0 0 66px;
             background: linear-gradient(135deg, #0f5f8c, #12956b);
             color: #fff;
-            font-size: 1.75rem;
+            font-size: 1.55rem;
             font-weight: 800;
-            box-shadow: 0 8px 18px rgba(15,95,140,0.24);
+            box-shadow: 0 8px 16px rgba(15,95,140,0.20);
         }
         .goushfi-profile-name {
-            font-size: 1.2rem;
+            font-size: 1.12rem;
             font-weight: 800;
             color: #0f172a;
+            line-height: 1.24;
         }
         .goushfi-profile-meta {
             color: #475569;
-            font-size: 0.92rem;
-            margin-top: 4px;
-            line-height: 1.55;
+            font-size: 0.86rem;
+            margin-top: 3px;
+            line-height: 1.45;
         }
         .goushfi-settings-summary-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px 14px;
-            margin-top: 12px;
+            gap: 8px 12px;
+            margin-top: 10px;
         }
         .goushfi-settings-summary-item {
             border-top: 1px solid rgba(15,23,42,0.08);
-            padding-top: 8px;
+            padding-top: 7px;
             min-width: 0;
         }
         .goushfi-settings-summary-label {
             color: #64748b;
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             font-weight: 700;
             margin-bottom: 2px;
+            line-height: 1.25;
         }
         .goushfi-settings-summary-value {
             color: #0f172a;
-            font-size: 0.92rem;
+            font-size: 0.88rem;
             font-weight: 800;
             word-break: break-word;
+            line-height: 1.32;
         }
         .goushfi-profile-fields {
-            margin-top: 8px;
+            margin-top: 6px;
+        }
+        section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: rgba(15, 23, 42, 0.10) !important;
+            border-radius: 15px !important;
+            background: rgba(255, 255, 255, 0.64) !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035) !important;
+        }
+        section[data-testid="stMain"] div[data-testid="stExpander"] {
+            border: 1px solid rgba(15, 95, 140, 0.10) !important;
+            border-radius: 15px !important;
+            background: rgba(255, 255, 255, 0.74) !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04) !important;
+            margin: 0.15rem 0 0.45rem 0 !important;
+        }
+        section[data-testid="stMain"] div[data-testid="stExpander"] details summary {
+            padding: 0.72rem 0.9rem !important;
+            background: linear-gradient(90deg, rgba(15, 95, 140, 0.055), rgba(18, 149, 107, 0.055)) !important;
+            border-bottom-color: rgba(15, 95, 140, 0.06) !important;
+            font-size: 0.94rem !important;
+            font-weight: 800 !important;
+            line-height: 1.25 !important;
+        }
+        section[data-testid="stMain"] div[data-testid="stExpander"] details > div {
+            padding: 0.42rem 0.5rem 0.35rem 0.5rem !important;
+        }
+        section[data-testid="stMain"] label[data-testid="stWidgetLabel"] p {
+            font-size: 0.82rem !important;
+            line-height: 1.18 !important;
+            margin-bottom: 0.15rem !important;
+        }
+        section[data-testid="stMain"] .stButton button,
+        section[data-testid="stMain"] .stDownloadButton button {
+            min-height: 40px;
+        }
+        section[data-testid="stMain"] .stTextInput input,
+        section[data-testid="stMain"] .stNumberInput input,
+        section[data-testid="stMain"] .stDateInput input {
+            min-height: 40px !important;
+        }
+        section[data-testid="stMain"] .stSelectbox [data-baseweb="select"] > div {
+            min-height: 40px !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+        @media (max-width: 1180px) {
+            section[data-testid="stMain"] .stMainBlockContainer.block-container,
+            section[data-testid="stMain"] .block-container {
+                max-width: min(100%, 1120px) !important;
+                padding-left: 0.85rem !important;
+                padding-right: 0.85rem !important;
+            }
+            section[data-testid="stMain"] h1 {
+                font-size: 1.42rem !important;
+            }
         }
         @media (max-width: 760px) {
             .goushfi-settings-grid {
@@ -371,9 +445,31 @@ def _render_settings_shell_css() -> None:
             .goushfi-profile-card {
                 align-items: flex-start;
                 flex-direction: column;
+                gap: 10px;
+                padding: 13px;
+                margin-bottom: 10px;
             }
             .goushfi-settings-summary-grid {
                 grid-template-columns: 1fr;
+                gap: 7px;
+            }
+            section[data-testid="stMain"] .stMainBlockContainer.block-container,
+            section[data-testid="stMain"] .block-container {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            section[data-testid="stMain"] div[data-testid="stVerticalBlock"] {
+                gap: 0.62rem;
+            }
+            section[data-testid="stMain"] h1 {
+                font-size: 1.16rem !important;
+                line-height: 1.16 !important;
+            }
+            section[data-testid="stMain"] h3 {
+                font-size: 1.18rem !important;
+            }
+            section[data-testid="stMain"] div[data-testid="stExpander"] details summary {
+                padding: 0.66rem 0.75rem !important;
             }
         }
         </style>

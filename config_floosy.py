@@ -5,6 +5,7 @@ import os
 import json
 import base64
 from urllib.parse import urlparse
+from services.currency_localization import currency_matches
 from services.local_store import delete_sqlite_payload, load_sqlite_payload, save_sqlite_payload
 from services.expense_tax_service import ExpenseTaxService
 
@@ -720,17 +721,43 @@ section[data-testid="stMain"] {
     box-sizing: border-box !important;
 }
 
+header[data-testid="stHeader"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    background: transparent !important;
+}
+
+header[data-testid="stHeader"] * {
+    display: none !important;
+}
+
+#stDecoration {
+    display: none !important;
+}
+
 /* Hosted + local: trim Streamlit default top padding on the main column */
 section[data-testid="stMain"] > div {
     padding-top: 0 !important;
+}
+
+div[data-testid="stElementContainer"]:has(div[data-testid="stMarkdownContainer"] > style),
+div[data-testid="stElementContainer"]:has(div[data-testid="stMarkdownContainer"] > script),
+div[data-testid="stElementContainer"]:has(iframe[height="0"]) {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
 }
 
 .main .block-container {
     max-width: min(1180px, 100%) !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding-top: 0.2rem !important;
-    padding-bottom: 2rem !important;
+    padding-top: 0 !important;
+    padding-bottom: 1.8rem !important;
 }
 
 h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3 {
@@ -763,8 +790,8 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 
 .flossy-header {
     width: 100%;
-    padding: 12px 20px;
-    margin-top: -1.05rem;
+    padding: 10px 18px;
+    margin-top: 0;
     border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
     color: #f8fafc;
@@ -773,7 +800,7 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     align-items: center;
     gap: 12px;
-    min-height: 84px;
+    min-height: 82px;
     box-shadow: var(--shadow-soft);
 }
 
@@ -797,11 +824,11 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
-    flex: 0 0 80px;
-    max-width: 80px;
-    max-height: 80px;
+    width: 84px;
+    height: 84px;
+    flex: 0 0 84px;
+    max-width: 84px;
+    max-height: 84px;
     overflow: hidden;
     box-sizing: border-box;
     border-radius: 12px;
@@ -825,8 +852,8 @@ h1, h2, h3, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownCont
 .flossy-header img {
     height: 100% !important;
     width: 100% !important;
-    max-height: 80px !important;
-    max-width: 80px !important;
+    max-height: 84px !important;
+    max-width: 84px !important;
     object-fit: contain !important;
     object-position: center !important;
     border-radius: 10px !important;
@@ -1029,6 +1056,7 @@ div[data-testid="stDialog"] div[role="dialog"] {
 
 hr {
     border-color: var(--line) !important;
+    margin: 0.65rem 0 !important;
 }
 
 .flossy-fab {
@@ -1073,7 +1101,7 @@ hr {
         max-width: 100% !important;
         padding-left: 0.9rem !important;
         padding-right: 0.9rem !important;
-        padding-top: 0.2rem !important;
+        padding-top: 0 !important;
     }
 
     [data-testid="stSidebar"] {
@@ -1128,15 +1156,15 @@ hr {
     .main .block-container {
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
-        padding-top: 0.35rem !important;
+        padding-top: 0.12rem !important;
         padding-bottom: 1.2rem !important;
     }
 
     .flossy-header {
-        min-height: 76px;
+        min-height: 74px;
         font-size: 21px;
-        padding: 10px 14px;
-        margin-top: -0.85rem;
+        padding: 9px 13px;
+        margin-top: 0;
     }
 
     .flossy-header-inner {
@@ -1145,16 +1173,16 @@ hr {
 
     .flossy-header img.flossy-header-logo,
     .flossy-header img {
-        max-height: 65px !important;
-        max-width: 65px !important;
+        max-height: 68px !important;
+        max-width: 68px !important;
     }
 
     .flossy-header-logo-wrap {
-        width: 65px;
-        height: 65px;
-        flex: 0 0 65px;
-        max-width: 65px;
-        max-height: 65px;
+        width: 68px;
+        height: 68px;
+        flex: 0 0 68px;
+        max-width: 68px;
+        max-height: 68px;
     }
 
     [data-testid="stSidebar"] {
@@ -1417,7 +1445,7 @@ def get_all_transactions_df(currency: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     df_all = pd.DataFrame(all_tx)
-    df_all_curr = df_all[df_all["currency"] == currency].copy()
+    df_all_curr = df_all[df_all["currency"].apply(lambda value: currency_matches(value, currency))].copy()
     if df_all_curr.empty:
         return pd.DataFrame()
 

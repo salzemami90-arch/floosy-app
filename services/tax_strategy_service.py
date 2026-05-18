@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from models.tax_profile import TaxProfile
+from services.currency_localization import currency_matches
+from services.i18n import get_lang_code, translate_en
 
 
 class TaxStrategyService:
@@ -19,6 +21,8 @@ class TaxStrategyService:
         }
         mode = cls.normalize_basis_mode(basis_mode)
         ar, en = labels.get(mode, labels["invoice"])
+        if get_lang_code() not in {"ar", "en"}:
+            return translate_en(en, ar)
         return en if is_en else ar
 
     @staticmethod
@@ -30,9 +34,7 @@ class TaxStrategyService:
 
     @classmethod
     def _currency_matches(cls, left: str, right: str) -> bool:
-        if not right:
-            return True
-        return cls._currency_symbol(left) == cls._currency_symbol(right)
+        return currency_matches(left, right)
 
     @staticmethod
     def _to_float(raw_value, fallback: float = 0.0) -> float:

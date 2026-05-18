@@ -6,10 +6,12 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import arabic_months, english_months, load_transactions
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import currency_short_label
+from services.i18n import dashboard_brief_copy, format_i18n, make_t, get_lang_code, get_months
 from repositories.session_repo import SessionStateRepository
 from services.cash_flow_engine import CashFlowEngine
 from services.financial_analyzer import FinancialAnalyzer
+from services.transaction_categories import category_label
 
 
 def _previous_month_key(current_month: str, current_year: int) -> str:
@@ -36,22 +38,22 @@ def _quick_take_theme(status: str) -> dict:
         }
     if status in {"cash_pressure_90", "coverage_gap", "project_pressure"}:
         return {
-            "background": "#FEF2F2",
-            "border": "#EF4444",
-            "label": "#991B1B",
-            "text": "#7F1D1D",
-            "pill_bg": "#FFF1F2",
-            "pill_border": "#FECACA",
-            "pill_text": "#991B1B",
+            "background": "#FFF8F6",
+            "border": "#E8B4A3",
+            "label": "#8A4A3C",
+            "text": "#6F352C",
+            "pill_bg": "#FFFFFF",
+            "pill_border": "#F1D1C4",
+            "pill_text": "#8A4A3C",
         }
     if status in {"needs_follow_up", "spending_high", "docs_due", "note_pattern"}:
         return {
-            "background": "#FFFBEB",
-            "border": "#F59E0B",
+            "background": "#FFFDF5",
+            "border": "#F6C453",
             "label": "#92400E",
             "text": "#78350F",
-            "pill_bg": "#FFF7D6",
-            "pill_border": "#FDE68A",
+            "pill_bg": "#FFFFFF",
+            "pill_border": "#F9E7A7",
             "pill_text": "#92400E",
         }
     return {
@@ -69,8 +71,194 @@ def _card_colors(value: float) -> dict:
     if value > 0:
         return {"bg": "#EAF5EF", "border": "#047857", "label": "#065F46", "value": "#064E3B"}
     if value < 0:
-        return {"bg": "#FEF2F2", "border": "#EF4444", "label": "#991B1B", "value": "#7F1D1D"}
-    return {"bg": "#FFFBEB", "border": "#F59E0B", "label": "#92400E", "value": "#78350F"}
+        return {"bg": "#FFF8F6", "border": "#E8B4A3", "label": "#8A4A3C", "value": "#6F352C"}
+    return {"bg": "#F8FAFC", "border": "#CBD5E1", "label": "#64748B", "value": "#334155"}
+
+
+def _render_analyzer_polish_css(is_ltr: bool) -> None:
+    text_align = "left" if is_ltr else "right"
+    st.markdown(
+        f"""
+        <style>
+        section[data-testid="stMain"] .stMainBlockContainer.block-container,
+        section[data-testid="stMain"] .block-container {{
+            max-width: min(1180px, 100%) !important;
+            padding-top: 0.25rem !important;
+            padding-left: clamp(0.95rem, 2vw, 1.9rem) !important;
+            padding-right: clamp(0.95rem, 2vw, 1.9rem) !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stVerticalBlock"] {{
+            gap: 0.78rem;
+        }}
+        section[data-testid="stMain"] h1 {{
+            margin-bottom: 0.12rem !important;
+            font-size: 2.05rem !important;
+            line-height: 1.08 !important;
+            letter-spacing: 0 !important;
+        }}
+        section[data-testid="stMain"] h3 {{
+            margin-top: 0.4rem !important;
+            margin-bottom: 0.28rem !important;
+            font-size: 1.32rem !important;
+            line-height: 1.2 !important;
+            letter-spacing: 0 !important;
+        }}
+        section[data-testid="stMain"] h4 {{
+            margin-top: 0.35rem !important;
+            margin-bottom: 0.28rem !important;
+            line-height: 1.25 !important;
+            letter-spacing: 0 !important;
+        }}
+        section[data-testid="stMain"] p,
+        section[data-testid="stMain"] .stCaption,
+        section[data-testid="stMain"] [data-testid="stCaptionContainer"] {{
+            line-height: 1.48;
+        }}
+        .floosy-analyzer-action-card {{
+            min-height: 138px;
+            border-radius: 16px;
+            padding: 15px 16px 14px 16px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.075);
+            position: relative;
+            overflow: hidden;
+        }}
+        .floosy-analyzer-action-card::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,255,255,0.28));
+            pointer-events: none;
+        }}
+        .floosy-analyzer-action-card__content {{
+            position: relative;
+            z-index: 1;
+        }}
+        .floosy-analyzer-action-card__label {{
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 0.35rem;
+        }}
+        .floosy-analyzer-action-card__value {{
+            font-size: clamp(1.24rem, 2.6vw, 1.52rem);
+            font-weight: 850;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }}
+        .floosy-analyzer-action-card__delta {{
+            font-size: 0.78rem;
+            line-height: 1.38;
+            margin-top: 0.45rem;
+            overflow-wrap: anywhere;
+        }}
+        section[data-testid="stMain"] div[data-testid="stMetric"] {{
+            border: 1px solid rgba(15, 23, 42, 0.085);
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.72);
+            padding: 0.78rem 0.82rem;
+            min-height: 104px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+        }}
+        section[data-testid="stMain"] div[data-testid="stMetricLabel"] p {{
+            font-size: 0.78rem !important;
+            line-height: 1.24 !important;
+            color: #64748B !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+            text-align: {text_align} !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stMetricValue"] {{
+            font-size: 1.05rem !important;
+            line-height: 1.2 !important;
+            color: #0F172A !important;
+            overflow-wrap: anywhere !important;
+            text-align: {text_align} !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stMetricDelta"] p {{
+            font-size: 0.73rem !important;
+            line-height: 1.28 !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stAlert"] {{
+            border-radius: 14px !important;
+            border-color: rgba(15, 95, 140, 0.14) !important;
+            background: rgba(248, 250, 252, 0.86) !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035) !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stAlert"] p {{
+            font-size: 0.88rem !important;
+            line-height: 1.45 !important;
+            color: #334155 !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stExpander"] {{
+            border: 1px solid rgba(15, 95, 140, 0.10) !important;
+            border-radius: 15px !important;
+            background: rgba(255, 255, 255, 0.76) !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04) !important;
+            margin: 0.12rem 0 0.5rem 0 !important;
+            overflow: hidden !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stExpander"] details summary {{
+            min-height: 46px;
+            padding: 0.68rem 0.9rem !important;
+            background: linear-gradient(90deg, rgba(15, 95, 140, 0.055), rgba(18, 149, 107, 0.055)) !important;
+            font-size: 0.92rem !important;
+            font-weight: 800 !important;
+            line-height: 1.3 !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stExpander"] details[open] summary {{
+            border-bottom: 1px solid rgba(15, 95, 140, 0.08) !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stExpander"] details summary p {{
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stExpander"] details > div {{
+            padding: 0.45rem 0.55rem 0.4rem 0.55rem !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stDataFrame"] {{
+            border-radius: 13px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }}
+        @media (max-width: 760px) {{
+            section[data-testid="stMain"] .stMainBlockContainer.block-container,
+            section[data-testid="stMain"] .block-container {{
+                padding-left: 0.72rem !important;
+                padding-right: 0.72rem !important;
+            }}
+            section[data-testid="stMain"] h1 {{
+                font-size: 1.55rem !important;
+            }}
+            section[data-testid="stMain"] h3 {{
+                font-size: 1.14rem !important;
+            }}
+            section[data-testid="stMain"] div[data-testid="column"] {{
+                flex: 1 1 100% !important;
+                width: 100% !important;
+                min-width: 100% !important;
+            }}
+            .floosy-analyzer-action-card {{
+                min-height: 116px;
+                padding: 13px 14px;
+            }}
+            .floosy-analyzer-action-card__value {{
+                font-size: 1.24rem;
+            }}
+            section[data-testid="stMain"] div[data-testid="stMetric"] {{
+                min-height: 88px;
+                padding: 0.7rem 0.74rem;
+            }}
+            section[data-testid="stMain"] div[data-testid="stExpander"] details summary {{
+                padding: 0.64rem 0.72rem !important;
+                font-size: 0.86rem !important;
+            }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _render_action_card(title: str, value_text: str, delta_text: str, net_value: float, is_ltr: bool) -> None:
@@ -80,14 +268,16 @@ def _render_action_card(title: str, value_text: str, delta_text: str, net_value:
     text_align = "left" if is_ltr else "right"
     st.markdown(
         f"""
-        <div style="
-          border-radius:14px;padding:14px 16px;border:1px solid {colors['border']};
-          {accent_side}:5px solid {colors['border']};background:{colors['bg']};
+        <div class="floosy-analyzer-action-card" style="
+          border:1px solid {colors['border']};
+          {accent_side}:5px solid {colors['border']};background:linear-gradient(135deg, {colors['bg']}, #FFFFFF);
           direction:{text_dir};text-align:{text_align};
         ">
-          <div style="font-size:0.85rem;font-weight:700;color:{colors['label']};">{title}</div>
-          <div style="font-size:1.35rem;font-weight:800;color:{colors['value']};">{value_text}</div>
-          <div style="font-size:0.78rem;color:{colors['label']};margin-top:4px;">{delta_text}</div>
+          <div class="floosy-analyzer-action-card__content">
+            <div class="floosy-analyzer-action-card__label" style="color:{colors['label']};">{title}</div>
+            <div class="floosy-analyzer-action-card__value" style="color:{colors['value']};">{value_text}</div>
+            <div class="floosy-analyzer-action-card__delta" style="color:{colors['label']};">{delta_text}</div>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -102,18 +292,13 @@ def render(month_key: str, month: str, year: int):
     _display_months = get_months()
     month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
 
+    _render_analyzer_polish_css(is_ltr)
+
     st.title(t("المحلل المالي", "Financial Analyzer"))
-    st.caption(
-        t(
-            f"تحليل شهر {month_display} {year} مقارنة بالشهر السابق",
-            f"Analysis for {month_display} {year} compared to previous month",
-        )
-    )
+    st.caption(format_i18n("analyzer_month_caption", month=month_display, year=year))
 
     currency = st.session_state.settings.get("default_currency", "د.ك")
-    currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_ltr else currency_symbol
+    currency_view = currency_short_label(currency, _lc)
 
     repo = SessionStateRepository()
     analyzer = FinancialAnalyzer(repo)
@@ -160,18 +345,11 @@ def render(month_key: str, month: str, year: int):
     theme = _quick_take_theme("stable" if show_spending_note_on_good else brief_status)
     border_side = "border-left" if is_ltr else "border-right"
 
-    if show_spending_note_on_good:
-        brief_message = t("الوضع المالي تحت السيطرة", "Financial position is under control")
-        brief_detail = t(
-            "صافي 90 يوم ما زال إيجابيًا، لكن مصروف هذا الشهر أعلى من المعتاد.",
-            "Your 90-day net is still positive, but this month's spending is above usual.",
-        )
-    else:
-        brief_message = brief["message_en"] if is_ltr else brief["message_ar"]
-        brief_detail = brief["detail_en"] if is_ltr else brief["detail_ar"]
-
-    focus_label = brief["focus_label_en"] if is_ltr else brief["focus_label_ar"]
-    support_label = brief["support_label_en"] if is_ltr else brief["support_label_ar"]
+    brief_message, brief_detail, focus_label, support_label = dashboard_brief_copy(
+        brief,
+        currency_view,
+        spending_note_on_good=show_spending_note_on_good,
+    )
     focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
     support_value = f"{brief.get('support_value', 0.0):,.0f} {currency_view}"
 
@@ -233,9 +411,10 @@ def render(month_key: str, month: str, year: int):
             _render_action_card(
                 title=t("الاستحقاقات", "Entitlements"),
                 value_text=f"{coverage['net_coverage']:,.2f} {currency_view}",
-                delta_text=t(
-                    f"{coverage['overdue_count']} متأخر · {coverage['expected_count']} متوقع",
-                    f"{coverage['overdue_count']} overdue · {coverage['expected_count']} expected",
+                delta_text=format_i18n(
+                    "entitlement_card_delta",
+                    overdue=coverage["overdue_count"],
+                    expected=coverage["expected_count"],
                 ),
                 net_value=coverage["net_coverage"],
                 is_ltr=is_ltr,
@@ -244,9 +423,9 @@ def render(month_key: str, month: str, year: int):
             _render_action_card(
                 title=t("90 يوم", "90-Day Outlook"),
                 value_text=f"{projected_90['net']:,.2f} {currency_view}",
-                delta_text=t(
-                    f"{comparison_90['net_delta']:+,.2f} عن آخر 90 يوم",
-                    f"{comparison_90['net_delta']:+,.2f} vs last 90 days",
+                delta_text=format_i18n(
+                    "delta_vs_last_90",
+                    delta=comparison_90["net_delta"],
                 ),
                 net_value=projected_90["net"],
                 is_ltr=is_ltr,
@@ -315,9 +494,9 @@ def render(month_key: str, month: str, year: int):
 
         s1, s2 = st.columns(2)
         with s1:
-            st.write(t(f"عدد معاملات هذا الشهر: **{current['count']}**", f"Transactions this month: **{current['count']}**"))
+            st.write(format_i18n("transactions_this_month", count=current["count"]))
         with s2:
-            st.write(t(f"عدد معاملات الشهر السابق: **{previous['count']}**", f"Transactions previous month: **{previous['count']}**"))
+            st.write(format_i18n("transactions_previous_month", count=previous["count"]))
 
     with st.expander(
         _section_label(
@@ -335,11 +514,13 @@ def render(month_key: str, month: str, year: int):
             st.metric(t("إجمالي الالتزامات المتأخرة", "Total Overdue Commitments"), f"{coverage['overdue_commitments']:,.2f} {currency_view}")
 
         st.caption(
-            t(
-                f"الفعلي المسجل الآن: دخل {current['income']:,.2f} / مصاريف {current['expense']:,.2f}. "
-                f"غير المؤكد (دخل متوقع {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}) لا يدخل في الفعلي إلا بعد التأكيد.",
-                f"Recorded now: income {current['income']:,.2f} / expenses {current['expense']:,.2f}. "
-                f"Unconfirmed values (expected income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}) are not included in actual totals until confirmed.",
+            format_i18n(
+                "recorded_vs_unconfirmed",
+                income=current["income"],
+                expense=current["expense"],
+                expected=coverage["expected_income"],
+                commitments=coverage["overdue_commitments"],
+                currency=currency_view,
             )
         )
 
@@ -350,9 +531,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي الاستحقاقات غير المؤكدة", "Unconfirmed Entitlement Net"),
                 f"{coverage['net_coverage']:,.2f} {currency_view}",
-                delta=t(
-                    f"دخل متوقع {coverage['expected_income']:,.2f} - التزامات {coverage['overdue_commitments']:,.2f}",
-                    f"Expected income {coverage['expected_income']:,.2f} - commitments {coverage['overdue_commitments']:,.2f}",
+                delta=format_i18n(
+                    "expected_minus_commitments",
+                    expected=coverage["expected_income"],
+                    commitments=coverage["overdue_commitments"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -369,9 +552,10 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("التزامات متأخرة (غير مسددة)", "Overdue Commitments (Unpaid)"),
                 f"{coverage['overdue_commitments']:,.2f} {currency_view}",
-                delta=t(
-                    f"{coverage['overdue_count']} عنصر | {coverage.get('overdue_pending_months', coverage['overdue_count'])} شهر",
-                    f"{coverage['overdue_count']} item(s) | {coverage.get('overdue_pending_months', coverage['overdue_count'])} month(s)",
+                delta=format_i18n(
+                    "items_months_count",
+                    items=coverage["overdue_count"],
+                    months=coverage.get("overdue_pending_months", coverage["overdue_count"]),
                 ),
                 delta_color="inverse",
             )
@@ -379,9 +563,10 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("دخل متوقع غير مستلم", "Expected Income Not Received"),
                 f"{coverage['expected_income']:,.2f} {currency_view}",
-                delta=t(
-                    f"{coverage['expected_count']} عنصر | {coverage.get('expected_pending_months', coverage['expected_count'])} شهر",
-                    f"{coverage['expected_count']} item(s) | {coverage.get('expected_pending_months', coverage['expected_count'])} month(s)",
+                delta=format_i18n(
+                    "items_months_count",
+                    items=coverage["expected_count"],
+                    months=coverage.get("expected_pending_months", coverage["expected_count"]),
                 ),
             )
         with k3:
@@ -409,9 +594,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي آخر 90 يوم", "Net Last 90 Days"),
                 f"{actual_90['net']:,.2f} {currency_view}",
-                delta=t(
-                    f"دخل {actual_90['income']:,.2f} | مصروف {actual_90['expense']:,.2f}",
-                    f"Income {actual_90['income']:,.2f} | Expense {actual_90['expense']:,.2f}",
+                delta=format_i18n(
+                    "income_expense_delta",
+                    income=actual_90["income"],
+                    expense=actual_90["expense"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -419,9 +606,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي متوقع خلال 90 يوم", "Projected Net Next 90 Days"),
                 f"{projected_90['net']:,.2f} {currency_view}",
-                delta=t(
-                    f"دخل {projected_90['income']:,.2f} | مصروف {projected_90['expense']:,.2f}",
-                    f"Income {projected_90['income']:,.2f} | Expense {projected_90['expense']:,.2f}",
+                delta=format_i18n(
+                    "income_expense_delta",
+                    income=projected_90["income"],
+                    expense=projected_90["expense"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -438,9 +627,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("المتكرر المتوقع", "Recurring Planned"),
                 f"{(components_90['recurring_income'] - components_90['recurring_expense']):,.2f} {currency_view}",
-                delta=t(
-                    f"دخل {components_90['recurring_income']:,.2f} | مصروف {components_90['recurring_expense']:,.2f}",
-                    f"Income {components_90['recurring_income']:,.2f} | Expense {components_90['recurring_expense']:,.2f}",
+                delta=format_i18n(
+                    "income_expense_delta",
+                    income=components_90["recurring_income"],
+                    expense=components_90["recurring_expense"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -448,9 +639,10 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("تحصيل فواتير متوقع", "Open Invoice Inflow"),
                 f"{components_90['invoice_income']:,.2f} {currency_view}",
-                delta=t(
-                    f"متأخر حالي {carry_over['overdue_open_invoice_total']:,.2f}",
-                    f"Current overdue {carry_over['overdue_open_invoice_total']:,.2f}",
+                delta=format_i18n(
+                    "current_overdue_amount",
+                    amount=carry_over["overdue_open_invoice_total"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -458,9 +650,10 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("رسوم مستندات قريبة", "Upcoming Document Fees"),
                 f"{components_90['document_expense']:,.2f} {currency_view}",
-                delta=t(
-                    f"متأخر حالي {carry_over['overdue_document_fee_total']:,.2f}",
-                    f"Current overdue {carry_over['overdue_document_fee_total']:,.2f}",
+                delta=format_i18n(
+                    "current_overdue_amount",
+                    amount=carry_over["overdue_document_fee_total"],
+                    currency=currency_view,
                 ),
                 delta_color="inverse" if components_90["document_expense"] > 0 else "normal",
             )
@@ -477,9 +670,11 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي الاستحقاقات الحالية", "Current Entitlement Net"),
                 f"{carry_over['recurring_delayed_net']:,.2f} {currency_view}",
-                delta=t(
-                    f"دخل متوقع {carry_over['delayed_income']:,.2f} | التزامات {carry_over['overdue_commitments']:,.2f}",
-                    f"Expected income {carry_over['delayed_income']:,.2f} | commitments {carry_over['overdue_commitments']:,.2f}",
+                delta=format_i18n(
+                    "expected_income_commitments_delta",
+                    expected=carry_over["delayed_income"],
+                    commitments=carry_over["overdue_commitments"],
+                    currency=currency_view,
                 ),
                 delta_color="off",
             )
@@ -487,9 +682,9 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("فواتير متأخرة مفتوحة", "Overdue Open Invoices"),
                 f"{carry_over['overdue_open_invoice_total']:,.2f} {currency_view}",
-                delta=t(
-                    f"{carry_over['overdue_open_invoice_count']} فاتورة",
-                    f"{carry_over['overdue_open_invoice_count']} invoice(s)",
+                delta=format_i18n(
+                    "invoice_count",
+                    count=carry_over["overdue_open_invoice_count"],
                 ),
                 delta_color="off",
             )
@@ -497,9 +692,9 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("رسوم مستندات متأخرة", "Overdue Document Fees"),
                 f"{carry_over['overdue_document_fee_total']:,.2f} {currency_view}",
-                delta=t(
-                    f"{carry_over['overdue_document_count']} مستند",
-                    f"{carry_over['overdue_document_count']} document(s)",
+                delta=format_i18n(
+                    "document_count",
+                    count=carry_over["overdue_document_count"],
                 ),
                 delta_color="inverse" if carry_over["overdue_document_fee_total"] > 0 else "normal",
             )
@@ -537,7 +732,7 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي المشاريع (كل الشهور)", "Projects Net (All Months)"),
                 f"{project['all_net']:,.2f} {currency_view}",
-                delta=t(f"{project['all_count']} معاملة", f"{project['all_count']} transaction(s)"),
+                delta=format_i18n("transaction_count", count=project["all_count"]),
             )
 
         x1, x2, x3 = st.columns(3)
@@ -545,9 +740,10 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("الدعم المطلوب للمشاريع", "Estimated Project Support"),
                 f"{project_impact['estimated_personal_support']:,.2f} {currency_view}",
-                delta=t(
-                    f"عجز 3 أشهر: {project_impact['last_3m_project_deficit']:,.2f}",
-                    f"3M deficit: {project_impact['last_3m_project_deficit']:,.2f}",
+                delta=format_i18n(
+                    "three_month_deficit",
+                    amount=project_impact["last_3m_project_deficit"],
+                    currency=currency_view,
                 ),
                 delta_color="inverse",
             )
@@ -560,9 +756,9 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("صافي الحساب بعد دعم المشاريع", "Personal Net After Support"),
                 f"{project_impact['personal_net_after_support']:,.2f} {currency_view}",
-                delta=t(
-                    f"شهور عجز آخر 3: {project_impact['deficit_months_in_last_3']}",
-                    f"Deficit months in last 3: {project_impact['deficit_months_in_last_3']}",
+                delta=format_i18n(
+                    "deficit_months_last_3",
+                    count=project_impact["deficit_months_in_last_3"],
                 ),
                 delta_color="inverse" if project_impact["personal_net_after_support"] < 0 else "normal",
             )
@@ -603,25 +799,26 @@ def render(month_key: str, month: str, year: int):
             st.info(t("مصاريفك قريبة من متوسطك المعتاد.", "Your spending is close to your usual average."))
 
         if category_signal["top_category"]:
+            top_category = category_label(category_signal["top_category"], is_en)
             if category_signal["status"] == "high":
                 st.caption(
-                    t(
-                        f"أعلى تصنيف صرف الآن: {category_signal['top_category']} وهو أعلى من متوسطه السابق.",
-                        f"Top expense category now: {category_signal['top_category']}, and it is above its previous average.",
+                    format_i18n(
+                        "top_category_above",
+                        category=top_category,
                     )
                 )
             elif category_signal["status"] == "low":
                 st.caption(
-                    t(
-                        f"أعلى تصنيف صرف الآن: {category_signal['top_category']} وهو أقل من متوسطه السابق.",
-                        f"Top expense category now: {category_signal['top_category']}, and it is below its previous average.",
+                    format_i18n(
+                        "top_category_below",
+                        category=top_category,
                     )
                 )
             else:
                 st.caption(
-                    t(
-                        f"أعلى تصنيف صرف الآن: {category_signal['top_category']} وهو قريب من المتوسط.",
-                        f"Top expense category now: {category_signal['top_category']}, and it is near average.",
+                    format_i18n(
+                        "top_category_near",
+                        category=top_category,
                     )
                 )
 
@@ -641,8 +838,8 @@ def render(month_key: str, month: str, year: int):
             st.metric(
                 t("رسوم سنوية تقديرية", "Estimated Annual Fees"),
                 f"{docs['annual_fees_estimate']:,.2f} {currency_view}",
-                delta=t(f"منتهي: {docs['expired_count']}", f"Expired: {docs['expired_count']}"),
+                delta=format_i18n("expired_count", count=docs["expired_count"]),
                 delta_color="inverse" if docs["expired_count"] > 0 else "normal",
             )
 
-    st.caption(t(f"آخر تحديث: {date.today().isoformat()}", f"Last update: {date.today().isoformat()}"))
+    st.caption(format_i18n("last_update", date=date.today().isoformat()))

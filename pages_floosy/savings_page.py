@@ -1,18 +1,119 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import html
 
 from config_floosy import arabic_months, english_months, get_saving_totals
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import currency_short_label
+from services.i18n import format_i18n, make_t, get_lang_code, get_months
 from services.purchase_goal_service import PurchaseGoalService
+
+
+def _render_savings_page_polish_styles(is_ltr: bool) -> None:
+    align = "left" if is_ltr else "right"
+    direction = "ltr" if is_ltr else "rtl"
+    st.markdown(
+        f"""
+        <style>
+        section[data-testid="stMain"] .stMainBlockContainer.block-container,
+        section[data-testid="stMain"] .block-container {{
+            padding-top: 0 !important;
+        }}
+
+        section[data-testid="stMain"] h1 {{
+            margin-top: 0 !important;
+            margin-bottom: 0.05rem !important;
+        }}
+
+        section[data-testid="stMain"] div[data-testid="stVerticalBlock"] {{
+            gap: 0.72rem;
+        }}
+
+        section[data-testid="stMain"] h3 {{
+            margin-top: 0.35rem;
+            margin-bottom: 0.35rem;
+        }}
+
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetric"] {{
+            min-height: 86px;
+            padding: 13px 15px 11px 15px;
+        }}
+
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetricLabel"],
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetricValue"],
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetricDelta"] {{
+            direction: {direction};
+            text-align: {align};
+        }}
+
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetricLabel"] > div {{
+            font-size: 0.82rem !important;
+            line-height: 1.2 !important;
+            opacity: 0.94;
+        }}
+
+        div.st-key-savings_purchase_goal_summary div[data-testid="stMetricValue"] > div {{
+            line-height: 1.12 !important;
+        }}
+
+        div.st-key-savings_add_purchase_goal {{
+            margin: 0.2rem 0 0.45rem 0;
+        }}
+
+        .floosy-savings-empty-state {{
+            border: 1px dashed rgba(203, 213, 225, 0.72);
+            border-radius: 12px;
+            padding: 11px 12px;
+            background: rgba(248, 250, 252, 0.74);
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            margin: 0.35rem 0 0.65rem 0;
+            direction: {direction};
+            text-align: {align};
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_savings_empty_state(message: str) -> None:
+    st.markdown(
+        f'<div class="floosy-savings-empty-state">{html.escape(message)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _savings_tx_type_label(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"إيداع", "Deposit", t("إيداع", "Deposit")}:
+        return t("إيداع", "Deposit")
+    if clean_value in {"سحب", "Withdraw", t("سحب", "Withdraw")}:
+        return t("سحب", "Withdraw")
+    return clean_value
+
+
+def _canonical_savings_tx_type(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"إيداع", "Deposit", t("إيداع", "Deposit")}:
+        return "إيداع"
+    if clean_value in {"سحب", "Withdraw", t("سحب", "Withdraw")}:
+        return "سحب"
+    return clean_value
 
 
 def render(month_key: str, month: str, year: int):
     _lc = get_lang_code()
     is_en = _lc == "en"
+    is_ltr = _lc != "ar"
     t = make_t()
     _display_months = get_months()
     month_display = _display_months[arabic_months.index(month)] if (_lc != "ar" and month in arabic_months) else month
+
+    _render_savings_page_polish_styles(is_ltr)
 
     st.title(t("التوفير", "Savings"))
     st.caption(f"{month_display} {year}")
@@ -28,9 +129,7 @@ def render(month_key: str, month: str, year: int):
     savings_meta["purchase_goals"] = PurchaseGoalService.normalize_goals(savings_meta.get("purchase_goals", []))
 
     currency = st.session_state.settings["default_currency"]
-    currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
+    currency_view = currency_short_label(currency, _lc)
 
     s_data["goal"] = st.number_input(
         t("هدف التوفير الكلي", "Total Savings Goal"),
@@ -51,7 +150,7 @@ def render(month_key: str, month: str, year: int):
         s_data["transactions"].append(
             {
                 "date": sd_date.strftime("%Y-%m-%d"),
-                "type": "إيداع" if sd_type_lbl == t("إيداع", "Deposit") else "سحب",
+                "type": _canonical_savings_tx_type(sd_type_lbl),
                 "amount": float(sd_amount),
                 "note": sd_note,
             }
@@ -76,7 +175,7 @@ def render(month_key: str, month: str, year: int):
 
     if s_data["goal"] > 0:
         st.progress(max(0.0, min(1.0, progress_pct / 100.0)))
-        st.caption(t(f"نسبة تحقيق الهدف: {progress_pct:.1f}%", f"Goal progress: {progress_pct:.1f}%"))
+        st.caption(format_i18n("goal_progress", progress=progress_pct))
 
     total_saved_all, total_withdraw_all = get_saving_totals()
     st.metric(t("إجمالي التوفير (كل الشهور)", "Total Savings (All Months)"), f"{(total_saved_all - total_withdraw_all):,.0f} {currency_view}")
@@ -93,31 +192,33 @@ def render(month_key: str, month: str, year: int):
         )
     )
 
-    g1, g2, g3 = st.columns(3)
-    with g1:
-        st.metric(t("الأهداف النشطة", "Active Goals"), str(purchase_summary["active_count"]))
-    with g2:
-        st.metric(t("المتبقي على كل الأهداف", "Total Remaining"), f"{purchase_summary['total_remaining']:,.0f} {currency_view}")
-    with g3:
-        st.metric(
-            t("المبلغ الشهري المقترح", "Suggested Monthly Amount"),
-            f"{purchase_summary['total_monthly_needed']:,.0f} {currency_view}",
-            delta=t(f"مكتمل {purchase_summary['completed_count']}", f"Completed {purchase_summary['completed_count']}"),
-            delta_color="off",
-        )
+    with st.container(key="savings_purchase_goal_summary"):
+        g1, g2, g3 = st.columns(3)
+        with g1:
+            st.metric(t("الأهداف النشطة", "Active Goals"), str(purchase_summary["active_count"]))
+        with g2:
+            st.metric(t("المتبقي على كل الأهداف", "Total Remaining"), f"{purchase_summary['total_remaining']:,.0f} {currency_view}")
+        with g3:
+            st.metric(
+                t("المبلغ الشهري المقترح", "Suggested Monthly Amount"),
+                f"{purchase_summary['total_monthly_needed']:,.0f} {currency_view}",
+                delta=format_i18n("completed_count", count=purchase_summary["completed_count"]),
+                delta_color="off",
+            )
 
     default_target_date = (datetime.today() + timedelta(days=180)).date()
-    with st.expander(t("إضافة هدف شراء", "Add Purchase Goal"), expanded=False):
-        with st.form("add_purchase_goal_form", clear_on_submit=True):
-            pg_name = st.text_input(t("اسم الهدف", "Goal Name"), placeholder=t("مثال: عطور", "Example: Perfumes"))
-            pg_c1, pg_c2 = st.columns(2)
-            with pg_c1:
-                pg_target_amount = st.number_input(t("المبلغ المستهدف", "Target Amount"), min_value=0.0, step=10.0)
-            with pg_c2:
-                pg_saved_amount = st.number_input(t("المبلغ المدخر حاليًا", "Currently Saved"), min_value=0.0, step=10.0)
-            pg_target_date = st.date_input(t("تاريخ الهدف", "Target Date"), value=default_target_date, key="purchase_goal_target_date")
-            pg_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), "")
-            pg_submit = st.form_submit_button(t("حفظ الهدف", "Save Goal"), use_container_width=True)
+    with st.container(key="savings_add_purchase_goal"):
+        with st.expander(t("إضافة هدف شراء", "Add Purchase Goal"), expanded=False):
+            with st.form("add_purchase_goal_form", clear_on_submit=True):
+                pg_name = st.text_input(t("اسم الهدف", "Goal Name"), placeholder=t("مثال: عطور", "Example: Perfumes"))
+                pg_c1, pg_c2 = st.columns(2)
+                with pg_c1:
+                    pg_target_amount = st.number_input(t("المبلغ المستهدف", "Target Amount"), min_value=0.0, step=10.0)
+                with pg_c2:
+                    pg_saved_amount = st.number_input(t("المبلغ المدخر حاليًا", "Currently Saved"), min_value=0.0, step=10.0)
+                pg_target_date = st.date_input(t("تاريخ الهدف", "Target Date"), value=default_target_date, key="purchase_goal_target_date")
+                pg_note = st.text_input(t("ملاحظة (اختياري)", "Note (Optional)"), "")
+                pg_submit = st.form_submit_button(t("حفظ الهدف", "Save Goal"), use_container_width=True)
 
         if pg_submit:
             if not pg_name.strip():
@@ -142,7 +243,7 @@ def render(month_key: str, month: str, year: int):
                 st.rerun()
 
     if not purchase_goals:
-        st.info(t("لا توجد أهداف شراء حالياً.", "No purchase goals yet."))
+        _render_savings_empty_state(t("لا توجد أهداف شراء حالياً.", "No purchase goals yet."))
     else:
         for goal in purchase_goals:
             goal_id = goal["goal_id"]
@@ -155,9 +256,12 @@ def render(month_key: str, month: str, year: int):
             else:
                 status_label = t("نشط", "Active")
 
-            expander_title = t(
-                f"{goal_name} | المتبقي {goal['remaining_amount']:,.0f} {currency_view} | شهريًا {goal['monthly_needed']:,.0f} {currency_view}",
-                f"{goal_name} | Remaining {goal['remaining_amount']:,.0f} {currency_view} | Monthly {goal['monthly_needed']:,.0f} {currency_view}",
+            expander_title = format_i18n(
+                "purchase_goal_title",
+                name=goal_name,
+                remaining=goal["remaining_amount"],
+                monthly=goal["monthly_needed"],
+                currency=currency_view,
             )
             with st.expander(expander_title, expanded=False):
                 pgm1, pgm2, pgm3, pgm4 = st.columns(4)
@@ -177,9 +281,10 @@ def render(month_key: str, month: str, year: int):
 
                 st.progress(max(0.0, min(1.0, goal["progress_pct"] / 100.0)))
                 st.caption(
-                    t(
-                        f"نسبة الإنجاز {goal['progress_pct']:.1f}% | الشهور المتبقية {goal['months_left']}",
-                        f"Progress {goal['progress_pct']:.1f}% | Months left {goal['months_left']}",
+                    format_i18n(
+                        "purchase_goal_progress",
+                        progress=goal["progress_pct"],
+                        months=goal["months_left"],
                     )
                 )
                 if goal.get("note"):
@@ -254,12 +359,16 @@ def render(month_key: str, month: str, year: int):
 
     st.markdown(f"### {t('سجل حركات التوفير', 'Savings Transactions')}")
     if not txs:
-        st.info(t("لا توجد حركات لهذا الشهر.", "No transactions for this month."))
+        _render_savings_empty_state(t("لا توجد حركات لهذا الشهر.", "No transactions for this month."))
         return
 
     df_s = pd.DataFrame(txs).copy()
-    df_s.insert(0, "رقم", range(1, len(df_s) + 1))
-    df_s["حذف"] = False
+    if "type" in df_s.columns:
+        df_s["type"] = df_s["type"].apply(_savings_tx_type_label)
+    number_col = t("رقم", "Number")
+    delete_col = t("حذف", "Delete")
+    df_s.insert(0, number_col, range(1, len(df_s) + 1))
+    df_s[delete_col] = False
     date_col = t("التاريخ", "Date")
     type_col = t("النوع", "Type")
     amount_col = t("المبلغ", "Amount")
@@ -269,11 +378,11 @@ def render(month_key: str, month: str, year: int):
         df_s.rename(columns={"date": date_col, "type": type_col, "amount": amount_col, "note": note_col}),
         use_container_width=True,
         hide_index=True,
-        disabled=["رقم", date_col, type_col, amount_col, note_col],
+        disabled=[number_col, date_col, type_col, amount_col, note_col],
         key="saving_tx_editor",
     )
 
-    selected = edited[edited["حذف"]]["رقم"].tolist()
+    selected = edited[edited[delete_col]][number_col].tolist()
     if st.button(t("حذف المحدد من التوفير", "Delete Selected Savings Transactions"), use_container_width=True):
         if not selected:
             st.warning(t("يرجى اختيار حركة واحدة على الأقل.", "Select at least one transaction."))
@@ -282,5 +391,5 @@ def render(month_key: str, month: str, year: int):
                 tx_index = int(row_num) - 1
                 if 0 <= tx_index < len(txs):
                     txs.pop(tx_index)
-            st.success(t(f"تم حذف {len(selected)} حركة.", f"Deleted {len(selected)} transaction(s)."))
+            st.success(format_i18n("savings_deleted_transactions", count=len(selected)))
             st.rerun()

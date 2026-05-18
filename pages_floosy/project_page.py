@@ -7,7 +7,8 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import add_transaction, arabic_months, english_months
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import currency_short_label
+from services.i18n import format_i18n, make_t, get_lang_code, get_months
 from services.expense_tax_service import ExpenseTaxService
 
 
@@ -23,33 +24,57 @@ PROJECT_TYPE_EN_TO_AR = {v: k for k, v in PROJECT_TYPE_AR_TO_EN.items()}
 
 
 def _project_type_label(value: str, is_en: bool) -> str:
+    t = make_t()
     clean_value = str(value or "").strip()
-    if not is_en:
-        if clean_value in PROJECT_TYPE_EN_TO_AR:
-            return PROJECT_TYPE_EN_TO_AR[clean_value]
-        return clean_value or "أخرى"
-    if clean_value in PROJECT_TYPE_AR_TO_EN:
-        return PROJECT_TYPE_AR_TO_EN[clean_value]
-    return clean_value or "Other"
+    for ar_label, en_label in PROJECT_TYPE_AR_TO_EN.items():
+        translated_label = t(ar_label, en_label)
+        if clean_value in {ar_label, en_label, translated_label}:
+            return translated_label
+    return clean_value or t("أخرى", "Other")
 
 
 def _normalize_project_type_value(value: str) -> str:
+    t = make_t()
     clean_value = str(value or "").strip()
-    if clean_value in PROJECT_TYPE_EN_TO_AR:
-        clean_value = PROJECT_TYPE_EN_TO_AR[clean_value]
-    if clean_value not in DEFAULT_PROJECT_TYPES:
-        return "أخرى"
-    return clean_value
+    for ar_label, en_label in PROJECT_TYPE_AR_TO_EN.items():
+        if clean_value in {ar_label, en_label, t(ar_label, en_label)}:
+            return ar_label
+    return "أخرى"
 
 
 def _project_tx_type_label(value: str, is_en: bool) -> str:
+    t = make_t()
     clean_value = str(value or "").strip()
-    if not is_en:
-        return clean_value
-    if clean_value == "دخل":
-        return "Income"
-    if clean_value == "مصروف":
-        return "Expense"
+    if clean_value in {"دخل", "Income", t("دخل", "Income")}:
+        return t("دخل", "Income")
+    if clean_value in {"مصروف", "Expense", t("مصروف", "Expense")}:
+        return t("مصروف", "Expense")
+    return clean_value
+
+
+def _canonical_project_tx_type(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"دخل", "Income", t("دخل", "Income")}:
+        return "دخل"
+    if clean_value in {"مصروف", "Expense", t("مصروف", "Expense")}:
+        return "مصروف"
+    return clean_value
+
+
+def _project_category_value(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if not clean_value or clean_value in {"عام", "General", t("عام", "General")}:
+        return "عام"
+    return clean_value
+
+
+def _project_category_label(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"عام", "General", t("عام", "General")}:
+        return t("عام", "General")
     return clean_value
 
 
@@ -76,7 +101,7 @@ def _record_project_account_link(month_key: str, tx_payload: dict, currency: str
             "type": "مصروف",
             "amount": float(tx_payload.get("amount", 0.0) or 0.0),
             "currency": currency,
-            "category": t("تحويل للمشروع", "Project Transfer"),
+            "category": "تحويل للمشروع",
             "note": _account_link_note(project_name, str(tx_payload.get("type") or ""), str(tx_payload.get("note") or ""), t),
             "project_name": project_name,
             "project_link_id": link_id,
@@ -250,14 +275,12 @@ def render(month_key: str, month: str, year: int):
     _ensure_multi_project_model(month_obj)
 
     currency = st.session_state.settings["default_currency"]
-    currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
+    currency_view = currency_short_label(currency, _lc)
 
     tax_profile_raw = st.session_state.get("tax_profile", {})
     default_tax_rate = float(tax_profile_raw.get("default_tax_rate", 0.0) or 0.0) if isinstance(tax_profile_raw, dict) else 0.0
     default_prices_include_tax = bool(tax_profile_raw.get("prices_include_tax", False)) if isinstance(tax_profile_raw, dict) else False
-    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
+    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=(_lc != "ar"))
     tax_codes = [opt["code"] for opt in tax_options]
     tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
     default_expense_tax_code = next((opt["code"] for opt in tax_options if opt.get("deductible")), tax_codes[0] if tax_codes else "")
@@ -342,9 +365,9 @@ def render(month_key: str, month: str, year: int):
     _ensure_project_defaults(selected_project)
 
     st.markdown("---")
-    st.subheader(t(f"تفاصيل المشروع: {selected_name}", f"Project Details: {selected_name}"))
+    st.subheader(f"{t('تفاصيل المشروع', 'Project Details')}: {selected_name}")
     type_label = _project_type_label(selected_project.get("project_type", "أخرى"), is_en)
-    st.caption(t(f"نوع المشروع: {type_label}", f"Project type: {type_label}"))
+    st.caption(f"{t('نوع المشروع', 'Project Type')}: {type_label}")
 
     with st.expander(t("إدارة المشروع", "Manage Project"), expanded=False):
         rename_value = st.text_input(
@@ -431,9 +454,10 @@ def render(month_key: str, month: str, year: int):
             st.caption(t("فواتير هذا المشروع تستخدم هذه القيم افتراضياً.", "Project invoices use these values by default."))
         else:
             st.caption(
-                t(
-                    f"هذا المشروع يستخدم الإعداد العام: {default_tax_rate:.3f}% | شامل الضريبة: {'نعم' if default_prices_include_tax else 'لا'}",
-                    f"This project uses global settings: {default_tax_rate:.3f}% | includes tax: {'yes' if default_prices_include_tax else 'no'}",
+                format_i18n(
+                    "project_global_tax_settings",
+                    rate=default_tax_rate,
+                    includes_tax=t("نعم", "Yes") if default_prices_include_tax else t("لا", "No"),
                 )
             )
 
@@ -447,7 +471,7 @@ def render(month_key: str, month: str, year: int):
                 p_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, step=5.0)
                 p_category = st.text_input(t("التصنيف", "Category"), value=t("عام", "General"))
     
-            p_type_value = "دخل" if p_type_lbl == t("دخل", "Income") else "مصروف"
+            p_type_value = _canonical_project_tx_type(p_type_lbl)
             p_tax_code = ""
             if p_type_value == "مصروف" and tax_codes:
                 p_tax_code = st.selectbox(
@@ -476,7 +500,7 @@ def render(month_key: str, month: str, year: int):
             "date": p_date.strftime("%Y-%m-%d"),
             "type": tx_type,
             "amount": float(p_amount),
-            "category": p_category or t("عام", "General"),
+            "category": _project_category_value(p_category),
             "note": p_note,
             "project_name": selected_name,
             "project_type": selected_project.get("project_type", "أخرى"),
@@ -545,10 +569,12 @@ def render(month_key: str, month: str, year: int):
         for bool_col in ["funded_from_personal", "transferred_from_account"]:
             if bool_col not in df_p.columns:
                 df_p[bool_col] = False
-        if is_en and "type" in df_p.columns:
-            df_p["type"] = df_p["type"].apply(lambda x: _project_tx_type_label(x, True))
-        if is_en and "project_type" in df_p.columns:
-            df_p["project_type"] = df_p["project_type"].apply(lambda x: _project_type_label(x, True))
+        if "type" in df_p.columns:
+            df_p["type"] = df_p["type"].apply(lambda x: _project_tx_type_label(x, is_en))
+        if "category" in df_p.columns:
+            df_p["category"] = df_p["category"].apply(_project_category_label)
+        if "project_type" in df_p.columns:
+            df_p["project_type"] = df_p["project_type"].apply(lambda x: _project_type_label(x, is_en))
         df_p.insert(0, "رقم", range(1, len(df_p) + 1))
         df_p["حذف"] = False
 
@@ -598,13 +624,14 @@ def render(month_key: str, month: str, year: int):
                 _sync_legacy_fields(month_obj)
                 if removed_account_links:
                     st.success(
-                        t(
-                            f"تم حذف {len(selected_rows)} معاملة وحذف {removed_account_links} حركة مرتبطة من الحساب.",
-                            f"Deleted {len(selected_rows)} transaction(s) and {removed_account_links} linked account transaction(s).",
+                        format_i18n(
+                            "project_deleted_with_linked",
+                            count=len(selected_rows),
+                            linked=removed_account_links,
                         )
                     )
                 else:
-                    st.success(t(f"تم حذف {len(selected_rows)} معاملة.", f"Deleted {len(selected_rows)} transaction(s)."))
+                    st.success(format_i18n("project_deleted_transactions", count=len(selected_rows)))
                 st.rerun()
 
     with st.expander(t("مقارنة المشاريع", "Projects Comparison"), expanded=False):
@@ -646,9 +673,10 @@ def render(month_key: str, month: str, year: int):
         if not selected_rank.empty:
             row = selected_rank.iloc[0]
             st.caption(
-                t(
-                    f"ترتيب المشروع الحالي: {int(row[t('الترتيب', 'Rank')])} من {len(df_rank)}.",
-                    f"Current project rank: {int(row[t('الترتيب', 'Rank')])} of {len(df_rank)}.",
+                format_i18n(
+                    "current_project_rank",
+                    rank=int(row[t("الترتيب", "Rank")]),
+                    total=len(df_rank),
                 )
             )
 

@@ -5,11 +5,12 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import add_transaction, arabic_months, english_months, get_all_transactions_df, get_saving_totals, get_builtin_logo_b64
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import currency_short_label
+from services.i18n import dashboard_brief_copy, format_i18n, make_t, get_lang_code, get_months
 from repositories.session_repo import SessionStateRepository
 from services.expense_tax_service import ExpenseTaxService
 from services.financial_analyzer import FinancialAnalyzer
-from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, localized_all_categories
+from services.transaction_categories import canonical_category, category_label, localized_all_categories
 
 
 def _proof_payload(uploaded_file) -> dict:
@@ -28,17 +29,17 @@ def _render_summary_card_styles() -> None:
         <style>
         .floosy-summary-card {
             border-radius: 16px;
-            padding: 16px 18px 14px 18px;
+            padding: 14px 16px 13px 16px;
             border: 1px solid #e5e7eb;
             box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.55rem;
             background: #ffffff;
             position: relative;
             overflow: hidden;
         }
 
         .floosy-summary-card--featured {
-            min-height: 124px;
+            min-height: 116px;
             background: linear-gradient(135deg, #164c72 0%, #1f7a92 55%, #2aa47c 100%);
             color: #f8fafc;
             border-color: rgba(255, 255, 255, 0.16);
@@ -80,7 +81,7 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card__label {
             font-size: 0.88rem;
             font-weight: 700;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.42rem;
             color: var(--label-color, #475569);
             display: inline-flex;
             align-items: center;
@@ -118,6 +119,38 @@ def _render_summary_card_styles() -> None:
         .floosy-summary-card--featured .floosy-summary-card__currency {
             color: rgba(255, 255, 255, 0.82);
             opacity: 1;
+        }
+
+        .floosy-smart-summary {
+            border-radius: 12px;
+            padding: 14px 16px 13px 16px;
+            margin: 0.15rem 0 0.65rem 0;
+        }
+
+        .floosy-smart-summary__message {
+            font-weight: 800;
+            font-size: 1.04rem;
+            line-height: 1.35;
+        }
+
+        .floosy-smart-summary__detail {
+            font-size: 0.92rem;
+            line-height: 1.45;
+            margin-top: 0.32rem;
+        }
+
+        .floosy-smart-summary__facts {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            margin-top: 0.8rem;
+        }
+
+        .floosy-smart-summary__pill {
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 0.84rem;
+            line-height: 1.35;
         }
 
         </style>
@@ -179,6 +212,26 @@ def _render_summary_card(label: str, value: str, tone: str, is_ltr: bool, featur
     st.markdown(card_markup, unsafe_allow_html=True)
 
 
+def _tx_type_label(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"دخل", "Income", t("دخل", "Income")}:
+        return t("دخل", "Income")
+    if clean_value in {"مصروف", "Expense", t("مصروف", "Expense")}:
+        return t("مصروف", "Expense")
+    return clean_value
+
+
+def _canonical_tx_type(value: str) -> str:
+    t = make_t()
+    clean_value = str(value or "").strip()
+    if clean_value in {"دخل", "Income", t("دخل", "Income")}:
+        return "دخل"
+    if clean_value in {"مصروف", "Expense", t("مصروف", "Expense")}:
+        return "مصروف"
+    return clean_value
+
+
 def _summary_theme(status: str) -> dict:
     if status == "empty":
         return {
@@ -230,9 +283,7 @@ def render(month_key: str, month: str, year: int):
     is_en = _lc == "en"
     is_ltr = _lc != "ar"
     t = make_t()
-    currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if _lc != "ar" else currency_symbol
+    currency_view = currency_short_label(currency, _lc)
     tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=(_lc != "ar"))
     tax_codes = [opt["code"] for opt in tax_options]
     tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
@@ -276,11 +327,11 @@ def render(month_key: str, month: str, year: int):
     # ===== Greeting (above the cards) =====
     user_name = (settings.get("name") or "").strip()
     if user_name:
-        st.markdown(t(f"مرحباً، **{user_name}**", f"Hello, **{user_name}**"))
+        st.markdown(format_i18n("hello_user", name=user_name))
     else:
         st.markdown(t("مرحباً", "Hello"))
 
-    st.caption(t(f"الشهر المعروض: {month_display} {year}", f"Selected month: {month_display} {year}"))
+    st.caption(format_i18n("selected_month", month=month_display, year=year))
     st.markdown("---")
 
     _render_summary_card_styles()
@@ -436,31 +487,25 @@ def render(month_key: str, month: str, year: int):
     summary_border_side = "border-left" if is_ltr else "border-right"
 
     st.markdown("### " + t("الملخص الذكي", "Smart Summary"))
-    if show_spending_note_on_good:
-        brief_message = t("الوضع المالي تحت السيطرة", "Financial position is under control")
-        brief_detail = t(
-            "صافي 90 يوم ما زال إيجابيًا، لكن مصروف هذا الشهر أعلى من المعتاد.",
-            "Your 90-day net is still positive, but this month's spending is above usual.",
-        )
-    else:
-        brief_message = brief["message_en"] if is_ltr else brief["message_ar"]
-        brief_detail = brief["detail_en"] if is_ltr else brief["detail_ar"]
-    focus_label = brief["focus_label_en"] if is_ltr else brief["focus_label_ar"]
-    support_label = brief["support_label_en"] if is_ltr else brief["support_label_ar"]
+    brief_message, brief_detail, focus_label, support_label = dashboard_brief_copy(
+        brief,
+        currency_view,
+        spending_note_on_good=show_spending_note_on_good,
+    )
     focus_value = f"{brief.get('focus_value', 0.0):,.0f} {currency_view}"
     support_value = f"{brief.get('support_value', 0.0):,.0f} {currency_view}"
 
     st.markdown(
         f"""
-        <div style="background:{summary_theme['background']};border:1px solid {summary_theme['pill_border']};{summary_border_side}:6px solid {summary_theme['border']};border-radius:12px;padding:12px 14px;margin-bottom:8px;">
-            <div style="font-weight:700;font-size:1.02rem;color:{summary_theme['text']};">{brief_message}</div>
-            <div style="color:{summary_theme['label']};font-size:0.92rem;margin-top:4px;">{brief_detail}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-                <div style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+        <div class="floosy-smart-summary" style="background:{summary_theme['background']};border:1px solid {summary_theme['pill_border']};{summary_border_side}:6px solid {summary_theme['border']};">
+            <div class="floosy-smart-summary__message" style="color:{summary_theme['text']};">{brief_message}</div>
+            <div class="floosy-smart-summary__detail" style="color:{summary_theme['label']};">{brief_detail}</div>
+            <div class="floosy-smart-summary__facts">
+                <div class="floosy-smart-summary__pill" style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};">
                     <span style="color:{summary_theme['label']};">{focus_label}:</span>
                     <span style="font-weight:700;color:{summary_theme['pill_text']};"> {focus_value}</span>
                 </div>
-                <div style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};border-radius:999px;padding:6px 10px;font-size:0.85rem;">
+                <div class="floosy-smart-summary__pill" style="background:{summary_theme['pill_bg']};border:1px solid {summary_theme['pill_border']};">
                     <span style="color:{summary_theme['label']};">{support_label}:</span>
                     <span style="font-weight:700;color:{summary_theme['pill_text']};"> {support_value}</span>
                 </div>
@@ -537,37 +582,20 @@ def render(month_key: str, month: str, year: int):
         st.markdown(f"### {t('إضافة معاملة', 'Add Transaction')}")
 
         form_state = st.session_state["dash_quick_form"]
-        type_map_ar_en = {"مصروف": "Expense", "دخل": "Income"}
-        type_map_en_ar = {"Expense": "مصروف", "Income": "دخل"}
-        type_options = [t("مصروف", "Expense"), t("دخل", "Income")]
+        type_options = [_tx_type_label("مصروف"), _tx_type_label("دخل")]
 
-        default_type = form_state.get("type", "مصروف")
-        if is_en and default_type in type_map_ar_en:
-            default_type = type_map_ar_en[default_type]
-        if (not is_en) and default_type in type_map_en_ar:
-            default_type = type_map_en_ar[default_type]
-
-        default_category = form_state.get("category", "أخرى")
-        if is_en and default_category in CATEGORY_AR_TO_EN:
-            default_category = CATEGORY_AR_TO_EN[default_category]
-        if (not is_en) and default_category in CATEGORY_EN_TO_AR:
-            default_category = CATEGORY_EN_TO_AR[default_category]
+        default_type = _tx_type_label(form_state.get("type", "مصروف"))
+        default_category = category_label(form_state.get("category", "أخرى"), is_en)
 
         current_type = st.session_state.get("dash_q_type", default_type)
-        if is_en and current_type in type_map_ar_en:
-            current_type = type_map_ar_en[current_type]
-        elif (not is_en) and current_type in type_map_en_ar:
-            current_type = type_map_en_ar[current_type]
+        current_type = _tx_type_label(current_type)
         if current_type not in type_options:
             current_type = default_type if default_type in type_options else type_options[0]
         st.session_state["dash_q_type"] = current_type
         categories = localized_all_categories(is_en)
 
         current_category = st.session_state.get("dash_q_category", default_category)
-        if is_en and current_category in CATEGORY_AR_TO_EN:
-            current_category = CATEGORY_AR_TO_EN[current_category]
-        elif (not is_en) and current_category in CATEGORY_EN_TO_AR:
-            current_category = CATEGORY_EN_TO_AR[current_category]
+        current_category = category_label(current_category, is_en)
         if current_category not in categories:
             current_category = default_category if default_category in categories else categories[-1]
         st.session_state["dash_q_category"] = current_category
@@ -621,7 +649,7 @@ div[data-testid="stForm"] {
                 q_amount = st.number_input(t("المبلغ", "Amount"), min_value=0.0, step=1.0, key="dash_q_amount")
 
             q_category = st.selectbox(t("التصنيف", "Category"), categories, key="dash_q_category")
-            q_selected_type = "مصروف" if q_type_lbl == t("مصروف", "Expense") else "دخل"
+            q_selected_type = _canonical_tx_type(q_type_lbl)
             q_tax_code = ""
             if q_selected_type == "مصروف" and tax_codes:
                 q_tax_index = tax_codes.index(current_tax_code) if current_tax_code in tax_codes else 0
@@ -669,7 +697,7 @@ div[data-testid="stForm"] {
             st.session_state["dash_quick_form"] = {
                 "type": q_selected_type,
                 "amount": float(q_amount),
-                "category": q_category,
+                "category": canonical_category(q_category),
                 "note": q_note,
                 "tax_tag_code": q_tax_code if q_selected_type == "مصروف" else "",
             }
@@ -679,7 +707,7 @@ div[data-testid="stForm"] {
                     "type": q_selected_type,
                     "amount": float(q_amount),
                     "currency": currency,
-                    "category": q_category,
+                    "category": canonical_category(q_category),
                     "note": q_note,
                 }
                 if q_selected_type == "مصروف" and q_tax_code:

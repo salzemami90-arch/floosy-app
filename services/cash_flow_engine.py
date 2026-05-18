@@ -8,6 +8,7 @@ from models.document import Document
 from models.invoice import Invoice
 from models.transaction import Transaction
 from repositories.base import FlossyRepository
+from services.currency_localization import currency_matches
 from services.financial_analyzer import ARABIC_MONTHS, FinancialAnalyzer
 
 
@@ -34,7 +35,7 @@ class CashFlowEngine:
 
     @classmethod
     def _currency_matches(cls, item_currency: str, target_currency: str) -> bool:
-        return cls._currency_symbol(item_currency) == cls._currency_symbol(target_currency)
+        return currency_matches(item_currency, target_currency)
 
     @staticmethod
     def _month_key_for(ref_date: date) -> str:

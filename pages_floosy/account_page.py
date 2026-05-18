@@ -9,20 +9,25 @@ import pandas as pd
 import streamlit as st
 
 from config_floosy import CURRENCY_OPTIONS, add_transaction, arabic_months, english_months, load_transactions
-from services.i18n import make_t, get_lang_code, get_months
+from services.currency_localization import (
+    currency_display_to_canonical_map,
+    currency_matches,
+    currency_option_label,
+    currency_short_label,
+)
+from services.i18n import format_i18n, make_t, get_lang_code, get_months
 from services.expense_tax_service import ExpenseTaxService
-from services.transaction_categories import CATEGORY_AR_TO_EN, CATEGORY_EN_TO_AR, category_label, localized_all_categories
+from services.transaction_categories import (
+    CATEGORY_AR_TO_EN,
+    CATEGORY_EN_TO_AR,
+    canonical_category,
+    category_label,
+    localized_all_categories,
+)
 
 
 TX_TYPE_AR_TO_EN = {"دخل": "Income", "مصروف": "Expense"}
 TX_TYPE_EN_TO_AR = {v: k for k, v in TX_TYPE_AR_TO_EN.items()}
-CURRENCY_OPTION_AR_TO_EN = {
-    "د.ك - دينار كويتي": "KWD - Kuwaiti Dinar",
-    "ر.س - ريال سعودي": "SAR - Saudi Riyal",
-    "د.إ - درهم إماراتي": "AED - UAE Dirham",
-    "$ - دولار أمريكي": "USD - US Dollar",
-    "€ - يورو": "EUR - Euro",
-}
 
 def _render_account_summary_styles() -> None:
     st.markdown(
@@ -209,29 +214,27 @@ def _render_account_summary_card(label: str, value: str, tone: str, is_ltr: bool
 
 
 def _tx_type_label(value: str, is_en: bool) -> str:
+    t = make_t()
     clean_value = str(value or "").strip()
-    if not is_en:
-        if clean_value in TX_TYPE_EN_TO_AR:
-            return TX_TYPE_EN_TO_AR[clean_value]
-        return clean_value
-    if clean_value in TX_TYPE_AR_TO_EN:
-        return TX_TYPE_AR_TO_EN[clean_value]
+    if clean_value in {"دخل", "Income", t("دخل", "Income")}:
+        return t("دخل", "Income")
+    if clean_value in {"مصروف", "Expense", t("مصروف", "Expense")}:
+        return t("مصروف", "Expense")
     return clean_value
 
 
 def _currency_option_label(value: str, is_en: bool) -> str:
-    clean_value = str(value or "").strip()
-    if not is_en:
-        return clean_value
-    return CURRENCY_OPTION_AR_TO_EN.get(clean_value, clean_value)
+    lang_code = get_lang_code()
+    if lang_code == "ar" and is_en:
+        lang_code = "en"
+    return currency_option_label(value, lang_code)
 
 
 def _currency_short_label(value: str, is_en: bool) -> str:
-    clean_value = str(value or "").strip()
-    symbol = clean_value.split(" - ")[0] if " - " in clean_value else clean_value
-    if not is_en:
-        return symbol
-    return {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}.get(symbol, symbol)
+    lang_code = get_lang_code()
+    if lang_code == "ar" and is_en:
+        lang_code = "en"
+    return currency_short_label(value, lang_code)
 
 
 def _category_label(value: str, is_en: bool) -> str:
@@ -282,25 +285,24 @@ def _editor_date_to_iso(value) -> str:
 
 
 def _canonical_tx_type(value: str) -> str:
+    t = make_t()
     clean = str(value or "").strip()
-    if clean in {"دخل", "Income"}:
+    if clean in {"دخل", "Income", t("دخل", "Income")}:
         return "دخل"
-    if clean in {"مصروف", "Expense"}:
+    if clean in {"مصروف", "Expense", t("مصروف", "Expense")}:
         return "مصروف"
     return clean
 
 
 def _canonical_category(value: str, is_en: bool) -> str:
-    clean = str(value or "").strip()
-    if not is_en:
-        return clean
-    return CATEGORY_EN_TO_AR.get(clean, clean)
+    return canonical_category(value)
 
 
 def _currency_display_to_canonical_map(is_en: bool) -> dict[str, str]:
-    if not is_en:
-        return {opt: opt for opt in CURRENCY_OPTIONS}
-    return {_currency_option_label(opt, True): opt for opt in CURRENCY_OPTIONS}
+    lang_code = get_lang_code()
+    if lang_code == "ar" and is_en:
+        lang_code = "en"
+    return currency_display_to_canonical_map(CURRENCY_OPTIONS, lang_code)
 
 
 def _canonical_currency(value: str, is_en: bool) -> str:
@@ -328,14 +330,15 @@ def _apply_transaction_edits(
     if original_rows.empty or edited_rows.empty:
         return {"updated": 0, "moved": 0, "moved_targets": [], "errors": []}
 
-    id_col = "ID" if is_en else "معرّف"
-    date_col = "Movement Date" if is_en else "تاريخ الحركة"
-    type_col = "Type" if is_en else "النوع"
-    category_col = "Category" if is_en else "التصنيف"
-    amount_col = "Amount" if is_en else "المبلغ"
-    currency_col = "Currency" if is_en else "العملة"
-    note_col = "Note" if is_en else "ملاحظة"
-    tax_col = "Tax Classification" if is_en else "التصنيف الضريبي"
+    t = make_t()
+    id_col = "ID" if is_en else t("معرّف", "ID")
+    date_col = "Movement Date" if is_en else t("تاريخ الحركة", "Movement Date")
+    type_col = "Type" if is_en else t("النوع", "Type")
+    category_col = "Category" if is_en else t("التصنيف", "Category")
+    amount_col = "Amount" if is_en else t("المبلغ", "Amount")
+    currency_col = "Currency" if is_en else t("العملة", "Currency")
+    note_col = "Note" if is_en else t("ملاحظة", "Note")
+    tax_col = "Tax Classification" if is_en else t("التصنيف الضريبي", "Tax Classification")
 
     transactions_by_month = session_state.setdefault("transactions", {})
     current_month_transactions = transactions_by_month.setdefault(month_key, [])
@@ -470,7 +473,7 @@ def _build_filtered_df(
         df["proof_bytes"] = None
 
     # same behavior as existing summary: focus on selected currency
-    df = df[df["currency"] == currency].copy()
+    df = df[df["currency"].apply(lambda value: currency_matches(value, currency))].copy()
     if df.empty:
         return pd.DataFrame()
 
@@ -478,12 +481,8 @@ def _build_filtered_df(
         df = df[df["type"] == type_filter]
 
     if category_filter != "الكل":
-        category_matches = {
-            str(category_filter or "").strip(),
-            CATEGORY_EN_TO_AR.get(str(category_filter or "").strip(), str(category_filter or "").strip()),
-            CATEGORY_AR_TO_EN.get(str(category_filter or "").strip(), str(category_filter or "").strip()),
-        }
-        df = df[df["category"].astype(str).isin(category_matches)]
+        category_matches = {str(category_filter or "").strip(), canonical_category(category_filter)}
+        df = df[df["category"].astype(str).apply(canonical_category).isin(category_matches)]
 
     if proof_filter != "الكل":
         proof_mask = df.apply(_row_has_proof, axis=1)
@@ -571,8 +570,10 @@ def _month_label_from_key(month_key: str, is_en: bool) -> str:
     if "-" not in month_key:
         return month_key
     year_txt, month_name = month_key.split("-", 1)
-    if is_en and month_name in arabic_months:
-        month_name = english_months[arabic_months.index(month_name)]
+    lang_code = get_lang_code()
+    if lang_code != "ar" and month_name in arabic_months:
+        display_months = get_months()
+        month_name = display_months[arabic_months.index(month_name)]
     return f"{month_name} {year_txt}"
 
 
@@ -692,20 +693,21 @@ def _latest_confirmed_tx_for_item(item: dict, transactions_by_month) -> dict | N
 
 
 def _monthly_item_status_label(item: dict, pending: list[str], is_en: bool, today: date | None = None) -> str:
+    t = make_t()
     if not isinstance(pending, list):
         pending = []
     clean_pending = _sort_month_keys([str(mk) for mk in pending if isinstance(mk, str) and mk.strip()])
     is_income = item.get("type") == "دخل"
     if not clean_pending:
-        return "Received" if is_en and is_income else "Paid" if is_en else "مستلم" if is_income else "مدفوع"
+        return t("مستلم", "Received") if is_income else t("مدفوع", "Paid")
 
     has_passed_due = _monthly_item_has_passed_due(item, clean_pending, today=today)
-    count_txt = f"{len(clean_pending)} {'month' if len(clean_pending) == 1 else 'months'}" if is_en else f"{len(clean_pending)} شهر"
+    count_txt = format_i18n("month_count", count=len(clean_pending))
 
     if is_income:
-        state = "Not received yet" if has_passed_due and is_en else "Expected" if is_en else "لم يُستلم بعد" if has_passed_due else "متوقع"
+        state = t("لم يُستلم بعد", "Not received yet") if has_passed_due else t("متوقع", "Expected")
     else:
-        state = "Overdue" if has_passed_due and is_en else "Awaiting payment" if is_en else "متأخر" if has_passed_due else "بانتظار الدفع"
+        state = t("متأخر", "Overdue") if has_passed_due else t("بانتظار الدفع", "Awaiting payment")
     return f"{state}: {count_txt}"
 
 
@@ -806,7 +808,7 @@ def _monthly_transaction_matches_item(tx: dict, item: dict) -> bool:
 
     tx_currency = str(tx.get("currency") or "").strip()
     item_currency = str(item.get("currency") or "").strip()
-    if tx_currency and item_currency and tx_currency != item_currency:
+    if tx_currency and item_currency and not currency_matches(tx_currency, item_currency):
         return False
 
     return True
@@ -886,10 +888,8 @@ def render(month_key: str, month: str, year: int):
 
     tx_list = load_transactions(month_key)
     currency = st.session_state.settings.get("default_currency", CURRENCY_OPTIONS[0])
-    currency_symbol = currency.split(" - ")[0] if " - " in currency else currency
-    currency_map_en = {"د.ك": "KWD", "ر.س": "SAR", "د.إ": "AED", "$": "USD", "€": "EUR", "¥": "CNY", "₩": "KRW", "Rp": "IDR", "S$": "SGD"}
-    currency_view = currency_map_en.get(currency_symbol, currency_symbol) if is_en else currency_symbol
-    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=is_en)
+    currency_view = currency_short_label(currency, _lc)
+    tax_options = ExpenseTaxService.expense_options(st.session_state, is_en=(_lc != "ar"))
     tax_codes = [opt["code"] for opt in tax_options]
     tax_label_by_code = {opt["code"]: opt["label"] for opt in tax_options}
     default_expense_tax_code = next((opt["code"] for opt in tax_options if opt.get("deductible")), tax_codes[0] if tax_codes else "")
@@ -898,7 +898,7 @@ def render(month_key: str, month: str, year: int):
     total_income = 0.0
     total_expense = 0.0
     if not df_all.empty:
-        df_k = df_all[df_all["currency"] == currency]
+        df_k = df_all[df_all["currency"].apply(lambda value: currency_matches(value, currency))]
         total_income = float(df_k[df_k["type"] == "دخل"]["amount"].sum())
         total_expense = float(df_k[df_k["type"] == "مصروف"]["amount"].sum())
 
@@ -963,7 +963,7 @@ def render(month_key: str, month: str, year: int):
                     )
                     new_category = st.text_input(
                         t("التصنيف", "Category"),
-                        value=str(item.get("category", t("أخرى", "Other")) or t("أخرى", "Other")),
+                        value=_category_label(item.get("category", "أخرى"), is_en),
                         key=f"acct_tpl_cat_{safe_key}",
                     )
                     new_currency = st.selectbox(
@@ -1046,8 +1046,8 @@ def render(month_key: str, month: str, year: int):
                     st.warning(t("يرجى إدخال الاسم والمبلغ بصورة صحيحة.", "Please enter a valid name and amount."))
                 else:
                     item["name"] = str(new_name).strip()
-                    item["type"] = "مصروف" if new_type_label == t("مصروف", "Expense") else "دخل"
-                    item["category"] = str(new_category).strip() or t("أخرى", "Other")
+                    item["type"] = _canonical_tx_type(new_type_label)
+                    item["category"] = canonical_category(str(new_category).strip() or "أخرى")
                     item["currency"] = new_currency
                     item["amount"] = float(new_amount)
                     item["day"] = int(new_day)
@@ -1112,10 +1112,10 @@ def render(month_key: str, month: str, year: int):
                         {
                             "name": name.strip(),
                             "id": str(uuid4()),
-                            "type": "مصروف" if tx_type == t("مصروف", "Expense") else "دخل",
+                            "type": _canonical_tx_type(tx_type),
                             "amount": float(amount),
                             "currency": item_currency,
-                            "category": category.strip() or t("أخرى", "Other"),
+                            "category": canonical_category(category.strip() or "أخرى"),
                             "day": int(due_day),
                             "active": True,
                             "is_variable": bool(is_variable),
@@ -1285,7 +1285,7 @@ def render(month_key: str, month: str, year: int):
                     pending_labels = ", ".join(_month_label_from_key(mk, is_en) for mk in _sort_month_keys(pending))
                     st.caption(f"{t('أشهر الاستحقاق غير المؤكدة', 'Unconfirmed entitlement months')}: {pending_labels}")
                     if len(pending) > 1:
-                        st.caption(t(f"{len(pending)} أشهر بانتظار التأكيد — أكد كل شهر على حدة", f"{len(pending)} months pending — confirm each separately"))
+                        st.caption(format_i18n("pending_confirmation", count=len(pending)))
                 else:
                     st.caption(t("لا توجد أشهر استحقاق بانتظار التأكيد.", "No entitlement months waiting for confirmation."))
 
@@ -1378,7 +1378,7 @@ def render(month_key: str, month: str, year: int):
                             "type": item.get("type", "مصروف"),
                             "amount": float(pay_amount),
                             "currency": item.get("currency", currency),
-                            "category": item.get("category", t("أخرى", "Other")),
+                            "category": canonical_category(item.get("category", "أخرى")),
                             "note": f"{t('استلام دخل شهري', 'Monthly income receipt') if is_income else t('دفع عنصر شهري', 'Monthly item payment')}: {item.get('name', '')}",
                             "payment_month_key": payment_month_key,
                             "entitlement_month_key": entitlement_key,
@@ -1430,7 +1430,7 @@ def render(month_key: str, month: str, year: int):
                     key=f"account_tx_category_{form_nonce}",
                 )
 
-            selected_tx_type = "مصروف" if t_type_lbl == t("مصروف", "Expense") else "دخل"
+            selected_tx_type = _canonical_tx_type(t_type_lbl)
             selected_tax_code = ""
             if selected_tx_type == "مصروف" and tax_codes:
                 selected_tax_code = st.selectbox(
@@ -1478,7 +1478,7 @@ def render(month_key: str, month: str, year: int):
                     "type": selected_tx_type,
                     "amount": float(t_amount),
                     "currency": tx_currency,
-                    "category": t_category,
+                    "category": canonical_category(t_category),
                     "note": t_note,
                     "payment_month_key": target_month_key,
                 }
@@ -1496,9 +1496,9 @@ def render(month_key: str, month: str, year: int):
                     )
                 else:
                     target_label = _month_label_from_key(target_month_key, is_en)
-                    st.session_state["account_save_notice"] = t(
-                        f"تم حفظ المعاملة في شهر {target_label} حسب التاريخ. يمكن تغيير الشهر لعرضها.",
-                        f"Transaction was saved in {target_label} based on date. Change the month to view it.",
+                    st.session_state["account_save_notice"] = format_i18n(
+                        "transaction_saved_in_month",
+                        month=target_label,
                     )
                 st.rerun()
 
@@ -1565,11 +1565,12 @@ def render(month_key: str, month: str, year: int):
         proof_filter=proof_filter,
         newest_first=newest_first,
     )
-    currency_scope_count = sum(1 for tx in tx_list if str(tx.get("currency") or "") == currency)
+    currency_scope_count = sum(1 for tx in tx_list if currency_matches(str(tx.get("currency") or ""), currency))
     st.caption(
-        t(
-            f"بحث الحساب يعمل داخل هذا القسم فقط. النتائج: {len(filtered_df)} من {currency_scope_count} معاملة.",
-            f"Account search works only inside this section. Results: {len(filtered_df)} of {currency_scope_count} transactions.",
+        format_i18n(
+            "account_search_results",
+            shown=len(filtered_df),
+            total=currency_scope_count,
         )
     )
     if filtered_df.empty:
@@ -1598,12 +1599,12 @@ def render(month_key: str, month: str, year: int):
     view_df["date"] = pd.to_datetime(view_df["date"], errors="coerce")
     view_df["payment_month_key"] = view_df.apply(lambda row: _payment_month_label_for_row(row, is_en), axis=1)
     view_df["entitlement_month_key"] = view_df["entitlement_month_key"].apply(lambda mk: _display_month_label(mk, is_en))
-    if is_en and "type" in view_df.columns:
-        view_df["type"] = view_df["type"].apply(lambda x: _tx_type_label(x, True))
-    if is_en and "category" in view_df.columns:
-        view_df["category"] = view_df["category"].apply(lambda x: _category_label(x, True))
-    if is_en and "currency" in view_df.columns:
-        view_df["currency"] = view_df["currency"].apply(lambda x: _currency_option_label(x, True))
+    if "type" in view_df.columns:
+        view_df["type"] = view_df["type"].apply(lambda x: _tx_type_label(x, is_en))
+    if "category" in view_df.columns:
+        view_df["category"] = view_df["category"].apply(lambda x: _category_label(x, is_en))
+    if "currency" in view_df.columns:
+        view_df["currency"] = view_df["currency"].apply(lambda x: _currency_option_label(x, is_en))
     view_df["tax_tag_code"] = view_df["tax_tag_code"].apply(lambda code: _localized_tax_label(code, tax_label_by_code))
     proof_lookup = {
         int(row["tx_id"]): _proof_label(row, t("مرفق", "Attached"))
@@ -1704,14 +1705,16 @@ def render(month_key: str, month: str, year: int):
                 st.session_state["account_templates_open"] = False
                 if result["moved"]:
                     moved_labels = ", ".join(_month_label_from_key(mk, is_en) for mk in result["moved_targets"])
-                    st.session_state["account_save_notice"] = t(
-                        f"تم حفظ {result['updated']} تعديل. نُقلت {result['moved']} معاملة إلى {moved_labels} حسب التاريخ الجديد.",
-                        f"Saved {result['updated']} edit(s). {result['moved']} transaction(s) moved to {moved_labels} based on the new date.",
+                    st.session_state["account_save_notice"] = format_i18n(
+                        "account_edits_moved",
+                        updated=result["updated"],
+                        moved=result["moved"],
+                        months=moved_labels,
                     )
                 else:
-                    st.session_state["account_save_notice"] = t(
-                        f"تم حفظ {result['updated']} تعديل على المعاملات.",
-                        f"Saved {result['updated']} transaction edit(s).",
+                    st.session_state["account_save_notice"] = format_i18n(
+                        "account_edits_saved",
+                        updated=result["updated"],
                     )
                 st.rerun()
 
@@ -1736,11 +1739,12 @@ def render(month_key: str, month: str, year: int):
 
             if restored_monthly_items:
                 st.success(
-                    t(
-                        f"تم حذف {len(deleted_transactions)} معاملة وإرجاع {restored_monthly_items} عنصر شهري للتأكيد.",
-                        f"Deleted {len(deleted_transactions)} transaction(s) and returned {restored_monthly_items} monthly item(s) to confirmation.",
+                    format_i18n(
+                        "account_deleted_with_restored",
+                        count=len(deleted_transactions),
+                        restored=restored_monthly_items,
                     )
                 )
             else:
-                st.success(t(f"تم حذف {len(deleted_transactions)} معاملة.", f"Deleted {len(deleted_transactions)} transaction(s)."))
+                st.success(format_i18n("account_deleted_transactions", count=len(deleted_transactions)))
             st.rerun()

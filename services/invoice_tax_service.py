@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from models.invoice import Invoice
 from repositories.base import FlossyRepository
+from services.currency_localization import currency_matches
 
 
 ARABIC_MONTHS = [
@@ -235,7 +236,7 @@ class InvoiceTaxService:
         outstanding_total = 0.0
 
         for inv in self.repo.list_invoices():
-            if currency and inv.currency != currency:
+            if currency and not currency_matches(inv.currency, currency):
                 continue
 
             if inv.status in {"draft", "sent"}:

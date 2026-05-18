@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import date, datetime
 
 from repositories.base import FlossyRepository
+from services.currency_localization import currency_matches, currency_short_label
 
 ARABIC_MONTHS = [
     "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -83,20 +84,11 @@ class FinancialAnalyzer:
 
     @classmethod
     def _currency_display(cls, raw_value: str, is_en: bool = False) -> str:
-        symbol = cls._currency_symbol(raw_value)
-        if not is_en:
-            return symbol
-        return {
-            "د.ك": "KWD",
-            "ر.س": "SAR",
-            "د.إ": "AED",
-            "$": "USD",
-            "€": "EUR",
-        }.get(symbol, symbol)
+        return currency_short_label(raw_value, "en" if is_en else "ar")
 
     @classmethod
     def _currency_matches(cls, item_currency: str, target_currency: str) -> bool:
-        return cls._currency_symbol(item_currency) == cls._currency_symbol(target_currency)
+        return currency_matches(item_currency, target_currency)
 
     @staticmethod
     def totals_by_currency(tx_list: list[dict], currency: str) -> dict:
@@ -358,7 +350,7 @@ class FinancialAnalyzer:
             expense = sum(
                 float(tx.get("amount", 0.0))
                 for tx in txs
-                if tx.get("currency") == currency and tx.get("type") == "مصروف"
+                if currency_matches(tx.get("currency", ""), currency) and tx.get("type") == "مصروف"
             )
             monthly_rows.append({
                 "month_key": mk,
@@ -434,7 +426,7 @@ class FinancialAnalyzer:
         expense_count = 0
 
         for tx in txs:
-            if tx.get("currency") != currency or tx.get("type") != "مصروف":
+            if not currency_matches(tx.get("currency", ""), currency) or tx.get("type") != "مصروف":
                 continue
             amount = float(tx.get("amount", 0.0))
             total_expense += amount
@@ -474,7 +466,7 @@ class FinancialAnalyzer:
 
         current_by_cat: dict[str, float] = defaultdict(float)
         for tx in current_txs:
-            if tx.get("currency") != currency or tx.get("type") != "مصروف":
+            if not currency_matches(tx.get("currency", ""), currency) or tx.get("type") != "مصروف":
                 continue
             current_by_cat[str(tx.get("category", "أخرى"))] += float(tx.get("amount", 0.0))
 
@@ -513,7 +505,7 @@ class FinancialAnalyzer:
         for mk in history_keys:
             amount = 0.0
             for tx in tx_by_month.get(mk, []):
-                if tx.get("currency") != currency or tx.get("type") != "مصروف":
+                if not currency_matches(tx.get("currency", ""), currency) or tx.get("type") != "مصروف":
                     continue
                 if str(tx.get("category", "أخرى")) == top_category:
                     amount += float(tx.get("amount", 0.0))
@@ -541,12 +533,12 @@ class FinancialAnalyzer:
         personal_income = sum(
             float(tx.get("amount", 0.0))
             for tx in personal_month_txs
-            if tx.get("currency") == currency and tx.get("type") == "دخل"
+            if currency_matches(tx.get("currency", ""), currency) and tx.get("type") == "دخل"
         )
         personal_expense = sum(
             float(tx.get("amount", 0.0))
             for tx in personal_month_txs
-            if tx.get("currency") == currency and tx.get("type") == "مصروف"
+            if currency_matches(tx.get("currency", ""), currency) and tx.get("type") == "مصروف"
         )
         personal_net = personal_income - personal_expense
 
@@ -620,6 +612,9 @@ class FinancialAnalyzer:
         support_label_ar = "يحتاج متابعة"
         support_label_en = "Needs Follow-up"
         support_value = float(follow_up_total)
+        merchant_label = ""
+        merchant_amount = 0.0
+        merchant_count = 0
         tx_by_month = session_state.get("transactions", {})
         tx_count = 0
         if isinstance(tx_by_month, dict):
@@ -648,6 +643,12 @@ class FinancialAnalyzer:
                 "support_label_ar": "يحتاج متابعة",
                 "support_label_en": "Needs Follow-up",
                 "support_value": 0.0,
+                "projected_net": 0.0,
+                "net_delta": 0.0,
+                "follow_up_total": 0.0,
+                "merchant_label": "",
+                "merchant_amount": 0.0,
+                "merchant_count": 0,
             }
 
         if projected_90["net"] < 0:
@@ -730,4 +731,10 @@ class FinancialAnalyzer:
             "support_label_ar": support_label_ar,
             "support_label_en": support_label_en,
             "support_value": float(support_value),
+            "projected_net": float(projected_90["net"]),
+            "net_delta": float(comparison_90["net_delta"]),
+            "follow_up_total": float(follow_up_total),
+            "merchant_label": merchant_label,
+            "merchant_amount": float(merchant_amount),
+            "merchant_count": int(merchant_count),
         }

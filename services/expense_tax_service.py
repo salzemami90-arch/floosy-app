@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from services.currency_localization import currency_matches
+from services.i18n import get_lang_code, translate_en
+
 from services.tax_readiness import ensure_tax_state
 
 
@@ -122,19 +125,27 @@ class ExpenseTaxService:
     def _display_name(cls, tag: dict, is_en: bool = False) -> str:
         raw_name = str(tag.get("name", "") or tag.get("code", "")).strip()
         code = str(tag.get("code", "") or "").strip()
-        if not is_en and code in cls._KNOWN_AR_NAMES_BY_CODE:
-            return cls._KNOWN_AR_NAMES_BY_CODE[code]
+        lang_code = get_lang_code()
+        ar_name = cls._KNOWN_AR_NAMES_BY_CODE.get(code, raw_name)
         if not is_en:
+            if lang_code not in {"ar", "en"}:
+                en_fallback = cls._KNOWN_EN_NAMES_BY_CODE.get(code) or cls._KNOWN_EN_NAMES_BY_AR.get(raw_name, raw_name)
+                return translate_en(en_fallback, ar_name)
+            if code in cls._KNOWN_AR_NAMES_BY_CODE:
+                return cls._KNOWN_AR_NAMES_BY_CODE[code]
             return raw_name
 
         explicit_en_name = str(tag.get("name_en", "") or "").strip()
         if explicit_en_name:
-            return explicit_en_name
+            en_name = explicit_en_name
+        elif code in cls._KNOWN_EN_NAMES_BY_CODE:
+            en_name = cls._KNOWN_EN_NAMES_BY_CODE[code]
+        else:
+            en_name = cls._KNOWN_EN_NAMES_BY_AR.get(raw_name, raw_name)
 
-        if code in cls._KNOWN_EN_NAMES_BY_CODE:
-            return cls._KNOWN_EN_NAMES_BY_CODE[code]
-
-        return cls._KNOWN_EN_NAMES_BY_AR.get(raw_name, raw_name)
+        if lang_code not in {"ar", "en"}:
+            return translate_en(en_name, ar_name)
+        return en_name
 
     @classmethod
     def expense_options(cls, session_state, is_en: bool = False) -> list[dict]:
@@ -253,7 +264,7 @@ class ExpenseTaxService:
                 continue
             if str(tx.get("type", "") or "").strip() != "مصروف":
                 continue
-            if currency and str(tx.get("currency", "") or "").strip() != str(currency).strip():
+            if currency and not currency_matches(str(tx.get("currency", "") or ""), str(currency)):
                 continue
 
             amount = float(tx.get("amount", 0.0) or 0.0)
